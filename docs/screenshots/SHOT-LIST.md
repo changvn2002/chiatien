@@ -1,14 +1,14 @@
 # SHOT-LIST — screenshot pack chiatien (studio-catalog/chiatien/)
 
-> **Trạng thái (2026-10-23): ĐANG CHỤP LẠI trên bản live v1.4.0 (cc07c0f).**
-> Pack trước chụp ở v1.3.0 (069972e); hình học Settlement Strip/sheet đã đổi
-> ở v1.4.0 (đợt sửa Panel #03 §9) nên grader vòng 4 chỉ cho DOC-03 PASS-TẠM
-> và yêu cầu chụp lại trên v1.4.0. File này ghi lại hợp đồng chụp (tên file
-> giữ nguyên như pack cũ để catalog không gãy) và các TRẠNG THÁI nội dung
-> phải đúng sự thật khi chụp — đặc biệt: pack v1 (HEAD 044b960) từng bị
-> grader bắt lỗi DOC-03/DATA-03 vì gallery-01 in số tài khoản đầy đủ +
-> banner cảnh báo ngân hàng của thiết kế v1, trong khi app hiện tại không
-> còn cả hai. Không được tái sử dụng ảnh cũ.
+> **Trạng thái (2026-10-24): ĐÃ CHỤP LẠI trên bản live v1.6.0 (REDESIGN-V3,**
+> **Deep Orange #A5482F).** Pack trước chụp ở v1.4.0 (cc07c0f); bản V3 đổi
+> toàn bộ nhận diện (màu/mark/avatar/bố cục «Sổ kép») nên pack cũ lệch hẳn.
+> Xem SHOT-WAVE-V3-STATE.md ở repo root để biết sha256 mới + kết quả R2.
+> File này ghi lại hợp đồng chụp (tên file giữ nguyên như pack cũ để catalog
+> không gãy) và các TRẠNG THÁI nội dung phải đúng sự thật khi chụp — đặc
+> biệt: pack v1 (HEAD 044b960) từng bị grader bắt lỗi DOC-03/DATA-03 vì
+> gallery-01 in số tài khoản đầy đủ + banner cảnh báo ngân hàng của thiết kế
+> v1, trong khi app hiện tại không còn cả hai. Không được tái sử dụng ảnh cũ.
 
 ## Hợp đồng file (giữ nguyên tên — R2 studio-catalog/chiatien/)
 
