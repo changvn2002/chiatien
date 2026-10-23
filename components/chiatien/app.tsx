@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, TriangleAlert, Undo2, X } from 'lucide-react';
+import { IconChevronDown, IconChevronLeft, IconAlertTriangle, IconUndo, IconX } from './icons';
 import { FAQ_ITEMS } from '@/lib/site';
 import { SessionList } from './session-list';
 import { SessionView } from './session-view';
@@ -102,9 +102,9 @@ export function ChiaTienApp() {
           <button
             type="button"
             onClick={goBackToList}
-            className="-mr-2 ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
+            className="-mr-2 ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
           >
-            <ChevronLeft size={16} aria-hidden /> Tất cả cuộc chia
+            <IconChevronLeft size={16} aria-hidden /> Tất cả cuộc chia
           </button>
         )}
       </header>
@@ -112,9 +112,9 @@ export function ChiaTienApp() {
       {saveFailed && (
         <p
           role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
         >
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+          <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           <span>
             Trình duyệt đang chặn lưu trữ — dữ liệu chỉ giữ trong lần mở này. Hãy copy link để mang
             đi.
@@ -124,9 +124,9 @@ export function ChiaTienApp() {
       {brokenLink && !active && (
         <div
           role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
         >
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+          <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           <p className="min-w-0 flex-1">
             Link này không mở được — có thể link đã bị cắt ngắn khi gửi, hoặc không còn đúng định
             dạng. Hãy nhờ người gửi copy lại link đầy đủ.
@@ -135,14 +135,14 @@ export function ChiaTienApp() {
             type="button"
             aria-label="Đóng thông báo"
             onClick={() => setBrokenLink(false)}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
+            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
           >
-            <X size={16} />
+            <IconX size={16} />
           </button>
         </div>
       )}
       {importedTitle && (
-        <div className="mt-2 mb-4 flex items-start gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep">
+        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep">
           <div className="min-w-0 flex-1">
             <p>
               Đã nhập cuộc chia “{importedTitle}” — bản sao này nằm trên máy của bạn, cứ sửa thoải
@@ -167,9 +167,9 @@ export function ChiaTienApp() {
             type="button"
             aria-label="Đóng thông báo"
             onClick={dismissImport}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
+            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
           >
-            <X size={16} />
+            <IconX size={16} />
           </button>
         </div>
       )}
@@ -177,7 +177,7 @@ export function ChiaTienApp() {
       {externalChange && (
         <div
           role="status"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep"
         >
           <p className="min-w-0 flex-1">
             Dữ liệu vừa được thay đổi ở một tab khác — app đã tải lại bản mới nhất để không tab nào
@@ -188,9 +188,9 @@ export function ChiaTienApp() {
             type="button"
             aria-label="Đóng thông báo"
             onClick={dismissExternalChange}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
+            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
           >
-            <X size={16} />
+            <IconX size={16} />
           </button>
         </div>
       )}
@@ -237,10 +237,10 @@ export function ChiaTienApp() {
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
                 <h2 className="font-display text-base font-bold text-ink">Chia Tiền là gì?</h2>
-                <ChevronDown
+                <IconChevronDown
                   size={16}
                   aria-hidden
-                  className="shrink-0 text-muted transition-transform group-open:rotate-180"
+                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
                 />
               </summary>
               <p className="max-w-[72ch] pb-4 text-sm leading-relaxed text-muted">
@@ -258,10 +258,10 @@ export function ChiaTienApp() {
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
                 <h2 className="font-display text-base font-bold text-ink">Cách dùng Chia Tiền</h2>
-                <ChevronDown
+                <IconChevronDown
                   size={16}
                   aria-hidden
-                  className="shrink-0 text-muted transition-transform group-open:rotate-180"
+                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
                 />
               </summary>
               <ol className="grid gap-4 pb-4 sm:grid-cols-3">
@@ -298,21 +298,21 @@ export function ChiaTienApp() {
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
                 <h2 className="font-display text-base font-bold text-ink">Câu hỏi thường gặp</h2>
-                <ChevronDown
+                <IconChevronDown
                   size={16}
                   aria-hidden
-                  className="shrink-0 text-muted transition-transform group-open:rotate-180"
+                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
                 />
               </summary>
               <div className="grid gap-2 pb-4">
                 {FAQ_ITEMS.map((item) => (
-                  <details key={item.question} className="group/faq rounded-xl bg-paper px-3">
+                  <details key={item.question} className="group/faq rounded-lg bg-paper px-3">
                     <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 [&::-webkit-details-marker]:hidden">
                       <h3 className="font-display text-sm font-bold text-ink">{item.question}</h3>
-                      <ChevronDown
+                      <IconChevronDown
                         size={14}
                         aria-hidden
-                        className="shrink-0 text-muted transition-transform group-open/faq:rotate-180"
+                        className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open/faq:rotate-180"
                       />
                     </summary>
                     <p className="max-w-[72ch] pb-3 text-sm leading-relaxed text-muted">
@@ -343,7 +343,7 @@ export function ChiaTienApp() {
       {undoToast && (
         <div
           role="status"
-          className="animate-toast-in fixed inset-x-4 bottom-24 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-white shadow-[var(--shadow-lift)] lg:bottom-6"
+          className="animate-fade-in fixed inset-x-4 bottom-24 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-lg bg-ink px-4 py-3 text-sm text-white lg:bottom-6"
         >
           <span className="min-w-0 truncate">{undoToast.label}</span>
           <button
@@ -352,9 +352,9 @@ export function ChiaTienApp() {
               undoToast.undo();
               dismissUndo();
             }}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 font-display font-bold text-brand-soft transition hover:text-white"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 font-display font-bold text-brand-soft transition duration-100 ease-[var(--ease-lock)] hover:text-white"
           >
-            <Undo2 size={15} aria-hidden /> Hoàn tác
+            <IconUndo size={15} aria-hidden /> Hoàn tác
           </button>
         </div>
       )}

@@ -4,6 +4,7 @@
 @source "../lib";
 @source "../app";
 
+/* prettier-ignore */
 :root {
   color-scheme: light;
   /* Font tự host (Fontsource, import trong app/layout.tsx).
@@ -11,47 +12,80 @@
      Body: Inter, fallback Be Vietnam Pro để glyph lạ vẫn đúng dấu. */
   --font-sans: 'Inter', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --ink: #1c1917;
-  /* Chữ phụ ấm (REDESIGN-V2): đạt ≥4.5:1 trên mọi nền của hệ — họ chữ phụ duy nhất đứng trên tint/sand. */
-  --ink-2: #5c554b;
-  --muted: #6f675c;
-  /* Placeholder: taupe ấm riêng, đạt 5.08:1 trên nền trắng (WCAG AA) — không dùng muted mờ. */
-  --placeholder: #786d5b;
-  --line: #e6ddcf;
-  /* Biên ô nhập/control: tín hiệu non-text ≥3:1 trên trắng/paper/editor tint. */
-  --line-strong: #8a7a5f;
-  --paper: #f7f3ec;
-  --card: #ffffff;
-  /* Nền Settlement Strip + cột quyết toán desktop (REDESIGN-V2, token strip — thay Rail Cream #FFFBEB của v1). */
-  --strip: #fff7e8;
-  /* Alias chuyển tiếp: --rail trỏ về strip để code cũ dùng var(--rail) không vỡ; xoá khi mọi bề mặt đã chuyển sang strip. */
-  --rail: var(--strip);
-  /* Bề mặt duy nhất của trạng thái disabled (REDESIGN-V2). */
-  --deck-sand: #efe6d8;
-  /* Nền editor trong sheet: brand-soft pha 40% trên paper. */
-  --editor: #f8f0e4;
-  /* Màu thương hiệu: hổ phách đậm (amber) — không gradient, không tím-xanh. */
-  --brand: #b45309;
-  --brand-deep: #92400e;
-  --brand-soft: #faecd7;
-  /* Màu ngữ nghĩa cho số dư: xanh lá = được nhận lại, đỏ gạch = phải trả thêm. */
-  --credit: #177245;
-  --debt: #b3352c;
-  /* Palette danh tính thành viên (REDESIGN-V2, Panel-02 M-2): CHỈ dùng cho avatar — cấm dùng cho số dư/nút/focus/trạng thái; ngược lại cấm brand/brand-deep/credit/debt làm màu avatar. Mọi màu đạt ≥4.5:1 với chữ initials trắng. */
-  --identity-01: #7c4a1e;
-  --identity-02: #8a5a2b;
-  --identity-03: #7a3b2e;
-  --identity-04: #946b00;
-  --identity-05: #5e503f;
-  --identity-06: #855c1f;
-  --identity-07: #4a6741;
-  --identity-08: #6e5636;
-  --identity-09: #654321;
-  --identity-10: #7d5a3c;
-  --identity-11: #596235;
-  --identity-12: #8c6a3f;
-  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 8px 24px rgba(28, 25, 23, 0.06);
-  --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.06), 0 16px 40px rgba(28, 25, 23, 0.1);
+
+  /* === CHIATIEN V3 · TOKENS — chép NGUYÊN BYTE từ redesign-v3/chiatien/assets/tokens.css ===
+     100% hex từ color-correction.md §3.3/§9.3 (LK-01/LK-02) + identity 12 ô từ
+     identity-chiatien-recanal.md §3 (LK-14). Seed #A5482F · brand-600 #8C361E ·
+     mono #000000 (LK-11) · đĩa avatar #FAF3F1 ĐÓNG BĂNG (LK-15). */
+  --brand-50: #FFF2EE;
+  --brand-100: #FFE0D7;
+  --brand-200: #FBC6B7;
+  --brand-300: #EBA38F;
+  --brand-400: #D67D65;
+  --brand-500: #A5482F;
+  --brand-600: #8C361E;
+  --brand-700: #702612;
+  --brand-800: #511707;
+  --brand-900: #3A0F04;
+  --brand-950: #1F0401;
+  --paper: #FDF5F2;
+  --neutral-50: #FAF3F1; /* đĩa avatar — ĐÓNG BĂNG, đổi đĩa = chạy lại script identity (LK-15) */
+  --neutral-100: #F1E5E1; /* editor */
+  --neutral-200: #DDD1CE; /* sand / nền disabled */
+  --neutral-300: #C0B4B1;
+  --neutral-400: #A19592;
+  --neutral-500: #7E7370; /* cấm vai chữ */
+  --muted: #685E5B; /* = --placeholder, neutral-600 */
+  --placeholder: #685E5B;
+  --line-control: #534946; /* neutral-700 */
+  --ink: #140F0E; /* neutral-950 — MỌI con số dùng token này (LK-22) */
+  --strip: #FFFFFF;
+  --mono: #000000;
+  --credit-bg: #E4FDE3; --credit-border: #9CCD9B; --credit-solid: #1D7725; --credit-ink: #004F09;
+  --debt-bg: #FFF2F0; --debt-border: #FFA096; --debt-solid: #A80011; --debt-ink: #6B0006;
+  --warning-bg: #FFF3E9; --warning-border: #F1AD76; --warning-solid: #AB5E00; --warning-ink: #783F00;
+  --info-solid: #255EA6; --info-bg: #E4F0FF;
+  --identity-01: #CF284D;
+  --identity-02: #353C1D;
+  --identity-03: #607200;
+  --identity-04: #4C654C;
+  --identity-05: #00423F;
+  --identity-06: #224A71;
+  --identity-07: #006CD3;
+  --identity-08: #061D9D;
+  --identity-09: #5E56DE;
+  --identity-10: #5637A7;
+  --identity-11: #9F43C3;
+  --identity-12: #8A5673;
+  /* === HẾT khối chép nguyên byte từ assets/tokens.css === */
+
+  /* Easing token có tên (LK-37/V-M0 — mọi easing trong app phải là token này;
+     giá trị khoá ở INTERFACE-SPEC §3, bộ motion C1–C9 do Worker 2 thi hành). */
+  --ease-lock: cubic-bezier(0.15, 0, 0, 1);
+  --ease-step: cubic-bezier(0.3, 0, 0, 1);
+  --ease-leave: cubic-bezier(0.3, 0, 1, 1);
+
+  /* Alias tương thích cho class/token V2 mà components hiện dùng — BẢN ĐỒ
+     (chi tiết ở V3-IMPL-W1-LOG.md): tên cũ giữ nguyên, giá trị trỏ về token V3.
+     Worker 2 có thể dọn dần sang tên V3 trực tiếp. */
+  --ink-2: var(--muted); /* chữ phụ — neutral-600, 5.84:1 trên paper */
+  --line: var(--neutral-200); /* hairline chia hàng */
+  --line-strong: var(--line-control); /* biên control/phân định — 8.10:1 trên paper */
+  --card: var(--strip); /* bề mặt trắng #FFFFFF */
+  --rail: var(--strip); /* alias chuyển tiếp cũ, giữ như V2 */
+  --deck-sand: var(--neutral-200); /* bề mặt duy nhất của trạng thái disabled */
+  --editor: var(--neutral-100); /* nền editor trong sheet */
+  --brand: var(--brand-500);
+  --brand-deep: var(--brand-600); /* hover/pressed + chữ hành động (vai cũ của brand-deep) */
+  --brand-soft: var(--brand-100); /* tint lặng: chip đã chọn, ::selection */
+  --credit: var(--credit-solid);
+  --debt: var(--debt-solid);
+
+  /* REDESIGN-V3: bóng bề mặt tĩnh = 0 (LK-32) — --shadow-card / --shadow-lift
+     của V2 đã BỊ XOÁ. Nơi còn dùng (bàn giao Worker 2, xem log):
+     components/chiatien/sheet.tsx (shadow-[var(--shadow-lift)]),
+     components/chiatien/app.tsx (shadow-[var(--shadow-lift)] ở toast),
+     components/chiatien/session-list.tsx (shadow-[var(--shadow-card)] ×2). */
 }
 
 @theme inline {
@@ -61,18 +95,51 @@
   --color-placeholder: var(--placeholder);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-line-control: var(--line-control);
   --color-paper: var(--paper);
   --color-card: var(--card);
   --color-strip: var(--strip);
-  /* Alias chuyển tiếp: --color-rail trỏ về strip để class cũ (bg-rail…) không vỡ; xoá khi đã chuyển hết sang strip. */
+  /* Alias chuyển tiếp: --color-rail trỏ về strip để class cũ (bg-rail…) không vỡ. */
   --color-rail: var(--strip);
   --color-deck-sand: var(--deck-sand);
   --color-editor: var(--editor);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
   --color-credit: var(--credit);
+  --color-credit-bg: var(--credit-bg);
+  --color-credit-border: var(--credit-border);
+  --color-credit-solid: var(--credit-solid);
+  --color-credit-ink: var(--credit-ink);
   --color-debt: var(--debt);
+  --color-debt-bg: var(--debt-bg);
+  --color-debt-border: var(--debt-border);
+  --color-debt-solid: var(--debt-solid);
+  --color-debt-ink: var(--debt-ink);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-warning-solid: var(--warning-solid);
+  --color-warning-ink: var(--warning-ink);
+  --color-info-solid: var(--info-solid);
+  --color-info-bg: var(--info-bg);
+  --color-mono: var(--mono);
   --color-identity-01: var(--identity-01);
   --color-identity-02: var(--identity-02);
   --color-identity-03: var(--identity-03);
@@ -108,7 +175,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Figure (REDESIGN-V2): MỌI số tiền dùng Inter — Be Vietnam Pro không có tnum (đã kiểm chứng ở mức file)
+/* Figure: MỌI số tiền dùng Inter — Be Vietnam Pro không có tnum (đã kiểm chứng ở mức file)
    nên đặt số ở font display là no-op im lặng. Inter có GSUB tnum thật. */
 .font-figure {
   font-family: Inter, 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
@@ -116,14 +183,17 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Kẻ đôi tổng kết (REDESIGN-V2, dấu chữ ký của hệ): phần tử rỗng cao 5px — hai vệt brand cứng 1px
-   ở y=0 và y=4, cách nhau 3px. Triển khai bằng hai lớp background-image (mỗi lớp một vệt đặc 100%×1px,
-   background-repeat: no-repeat) — các điểm dừng là cứng/tuyệt đối, đây là vệt đặc chứ KHÔNG phải
-   gradient trang trí; không dùng border-top: 3px double vì độ dày của nó không kiểm soát được theo token. */
+/* Kẻ đôi tổng kết (dấu chữ ký của hệ — sinh ra từ hình học mark «Kẻ Đôi»):
+   phần tử rỗng cao 5px — hai vệt brand-700 cứng 1px ở y=0 và y=4, cách nhau 3px.
+   Triển khai bằng hai lớp background-image (mỗi lớp một vệt đặc 100%×1px,
+   background-repeat: no-repeat) — các điểm dừng là cứng/tuyệt đối, đây là vệt
+   đặc chứ KHÔNG phải gradient trang trí; không dùng border-top: 3px double vì
+   độ dày của nó không kiểm soát được theo token. Màu khoá: brand-700 (LK-22). */
 .double-rule {
   height: 5px;
   background-image:
-    linear-gradient(var(--brand), var(--brand)), linear-gradient(var(--brand), var(--brand));
+    linear-gradient(var(--brand-700), var(--brand-700)),
+    linear-gradient(var(--brand-700), var(--brand-700));
   background-size:
     100% 1px,
     100% 1px;
@@ -133,69 +203,41 @@ body {
   background-repeat: no-repeat;
 }
 
-/* Bóng hướng lên DUY NHẤT của Settlement Strip + sheet (DESIGN.md mục
-   Elevation): Strip dính đáy đổ bóng LÊN ledger phía trên nó, không dùng
-   shadow-card của v1 cho bề mặt này. */
-.strip-shadow {
-  box-shadow:
-    0 -1px 2px rgba(28, 25, 23, 0.05),
-    0 -12px 32px rgba(28, 25, 23, 0.07);
-}
+/* REDESIGN-V3 (W2): bóng tĩnh = 0 (LK-32) — class .strip-shadow của V2 đã
+   bị XOÁ hẳn cùng nơi dùng duy nhất của nó (session-settlement-strip):
+   Strip phân tầng bằng border-t hairline (border-line-strong) như cũ. */
 
-@keyframes ct-strip-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+/* === MOTION C1–C9 (INTERFACE-SPEC §3, LK-35/37) ===
+   Tập duration hợp lệ DUY NHẤT của app: {65, 90, 100, 125, 170, 190, 240}ms.
+   Mọi easing qua token --ease-lock / --ease-step / --ease-leave (định nghĩa
+   ở :root) — cubic-bezier thô ngoài định nghĩa token = 0.
+   C1 settle-lock 240ms · C3 step 170ms · C4 sheet enter 190 / exit 125 ·
+   C5 hàng vào 100 / ra 65 · C6 toast = token C5 · C7 kẻ đôi TĨNH (không
+   keyframe) · C8 identity + QR tĩnh tuyệt đối · C9 cấm count-up. */
+
+/* C1 — settle-lock: translateY 2px→0 trong 240ms; cross-fade opacity đạt
+   đầy ở mốc 50% của cùng cửa sổ (không duration riêng). Chỉ áp cho ô số
+   Strip + hàng tổng (hook useSettleLock gộp debounce). Số luôn --ink. */
+@keyframes ct-settle-lock {
+  0% {
+    opacity: 0.35;
+    transform: translateY(2px);
   }
-  to {
+  50% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.animate-strip-in {
-  animation: ct-strip-in 200ms cubic-bezier(0.2, 0, 0, 1);
+.animate-settle-lock {
+  animation: ct-settle-lock 240ms var(--ease-lock);
 }
 
-/* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
-::selection {
-  background: var(--brand-soft);
-  color: var(--brand-deep);
-}
-
-/* Focus bàn phím luôn thấy rõ ở mọi control — vòng hổ phách đậm trên nền sáng. */
-:focus-visible {
-  outline: 2px solid var(--brand-deep);
-  outline-offset: 2px;
-}
-
-input,
-textarea,
-select {
-  caret-color: var(--brand);
-}
-
-button {
-  /* Bỏ độ trễ chạm hai lần trên mobile; thao tác chốt tiền phải tức thì. */
-  touch-action: manipulation;
-}
-
-html {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Chuyển động đã khai trong DESIGN.md: đổi bước + mở sheet, chỉ transform/opacity. */
-@keyframes ct-sheet-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* C5/C6 — fade tại chỗ: hàng ledger mới vào (100ms) + toast vào + scrim. */
 @keyframes ct-fade-in {
   from {
     opacity: 0;
@@ -205,6 +247,21 @@ html {
   }
 }
 
+.animate-fade-in {
+  animation: ct-fade-in 100ms var(--ease-lock);
+}
+
+@keyframes ct-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* C3 — bước Deck: translateX 10px + opacity, 170ms --ease-step, chiều
+   theo tiến (mặc định) / lùi (-back). */
 @keyframes ct-step-in {
   from {
     opacity: 0;
@@ -216,39 +273,120 @@ html {
   }
 }
 
-@keyframes ct-toast-in {
+@keyframes ct-step-in-back {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateX(-10px);
   }
   to {
     opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-step-in {
+  animation: ct-step-in 170ms var(--ease-step);
+}
+
+.animate-step-in-back {
+  animation: ct-step-in-back 170ms var(--ease-step);
+}
+
+/* C5 — hàng ledger: vào 100ms opacity tại chỗ (displacement 0); hàng xoá
+   exit 65ms --ease-leave opacity → 0. */
+.animate-row-in {
+  animation: ct-fade-in 100ms var(--ease-lock);
+}
+
+.animate-row-out {
+  animation: ct-fade-out 65ms var(--ease-leave) forwards;
+}
+
+/* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
+::selection {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+/* Focus bàn phím luôn thấy rõ ở mọi control — vòng brand-700 trên nền sáng (LK-41: focus ring thuộc tập đóng của điểm brand). */
+:focus-visible {
+  outline: 2px solid var(--brand-700);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--brand-500);
+}
+
+button {
+  /* Bỏ độ trễ chạm hai lần trên mobile; thao tác chốt tiền phải tức thì. */
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* C4 — sheet: enter 190ms --ease-step, translateY bằng đúng chiều cao
+   sheet (100%) → 0, opacity = 1 SUỐT hành trình (không fade — keyframe
+   ct-sheet-in cũ translateY 16px + fade đã bị GIẾT); exit 125ms
+   --ease-leave cùng trục ngược chiều. Sheet dừng tại cạnh trên của
+   Strip qua cơ chế --strip-h (D4-CT-6). */
+@keyframes ct-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
     transform: translateY(0);
   }
 }
 
+@keyframes ct-sheet-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
 .animate-sheet-in {
-  animation: ct-sheet-in 200ms cubic-bezier(0.2, 0, 0, 1);
+  animation: ct-sheet-in 190ms var(--ease-step);
 }
 
-.animate-fade-in {
-  animation: ct-fade-in 150ms cubic-bezier(0.2, 0, 0, 1);
+.animate-sheet-out {
+  animation: ct-sheet-out 125ms var(--ease-leave) forwards;
 }
 
-.animate-step-in {
-  animation: ct-step-in 180ms cubic-bezier(0.2, 0, 0, 1);
+/* Scrim rút cùng nhịp exit của sheet (C4). */
+.animate-scrim-out {
+  animation: ct-fade-out 125ms var(--ease-leave) forwards;
 }
 
-.animate-toast-in {
-  animation: ct-toast-in 180ms cubic-bezier(0.2, 0, 0, 1);
-}
-
+/* Reduced-motion theo đúng bảng INTERFACE-SPEC §3: C1 → 0ms tức thì;
+   C3 → cross-fade 100ms 0px; C4 → fade 100ms 0px; C2 (press) → 0ms;
+   C5 giữ nguyên (fade 100/65 vốn đã 0px). Displacement = 0px ở mọi
+   phần tử; concurrent tối đa 1. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-sheet-in,
-  .animate-fade-in,
-  .animate-step-in,
-  .animate-toast-in,
-  .animate-strip-in {
+  .animate-settle-lock {
     animation: none;
+  }
+  .animate-step-in,
+  .animate-step-in-back {
+    animation: ct-fade-in 100ms var(--ease-lock);
+  }
+  .animate-sheet-in {
+    animation: ct-fade-in 100ms var(--ease-lock);
+  }
+  .animate-sheet-out {
+    animation: ct-fade-out 100ms var(--ease-leave) forwards;
+  }
+  .ct-press {
+    transition-duration: 0ms;
+  }
+  .ct-press:active {
+    scale: 1;
   }
 }

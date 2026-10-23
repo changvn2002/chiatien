@@ -54,7 +54,7 @@ export function MoneyInput({
     <div
       onClick={() => inputRef.current?.focus()}
       className={cn(
-        'flex min-h-11 cursor-text items-center gap-1 rounded-xl border border-line-strong bg-card px-3 transition focus-within:border-brand-deep',
+        'flex min-h-11 cursor-text items-center gap-1 rounded-lg border border-line-strong bg-card px-3 transition duration-100 ease-[var(--ease-lock)] focus-within:border-brand-deep',
         className,
       )}
     >

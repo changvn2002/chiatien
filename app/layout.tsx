@@ -10,10 +10,11 @@ import '@fontsource/be-vietnam-pro/800.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 
 export const viewport: Viewport = {
-  // Màu brand — thanh trạng thái/trình duyệt trên mobile nhuộm theo app.
-  themeColor: '#B45309',
+  // Màu brand V3 — thanh trạng thái/trình duyệt trên mobile nhuộm theo app.
+  themeColor: '#A5482F',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',

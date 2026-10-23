@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Landmark, Trash2, X } from 'lucide-react';
+import { IconCheck, IconBank, IconTrash, IconX } from './icons';
 import {
   findDuplicateMember,
   memberNameKey,
@@ -212,14 +212,14 @@ export function MemberEditor({
         )}
         {nameError && (
           <div className="mt-1.5">
-            <p role="alert" className="text-sm font-medium text-debt">
+            <p role="alert" className="text-sm font-medium text-debt-ink">
               {nameError}
             </p>
             {duplicateForAction && onOpenExisting && (
               <button
                 type="button"
                 onClick={() => onOpenExisting(duplicateForAction)}
-                className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand-deep transition hover:text-ink"
+                className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
               >
                 Mở thành viên “{duplicateForAction.name}” để sửa
               </button>
@@ -232,7 +232,7 @@ export function MemberEditor({
               Sẽ thêm {bulkAnalysis.valid.length} người: {bulkAnalysis.valid.join(' · ')}
             </p>
             {bulkAnalysis.duplicates.map((dup) => (
-              <p key={dup} className="text-sm font-medium text-debt">
+              <p key={dup} className="text-sm font-medium text-debt-ink">
                 “{dup}” đã có trong cuộc chia — sẽ bỏ qua
               </p>
             ))}
@@ -249,7 +249,7 @@ export function MemberEditor({
               onChange={(e) => setWantsBank(e.target.checked)}
               className="h-4 w-4 shrink-0 accent-brand"
             />
-            <Landmark size={16} className="shrink-0 text-brand-deep" aria-hidden />
+            <IconBank size={16} className="shrink-0 text-brand-deep" aria-hidden />
             <span>Lưu tài khoản trên máy này để tạo VietQR</span>
           </label>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
@@ -298,12 +298,12 @@ export function MemberEditor({
                 onBlur={() => setAcctBlurred(true)}
               />
               {initialBankInvalid && (
-                <p className="mt-1.5 text-sm font-medium text-debt">
+                <p className="mt-1.5 text-sm font-medium text-debt-ink">
                   Số tài khoản chưa hợp lệ — kiểm tra lại
                 </p>
               )}
               {showAcctError && acctError && (
-                <p role="alert" className="mt-1.5 text-sm font-medium text-debt">
+                <p role="alert" className="mt-1.5 text-sm font-medium text-debt-ink">
                   {acctError}
                 </p>
               )}
@@ -325,7 +325,7 @@ export function MemberEditor({
       )}
 
       {bankError && bankError !== acctError && (
-        <p role="alert" className="text-sm font-medium text-debt">
+        <p role="alert" className="text-sm font-medium text-debt-ink">
           {bankError}
         </p>
       )}
@@ -345,10 +345,10 @@ export function MemberEditor({
           }
           onClick={handleSave}
         >
-          <Check size={16} /> {saveLabel}
+          <IconCheck size={16} /> {saveLabel}
         </PrimaryButton>
         <GhostButton onClick={onCancel}>
-          <X size={16} /> Huỷ
+          <IconX size={16} /> Huỷ
         </GhostButton>
       </div>
 
@@ -357,9 +357,9 @@ export function MemberEditor({
           <button
             type="button"
             onClick={() => onDeleteRequest(initial)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-debt transition hover:bg-debt/10"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
           >
-            <Trash2 size={15} aria-hidden /> Xoá thành viên
+            <IconTrash size={15} aria-hidden /> Xoá thành viên
           </button>
         </div>
       )}

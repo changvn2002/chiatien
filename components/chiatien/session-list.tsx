@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Link2, Plus, Trash2 } from 'lucide-react';
+import { IconLink, IconPlus, IconTrash } from './icons';
 import { formatVNDDisplay } from '@/lib/money';
 import { totalSpent } from '@/lib/split';
 import type { Session } from '@/lib/types';
@@ -79,7 +79,7 @@ export function SessionList({
       <div className="grid min-w-0 gap-6 lg:max-w-[720px]">
         {/* Card tạo mới — primary CTA DUY NHẤT của Màn A cho hành động
             tạo (D-11): input + nút xếp dọc full-width trong card. */}
-        <div className="rounded-2xl border border-line bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
+        <div className="rounded-2xl border border-line bg-card p-4 sm:p-5">
           <h2 className="mb-1.5 font-display text-base font-bold text-ink">
             <label htmlFor="new-session">Tạo cuộc chia mới</label>
           </h2>
@@ -99,7 +99,7 @@ export function SessionList({
               disabledReason={!title.trim() ? 'Đặt tên cho cuộc chia để tạo' : undefined}
               className="w-full"
             >
-              <Plus size={16} /> Tạo cuộc chia
+              <IconPlus size={16} /> Tạo cuộc chia
             </PrimaryButton>
           </div>
           {/* Chỉ báo app-shell ở chân card tạo mới (D-2, LAYOUT-SPEC
@@ -108,7 +108,7 @@ export function SessionList({
         </div>
 
         {sessions.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-card px-5 py-6 text-center shadow-[var(--shadow-card)]">
+          <div className="rounded-2xl border border-line bg-card px-5 py-6 text-center">
             {/* Lý do (CQ-02): ảnh minh hoạ empty-state là WebP tĩnh đã nén
                 sẵn của chính app trong /public, kích thước hiển thị cố
                 định — next/image không thêm lợi ích ở đây. */}
@@ -127,7 +127,7 @@ export function SessionList({
             {/* Hành động tạo ở trạng thái rỗng chỉ là ghost/link (D-11):
                 primary CTA cho hành động tạo đã nằm ở card tạo mới. */}
             <GhostButton onClick={focusCreateInput} className="mt-4">
-              <Plus size={16} /> Tạo cuộc chia đầu tiên
+              <IconPlus size={16} /> Tạo cuộc chia đầu tiên
             </GhostButton>
           </div>
         ) : (
@@ -155,7 +155,7 @@ export function SessionList({
                   danger
                   onClick={() => setPendingDelete(s)}
                 >
-                  <Trash2 size={16} />
+                  <IconTrash size={16} />
                 </IconButton>
               </li>
             ))}
@@ -186,11 +186,11 @@ export function SessionList({
             }}
           />
           <GhostButton onClick={handleImportFromLink} disabled={!importUrl.trim()}>
-            <Link2 size={16} /> Nhập từ link
+            <IconLink size={16} /> Nhập từ link
           </GhostButton>
         </div>
         {importError && (
-          <p role="alert" className="mt-2 text-sm font-medium text-debt">
+          <p role="alert" className="mt-2 text-sm font-medium text-debt-ink">
             {importError}
           </p>
         )}

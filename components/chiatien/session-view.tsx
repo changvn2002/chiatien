@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { IconPlus } from './icons';
 import { newId } from '@/lib/id';
 import { assignIdentityColors, normalizeMemberName } from '@/lib/identity';
 import { computeBalances, sumBalances, totalSpent } from '@/lib/split';
@@ -72,6 +72,11 @@ export function SessionView({
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(session.title);
   const [stripFlash, setStripFlash] = useState(false);
+  // Luật nhường kẻ đôi (LK-22): hàng tổng ledger cùng khung → Strip/panel nhường.
+  const [ledgerTotalVisible, setLedgerTotalVisible] = useState(false);
+  const handleTotalVisibility = useCallback((visible: boolean) => {
+    setLedgerTotalVisible(visible);
+  }, []);
   const [deckNotice, setDeckNotice] = useState('');
   const [focusedExpenseId, setFocusedExpenseId] = useState<string | null>(null);
   const online = useOnlineStatus();
@@ -244,6 +249,7 @@ export function SessionView({
     session,
     balances,
     transfers,
+    doubleRuleYielded: ledgerTotalVisible,
     copied: settledCopied,
     copyFailed: settledCopyFailed,
     onCopy: handleCopySettlement,
@@ -255,10 +261,12 @@ export function SessionView({
   return (
     <div
       ref={rootRef}
-      className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col overflow-x-clip lg:h-auto lg:min-h-0"
+      className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col overflow-x-clip min-[900px]:h-auto min-[900px]:min-h-0"
     >
       {/* Scrim paper 60% trên ledger khi dải mở rộng (mobile). */}
-      {expanded && <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 lg:hidden" />}
+      {expanded && (
+        <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 min-[900px]:hidden" />
+      )}
 
       <SessionAppBar
         title={session.title}
@@ -270,20 +278,20 @@ export function SessionView({
         onOpenActions={() => setSessionActionOpen(true)}
       />
 
-      <div className="grid min-h-0 min-w-0 flex-1 items-start lg:grid-cols-[minmax(0,640px)_320px] lg:gap-8 xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12">
+      <div className="grid min-h-0 min-w-0 flex-1 items-start min-[900px]:grid-cols-[minmax(0,1fr)_288px] min-[900px]:gap-8 lg:grid-cols-[minmax(0,640px)_320px] xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12">
         <div className="flex min-h-0 min-w-0 flex-col self-stretch lg:self-auto">
           {/* Command Bar desktop */}
-          <div className="hidden h-[52px] shrink-0 items-center gap-2 lg:flex">
+          <div className="hidden h-[52px] shrink-0 items-center gap-2 min-[900px]:flex">
             <PrimaryButton
               disabledReason={
                 session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
               }
               onClick={addExpense}
             >
-              <Plus size={16} aria-hidden /> Thêm khoản
+              <IconPlus size={16} aria-hidden /> Thêm khoản
             </PrimaryButton>
             <GhostButton onClick={addMember}>
-              <Plus size={16} aria-hidden /> Thêm người
+              <IconPlus size={16} aria-hidden /> Thêm người
             </GhostButton>
             <span className="ml-auto flex items-center gap-4 text-xs text-ink-2">
               <span className="flex items-center gap-1.5">
@@ -324,13 +332,14 @@ export function SessionView({
             onOpenExpenseAction={setExpenseAction}
             onAddMember={addMember}
             onAddExpense={addExpense}
+            onTotalVisibility={handleTotalVisibility}
           />
         </div>
 
         {/* Cột quyết toán desktop — cùng SettlementPanel, biến thể stacked. */}
         <aside
           aria-label="Quyết toán"
-          className="sticky top-6 hidden border-l border-line-strong pl-6 lg:block"
+          className="sticky top-6 hidden border-l border-line-strong pl-6 min-[900px]:block"
         >
           <h2 className="mb-3 font-display text-[19px] font-bold text-ink">Quyết toán</h2>
           <SettlementPanel {...panelProps} variant="stacked" />
@@ -338,7 +347,7 @@ export function SessionView({
         </aside>
       </div>
 
-      <p className="mt-2 hidden h-8 shrink-0 items-center text-xs text-ink-2 lg:flex">
+      <p className="mt-2 hidden h-8 shrink-0 items-center text-xs text-ink-2 min-[900px]:flex">
         N thêm khoản · M thêm người · ⌘K hành động của hàng · C copy quyết toán khi dải mở · Esc lùi
         lớp
       </p>
@@ -356,6 +365,7 @@ export function SessionView({
         online={online}
         deckNotice={deckNotice}
         dockRef={dockRef}
+        doubleRuleYielded={ledgerTotalVisible}
         onCollapse={() => collapseStrip()}
         onToggle={() => (expanded ? collapseStrip() : expandStrip())}
         onAddExpense={addExpense}

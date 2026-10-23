@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, Link2, List, Pencil, Trash2, Users } from 'lucide-react';
+import { IconCheck, IconCopy, IconLink, IconList, IconPencil, IconTrash, IconUsers } from './icons';
 import { formatVND } from '@/lib/money';
 import { expenseDraftKey } from '@/lib/storage';
 import type { Expense, Member, Session } from '@/lib/types';
@@ -160,23 +160,23 @@ export function SessionSheets(props: SessionSheetsProps) {
             <button
               type="button"
               onClick={() => onEditExpenseAction(expenseAction)}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
             >
-              <Pencil size={16} aria-hidden /> Sửa khoản chi
+              <IconPencil size={16} aria-hidden /> Sửa khoản chi
             </button>
             <button
               type="button"
               onClick={() => onExpandExpenseAction(expenseAction.id)}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
             >
-              <List size={16} aria-hidden /> Xem phần chia từng người
+              <IconList size={16} aria-hidden /> Xem phần chia từng người
             </button>
             <button
               type="button"
               onClick={() => onDeleteExpenseAction(expenseAction)}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
             >
-              <Trash2 size={16} aria-hidden /> Xoá khoản chi
+              <IconTrash size={16} aria-hidden /> Xoá khoản chi
             </button>
           </div>
         )}
@@ -188,37 +188,37 @@ export function SessionSheets(props: SessionSheetsProps) {
           <button
             type="button"
             onClick={onSessionBack}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <Users size={16} aria-hidden /> Tất cả cuộc chia
+            <IconUsers size={16} aria-hidden /> Tất cả cuộc chia
           </button>
           <button
             type="button"
             onClick={onSessionShare}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <Link2 size={16} aria-hidden /> Chia sẻ link
+            <IconLink size={16} aria-hidden /> Chia sẻ link
           </button>
           <button
             type="button"
             onClick={onSessionCopy}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <Copy size={16} aria-hidden /> Copy bản quyết toán
+            <IconCopy size={16} aria-hidden /> Copy bản quyết toán
           </button>
           <button
             type="button"
             onClick={onSessionRename}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <Pencil size={16} aria-hidden /> Đổi tên cuộc chia
+            <IconPencil size={16} aria-hidden /> Đổi tên cuộc chia
           </button>
           <button
             type="button"
             onClick={onSessionDeleteRequest}
-            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
+            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-lg px-2 text-left text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
           >
-            <Trash2 size={16} aria-hidden /> Xoá cuộc chia
+            <IconTrash size={16} aria-hidden /> Xoá cuộc chia
           </button>
         </div>
       </Sheet>
@@ -246,7 +246,7 @@ export function SessionSheets(props: SessionSheetsProps) {
         </ul>
         <div className="mt-4 flex flex-wrap gap-2">
           <PrimaryButton onClick={handleCopyShareLink}>
-            {shareState === 'copied' ? <Check size={16} /> : <Link2 size={16} />}
+            {shareState === 'copied' ? <IconCheck size={16} /> : <IconLink size={16} />}
             {shareState === 'copied' ? 'Đã copy link!' : 'Tôi hiểu, tạo link'}
           </PrimaryButton>
           <GhostButton onClick={onCloseShare}>Quay lại</GhostButton>
@@ -264,7 +264,7 @@ export function SessionSheets(props: SessionSheetsProps) {
               aria-label="Link chia sẻ cuộc chia"
               value={shareUrl}
               onFocus={(e) => e.target.select()}
-              className="w-full rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
+              className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
               rows={3}
             />
           </div>

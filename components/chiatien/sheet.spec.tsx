@@ -96,7 +96,10 @@ describe('Sheet — trả focus khi opener bị thay node (Panel #03 Finding G)'
     // Node thế hệ 1 đã rời document sau commit mở (key đổi).
     expect(gen1.isConnected).toBe(false);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // HỢP ĐỒNG MỚI (REDESIGN-V3 C4): panel giữ mount 125ms cho exit
+    // animation --ease-leave rồi mới rời DOM — khẳng định «đã đóng»
+    // chuyển từ đồng bộ sang waitFor; trả focus vẫn ngay tại đóng.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => {
       const ae = document.activeElement as HTMLElement;
       expect(ae).not.toBe(document.body);
@@ -115,7 +118,8 @@ describe('Sheet / ConfirmDialog — trả focus sau Esc (D-7)', () => {
     fireEvent.click(opener);
     expect(screen.getByRole('dialog')).toBeTruthy();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // HỢP ĐỒNG MỚI (REDESIGN-V3 C4): như trên — exit 125ms giữ mount.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(opener));
   });
 
@@ -131,7 +135,8 @@ describe('Sheet / ConfirmDialog — trả focus sau Esc (D-7)', () => {
     fireEvent.click(opener);
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('alertdialog')).toBeNull();
+    // HỢP ĐỒNG MỚI (REDESIGN-V3 C4): như trên — exit 125ms giữ mount.
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(opener));
   });

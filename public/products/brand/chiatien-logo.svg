@@ -1,1 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="22" fill="#B45309"/><circle cx="48" cy="30" r="8" fill="#FFFBEB"/><rect x="28" y="44" width="40" height="8" rx="4" fill="#FFFBEB"/><circle cx="48" cy="66" r="8" fill="#FFFBEB"/><rect x="30" y="82" width="36" height="3" fill="#FFFBEB"/><rect x="30" y="87" width="36" height="3" fill="#FFFBEB"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- CHIATIEN V3 · Mark «Kẻ Đôi» SAU SỬA C-3 (lens-12) · lưới 96, module 4. Khối x10–86 (rộng 76), y12–84 (cao 72đv ≥ 48đv). Kênh dọc x50–64 (rộng 14): phiến trái 40 : phải 22 ≈ 65:35. Kênh ngang y43–53 (cao 10). Kẻ đôi = hai cạnh của kênh ngang. Góc ngoài Bézier r3; mọi góc trong VUÔNG tuyệt đối. Fill seed khoá #A5482F (LK-02). Một path, một fill, không container. -->
+  <path fill="#A5482F" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z"/>
+</svg>

@@ -1,52 +1,71 @@
 /**
  * Danh tính thành viên — chuẩn hoá tên, glyph initials và màu avatar.
  *
- * Nguồn luật: redesign-v2 DESIGN-LANGUAGE §8 (avatar, Panel-02 M-2) và
- * §13.2 (chuẩn hoá tên + chống trùng, Panel-02 D-3).
+ * Nguồn luật: REDESIGN-V3 — COLOR-SYSTEM §4–§5 (12 ô identity lens-11,
+ * LK-14/15/16), INTERFACE-SPEC §4 (cơ chế đĩa + initials + viền) và
+ * QUYẾT ĐỊNH M-2 của wave V3 (V3-IMPL-STATE.md mục 1, chốt 2026-10-24,
+ * xử lý tranh chấp 2 của Panel #04).
  *
- * Ba lỗi của cơ chế cũ mà module này thay thế (M-2): màu ghim bằng hash
- * của member id (import qua share link cấp id mới → cùng một người đổi
- * màu giữa hai máy), hash không chống va chạm (trùng màu trong cùng
- * nhóm), và palette chứa màu ngữ nghĩa tiền (#177245 credit).
+ * QUYẾT ĐỊNH M-2 (hướng (i) — seed CHỈ-TÊN + tie-break xác định):
+ * màu ứng viên của một thành viên chỉ suy từ tên đã chuẩn hoá
+ * (memberNameKey) — `fnv1a32(nameKey) % 12` — ordinal KHÔNG còn nằm
+ * trong seed. Việc gán diễn ra theo THỨ TỰ CHUẨN (nameKey tăng dần,
+ * ordinal gốc tăng dần làm tie-break cuối cho tên trùng tuyệt đối)
+ * rồi ánh xạ kết quả về vị trí gốc trong mảng đầu vào. Member id
+ * KHÔNG tham gia ở bất kỳ bước nào. Hàm thuần, không random, không
+ * trạng thái phụ.
  *
- * Cơ chế mới: màu suy XÁC ĐỊNH từ hai dữ kiện mà payload share v2 đã
- * mang theo trên mọi máy — (a) tên thành viên đã chuẩn hoá và (b) thứ
- * tự (ordinal) của thành viên trong mảng members. Member id KHÔNG
- * tham gia ở bất kỳ bước nào. Hàm thuần, không random, không trạng
- * thái phụ: cùng payload ⇒ cùng kết quả trên mọi máy.
+ * Giới hạn ghi thẳng (theo đúng STATE mục 1):
+ * - Tên phân biệt ⇒ màu của một người chỉ phụ thuộc TẬP TÊN của nhóm
+ *   — không phụ thuộc thứ tự mảng, máy, hay id: cùng một người giữ
+ *   nguyên màu ở mọi phiên/mọi máy kể cả khi thứ tự thành viên khác
+ *   nhau (đây là điểm cơ chế (tên + ordinal) của V2 không đạt: đổi
+ *   thứ tự là mọi người sau điểm chèn đổi màu).
+ * - Tên trùng tuyệt đối ⇒ TẬP màu của nhóm tên đó ổn định; gán cá
+ *   nhân bên trong nhóm trùng đi theo thứ tự chèn (ordinal).
+ * - Thêm thành viên mới chỉ có thể đổi màu trong chuỗi va chạm chứa
+ *   tên mới (thăm tuyến tính từ ứng viên của tên mới); thành viên
+ *   ngoài chuỗi va chạm không đổi màu.
+ * - Đổi tên một thành viên = đổi danh tính hiển thị ⇒ màu suy ra từ
+ *   tên mới, theo đúng các luật trên.
  *
- * Giới hạn ghi thẳng (theo §8.1): nếu người dùng ĐỔI TÊN thành viên
- * hoặc sắp xếp lại thứ tự sau khi import, màu suy ra có thể đổi — vì
- * danh tính hiển thị đã đổi. Trên cùng một bản dữ liệu, mọi máy luôn
- * khớp nhau.
+ * Lịch sử: cơ chế V2 (Panel-02 M-2) seed bằng (tên + ordinal) và
+ * palette tông đất 12 màu — đã thay bằng quyết định M-2 của V3 ở trên;
+ * palette cũ (gồm #654321) chết hẳn theo LK-14.
  */
 
 import type { Member } from './types';
 
 /* ------------------------------------------------------------------ */
-/* Palette danh tính (DESIGN-LANGUAGE §8.3, DESIGN.md.proposed        */
-/* identity-01..12) — 12 màu tông đất/ấm, mọi màu đạt ≥4.5:1 với chữ   */
-/* initials trắng.                                                     */
+/* Palette danh tính V3 (COLOR-SYSTEM §4, LK-14) — 12 ô của lens-11   */
+/* chép NGUYÊN BYTE, là đầu ra của phép tìm kiếm max-min trên lưới    */
+/* OKLCH với ràng buộc kênh mới (initials + viền trên đĩa neutral).   */
+/* Vai a11y quyết định là INITIALS mang màu ô trên đĩa neutral-50     */
+/* #FAF3F1 (ĐÓNG BĂNG, LK-15) và trên giấy #FDF5F2 — cột I-1 đã ký     */
+/* trong COLOR-SYSTEM §4 được kiểm lại bằng test hồi quy trong        */
+/* identity.spec.ts (LK-16: một nguồn generated duy nhất cho sink     */
+/* này + globals.css + spec — ba nơi phải giống hệt nhau).            */
 /*                                                                    */
-/* The Identity Palette Rule: TUYỆT ĐỐI không chứa brand #B45309,     */
-/* brand-deep #92400E, credit #177245, debt #B3352C — màu thương hiệu  */
-/* (hành động) và màu ngữ nghĩa tiền không bao giờ đóng vai danh tính */
-/* một con người; ngược lại màu danh tính cũng không dùng cho số      */
-/* dư/nút/focus. Thứ tự dưới đây là thứ tự token identity-01..12.     */
+/* The Identity Palette Rule: TUYỆT ĐỐI không chứa brand #A5482F     */
+/* (seed V3) hay bất kỳ hex semantic nào của hệ (credit #1D7725 /     */
+/* #004F09, debt #A80011 / #6B0006, warning #AB5E00 / #783F00) — màu  */
+/* thương hiệu (hành động) và màu ngữ nghĩa tiền không bao giờ đóng   */
+/* vai danh tính một con người; ngược lại màu danh tính cũng không    */
+/* dùng cho số dư/nút/focus. Thứ tự dưới đây là token identity-01..12. */
 /* ------------------------------------------------------------------ */
 export const IDENTITY_PALETTE: readonly string[] = [
-  '#7C4A1E', // identity-01
-  '#8A5A2B', // identity-02
-  '#7A3B2E', // identity-03
-  '#946B00', // identity-04
-  '#5E503F', // identity-05
-  '#855C1F', // identity-06
-  '#4A6741', // identity-07
-  '#6E5636', // identity-08
-  '#654321', // identity-09
-  '#7D5A3C', // identity-10
-  '#596235', // identity-11
-  '#8C6A3F', // identity-12
+  '#CF284D', // identity-01
+  '#353C1D', // identity-02
+  '#607200', // identity-03
+  '#4C654C', // identity-04
+  '#00423F', // identity-05
+  '#224A71', // identity-06
+  '#006CD3', // identity-07
+  '#061D9D', // identity-08
+  '#5E56DE', // identity-09
+  '#5637A7', // identity-10
+  '#9F43C3', // identity-11
+  '#8A5673', // identity-12
 ];
 
 /* ------------------------------------------------------------------ */
@@ -71,7 +90,7 @@ export function memberNameKey(name: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Hash + chọn màu (§8.1)                                             */
+/* Hash + chọn màu (M-2 V3: seed chỉ-tên)                             */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -89,13 +108,18 @@ export function fnv1a32(input: string): number {
 }
 
 /**
- * Chỉ số màu ỨNG VIÊN của một thành viên: FNV-1a-32 của
- * `${nameKey}#${ordinal}` modulo cỡ palette. nameKey phải là dạng so
- * sánh (memberNameKey). Đây mới là ứng viên — màu gán thật đi qua
- * chống trùng của assignIdentityColors.
+ * Chỉ số màu ỨNG VIÊN của một thành viên (QUYẾT ĐỊNH M-2, V3): chỉ
+ * FNV-1a-32 của `nameKey` modulo cỡ palette — seed CHỈ-TÊN, ordinal
+ * đã bị bỏ khỏi seed. nameKey phải là dạng so sánh (memberNameKey).
+ * Đây mới là ứng viên — màu gán thật đi qua chống trùng xác định
+ * theo thứ tự chuẩn của assignIdentityColors.
+ *
+ * Tham số `_ordinal` được GIỮ trong chữ ký chỉ để tương thích lời
+ * gọi cũ (V2 truyền ordinal vào đây) — nó không ảnh hưởng kết quả.
  */
-export function avatarColorIndex(nameKey: string, ordinal: number): number {
-  return fnv1a32(`${nameKey}#${ordinal}`) % IDENTITY_PALETTE.length;
+export function avatarColorIndex(nameKey: string, _ordinal?: number): number {
+  void _ordinal;
+  return fnv1a32(nameKey) % IDENTITY_PALETTE.length;
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,14 +149,18 @@ export function initialsOf(name: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Gán màu phân biệt xác định trong cùng cuộc chia (§8.2)             */
+/* Gán màu phân biệt xác định — thứ tự chuẩn (M-2 V3)                 */
 /* ------------------------------------------------------------------ */
 
 /**
- * Gán chỉ số màu palette cho từng thành viên, duyệt theo ordinal tăng
- * dần (đúng thứ tự mảng members của payload):
+ * Gán chỉ số màu palette cho từng thành viên theo QUYẾT ĐỊNH M-2 (V3):
  *
- * 1. Ứng viên = avatarColorIndex(memberNameKey(name), ordinal).
+ * 0. THỨ TỰ CHUẨN: sắp xếp thành viên theo (nameKey tăng dần theo
+ *    code unit, ordinal gốc tăng dần). So sánh chuỗi bằng toán tử
+ *    quan hệ của JS (code unit UTF-16) — KHÔNG dùng localeCompare
+ *    (phụ thuộc locale/máy). Ordinal chỉ còn vai tie-break cuối cho
+ *    tên trùng tuyệt đối.
+ * 1. Ứng viên = avatarColorIndex(nameKey) — seed CHỈ-TÊN.
  * 2. Ứng viên chưa ai dùng → gán. Đã bị dùng → thăm tuyến tính xác
  *    định (ứng viên + k) mod 12, k = 1, 2, … tới màu chưa dùng.
  *    Nhóm ≤ 12 người (cỡ palette) luôn gán được màu KHÁC NHAU cho
@@ -142,10 +170,12 @@ export function initialsOf(name: string): string {
  *    chỉ chọn màu mà cặp (màu, glyph initials) còn trống — tức không
  *    người giữ màu đó có cùng glyph với thành viên này. Không tìm
  *    được cặp trống nào → quay về ứng viên gốc.
+ * 4. Kết quả gán theo thứ tự chuẩn được ánh xạ về vị trí gốc trong
+ *    mảng đầu vào.
  *
- * Chỉ phụ thuộc vào (tên, thứ tự) của mảng đầu vào — KHÔNG phụ thuộc
- * member id: cùng danh sách tên theo cùng thứ tự ⇒ cùng bảng gán,
- * kể cả khi id của mọi thành viên đều khác (sau import).
+ * Hệ quả (giới hạn đã ghi ở đầu file): với tên phân biệt, màu theo
+ * tên chỉ phụ thuộc TẬP TÊN — bất biến chéo thứ tự mảng và chéo máy;
+ * KHÔNG phụ thuộc member id (import cấp id mới không đổi màu ai cả).
  */
 export function assignIdentityColors(members: readonly { name: string }[]): number[] {
   const size = IDENTITY_PALETTE.length;
@@ -154,8 +184,16 @@ export function assignIdentityColors(members: readonly { name: string }[]): numb
   /** glyph đã giữ từng màu — chỉ cần cho vòng hai khi nhóm > palette. */
   const glyphsByColor = new Map<number, Set<string>>();
 
-  members.forEach((member, ordinal) => {
-    const candidate = avatarColorIndex(memberNameKey(member.name), ordinal);
+  const canonical = members
+    .map((member, ordinal) => ({ member, ordinal, nameKey: memberNameKey(member.name) }))
+    .sort((a, b) => {
+      if (a.nameKey < b.nameKey) return -1;
+      if (a.nameKey > b.nameKey) return 1;
+      return a.ordinal - b.ordinal;
+    });
+
+  for (const { member, ordinal, nameKey } of canonical) {
+    const candidate = avatarColorIndex(nameKey);
     let assigned = -1;
 
     // Vòng một: màu phân biệt, thăm tuyến tính từ ứng viên.
@@ -187,7 +225,7 @@ export function assignIdentityColors(members: readonly { name: string }[]): numb
     const holders = glyphsByColor.get(assigned) ?? new Set<string>();
     holders.add(glyph);
     glyphsByColor.set(assigned, holders);
-  });
+  }
 
   return result;
 }

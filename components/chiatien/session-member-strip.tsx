@@ -1,7 +1,7 @@
 'use client';
 
 import type { RefObject } from 'react';
-import { Plus } from 'lucide-react';
+import { IconPlus } from './icons';
 import { hasBank } from '@/lib/vietqr';
 import type { Member } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function SessionMemberStrip({
       aria-label="Thành viên"
       className={cn(
         'flex h-14 shrink-0 items-center gap-2 outline-none',
-        flash && 'rounded-xl outline-2 outline-brand-deep',
+        flash && 'rounded-lg outline-2 outline-brand-deep',
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
@@ -45,15 +45,21 @@ export function SessionMemberStrip({
             aria-label={m.name}
             title={m.name}
             onClick={() => onOpenMember(m)}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-card pr-3 pl-1 transition hover:border-line-strong"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-card pr-3 pl-1 transition duration-100 ease-[var(--ease-lock)] hover:border-line-strong"
           >
-            <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={32} />
-            <span className="max-w-[96px] truncate text-sm font-semibold text-ink">{m.name}</span>
+            <Avatar
+              name={m.name}
+              colorIndex={colors[idx] ?? 0}
+              size={members.length > 8 ? 24 : 28}
+            />
+            <span className="max-w-[96px] truncate text-[15px] leading-5 font-semibold text-ink">
+              {m.name}
+            </span>
             <span
               aria-hidden
               className={cn(
                 'h-2 w-2 shrink-0 rounded-full',
-                hasBank(m) ? 'bg-credit' : 'border border-line-strong bg-transparent',
+                hasBank(m) ? 'bg-credit-solid' : 'border border-line-strong bg-transparent',
               )}
             />
             <span className="sr-only">{hasBank(m) ? 'Có QR' : 'Chưa có QR'}</span>
@@ -63,9 +69,9 @@ export function SessionMemberStrip({
       <button
         type="button"
         onClick={onAddMember}
-        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
+        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
       >
-        <Plus size={16} aria-hidden /> Thêm
+        <IconPlus size={16} aria-hidden /> Thêm
       </button>
     </div>
   );

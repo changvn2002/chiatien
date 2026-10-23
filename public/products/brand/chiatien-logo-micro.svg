@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- CHIATIEN V3 · MICRO (GATE-C3, V3-IMPL-STATE mục 2) — sinh từ CÙNG path nguồn với chiatien-logo.svg / redesign-v3 assets/logo-mark.svg (LK-26 một nguồn), fill seed khoá #A5482F (LK-02). Hình học mark khoá tuyệt đối (IDENTITY §2) — file này chỉ là bản đặt tên cho cỡ nhỏ, kèm render-check 16px + 32px trên file ship (xem V3-IMPL-W1-LOG.md). -->
+  <path fill="#A5482F" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z"/>
+</svg>

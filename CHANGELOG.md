@@ -3,6 +3,44 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.6.0] — 2026-10-24 — REDESIGN-V3: nhận diện Deep Orange
+
+### Changed
+
+- Toàn bộ hệ màu chuyển sang khoá V3: seed Deep Orange **#A5482F**
+  (Material Deep Orange) thay amber cũ; thang token chép nguyên từ
+  hồ sơ thiết kế V3 (mỗi token có nguồn gốc enterprise + derivation),
+  giấy #FAF3F1, theme manifest #A5482F. Hex cũ trong sink = 0.
+- Mark V3 + glyph «khía đôi»; **micro mới** sản xuất từ cùng path
+  (render 16px đạt ngưỡng nhận diện); **lockup đã outline** thành
+  path thật từ font Be Vietnam Pro 700 (hết dùng `<text>`).
+- Avatar: bỏ DiceBear + nền đặc — SVG initials trên đĩa giấy đóng
+  băng, 3 tầng kích thước theo số thành viên. **M-2 đã quyết:**
+  màu avatar nay theo TÊN (seed chỉ-tên + tie-break xác định) —
+  cùng một người có cùng màu ở mọi phiên/mọi thứ tự thành viên.
+- Bố cục «Sổ kép» hai cột từ 900px, cột quyết toán có border;
+  motion theo tập khoá V3 (settle-lock 240ms); sàn tên ở Settlement
+  Strip 65 → 88px ở khổ 320. Service worker bump `v4-2026-10-24`.
+
+### Removed
+
+- `@dicebear/collection`, `@dicebear/core`, `lucide-react` — 0
+  import sau V3 (icons nay là bộ path «Nét Chia» vẽ tay trong repo).
+  Gỡ DiceBear cũng xoá hẳn advisory GHSA-gcr2-9v8m-gq45 khỏi cây
+  dependency.
+
+### Notes
+
+- Cổng F-1 (histogram brand-solid < 2%): đo thật trên render —
+  thu gọn ~3,3%, mở rộng ~7,8–9,6%, desktop ~2,0–2,1%; toàn bộ
+  phần vượt là nút hành động solid (mẫu bị khoá bởi hồ sơ V3).
+  Parent ghi ngoại lệ có lý do vào biên bản phát hành; Panel #05
+  phán trên live.
+- Lib lõi (settle/share/sanitize/vietqr/money) byte-diff = 0;
+  ngân sách chữ 8/8 bề mặt lệch 0; DATA-04(ii) nguyên văn;
+  DATA-08 giữ 0 request ngoài. Suite 217/217; bundle 225.796 B
+  gzip / trần 243.000 B.
+
 ## [1.5.1] — 2026-10-24 — hotfix audit CI
 
 ### Security

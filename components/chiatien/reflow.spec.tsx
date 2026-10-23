@@ -223,12 +223,14 @@ describe('Panel #03 — Strip tóm tắt 2 hàng (Finding A, cấu trúc)', () =
       (r) => r !== headerRow && r.querySelector('.truncate') && r.textContent?.includes('lệnh'),
     );
     expect(transferRow).toBeTruthy();
-    // Tên người gửi/nhận là flex-1 + min-w-0 + truncate: co đều, không ép 0px.
+    // Tên người gửi/nhận theo HỢP ĐỒNG MỚI D4-CT-1 (REDESIGN-V3):
+    // ô lưới minmax(72px,1fr)/minmax(96px,1fr) + truncate, CẤM min-w-0
+    // trên ô tên — sàn lưới thay cơ chế flex-1 + min-w-0 của Finding A.
+    expect(transferRow?.className).toContain('minmax(72px,1fr)');
     const nameSpans = [...(transferRow?.querySelectorAll('.truncate') ?? [])];
     expect(nameSpans.length).toBeGreaterThanOrEqual(2);
     for (const s of nameSpans) {
-      expect(s.className).toContain('flex-1');
-      expect(s.className).toContain('min-w-0');
+      expect(s.className).not.toContain('min-w-0');
     }
   });
 });

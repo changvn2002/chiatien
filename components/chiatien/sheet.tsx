@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { IconX } from './icons';
 import { cn } from '@/lib/utils';
 import { GhostButton } from './ui-bits';
 
@@ -280,6 +280,40 @@ export function Sheet({
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  /* C4 (REDESIGN-V3): exit animation 125ms --ease-leave — khi `open`
+     chuyển sang false, panel GIỮ MOUNT ở trạng thái closing tới hết
+     125ms mới rời DOM (trước đây Sheet trả null ngay, không exit được).
+     Việc trả focus KHÔNG chờ exit: nhánh đóng của effect chính bên
+     dưới vẫn chạy ngay tại chuyển open=false như cũ (hợp đồng D-7 /
+     Finding G giữ nguyên từng nhịp). Mở lại giữa exit: huỷ timer,
+     về trạng thái entering. */
+  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
+  const mountedRef = useRef(open);
+  const closeTimerRef = useRef<number | undefined>(undefined);
+  // Đồng bộ trạng thái mount/closing với chuyển `open` + timer 125ms là
+  // bản chất của cơ chế exit (hệ thống thời gian ngoài React) — cùng mẫu
+  // eslint-disable có lý do như useOnlineStatus/QR ở các file khác.
+  /* eslint-disable react-hooks/set-state-in-effect -- cơ chế exit C4: setState là đầu ra của chuyển open + timer, không phải vòng lặp render */
+  useEffect(() => {
+    if (open) {
+      window.clearTimeout(closeTimerRef.current);
+      mountedRef.current = true;
+      setMounted(true);
+      setClosing(false);
+      return;
+    }
+    if (!mountedRef.current) return;
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      mountedRef.current = false;
+      setMounted(false);
+      setClosing(false);
+    }, 125);
+    return () => window.clearTimeout(closeTimerRef.current);
+  }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // Sheet bị gỡ khỏi cây khi đang mở (nơi gọi unmount luôn cả sheet):
   // nhánh đóng trong effect chính không có cơ hội chạy, nên cleanup lúc
   // unmount tự trả focus theo cùng cơ chế ba nhịp của restoreOpenerFocus.
@@ -371,7 +405,7 @@ export function Sheet({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     // Finding E (Panel #03): đáy của lớp phủ dừng ở đỉnh Settlement
@@ -384,6 +418,14 @@ export function Sheet({
     // nguyên hành vi phủ đầy. Nhờ vậy «Settlement in Sight» đứng cả
     // khi sheet mở: Strip vẫn nhìn thấy nguyên vẹn bên dưới sheet
     // (điều kiện chấm lại §9.7 của Panel #03).
+    //
+    // D4-CT-5 (phát hiện thêm của Verifier B, sửa W3): trần chiều cao
+    // của panel là min(92dvh, 100%) — 100% là chiều cao VÙNG CHỨA
+    // (lớp phủ đã dừng ở đỉnh Strip). Chỉ 92dvh thì form dài (khoản
+    // chi ≥4 thành viên ở viewport 844) cao hơn vùng chứa 696px, flex
+    // items-end đẩy đỉnh panel lên −79px và header (gồm nút đóng)
+    // khuất khỏi màn hình. Bị chặn bởi vùng chứa, panel cuộn nội bộ
+    // (overflow-y-auto sẵn có) và header sticky luôn trong khung.
     <div
       className="fixed inset-x-0 top-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
       style={{ bottom: 'var(--strip-h, 0px)' }}
@@ -392,7 +434,10 @@ export function Sheet({
         type="button"
         aria-label="Đóng"
         onClick={onClose}
-        className="animate-fade-in absolute inset-0 h-full w-full cursor-default bg-ink/45"
+        className={cn(
+          'absolute inset-0 h-full w-full cursor-default bg-ink/45',
+          closing ? 'animate-scrim-out' : 'animate-fade-in',
+        )}
       />
       <div
         ref={panelRef}
@@ -402,7 +447,8 @@ export function Sheet({
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
         className={cn(
-          'animate-sheet-in relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl shadow-[var(--shadow-lift)] outline-none sm:rounded-2xl',
+          'relative max-h-[min(92dvh,100%)] w-full overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl',
+          closing ? 'animate-sheet-out' : 'animate-sheet-in',
           wide ? 'sm:max-w-[640px]' : 'sm:max-w-lg',
           tinted ? 'bg-editor' : 'bg-card',
         )}
@@ -413,9 +459,9 @@ export function Sheet({
             type="button"
             onClick={onClose}
             aria-label={`Đóng ${title}`}
-            className="-mt-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted transition hover:bg-white/70 hover:text-ink"
+            className="-mt-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition duration-100 ease-[var(--ease-lock)] hover:bg-white/70 hover:text-ink"
           >
-            <X size={18} />
+            <IconX size={18} />
           </button>
         </div>
         <div className="px-4 pb-5 sm:px-5">{children}</div>
@@ -467,7 +513,7 @@ export function ConfirmDialog({
         <button
           type="button"
           onClick={onConfirm}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-debt px-4 py-2.5 font-display text-sm font-bold text-white transition hover:brightness-90 active:brightness-75"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-debt-solid px-4 py-2.5 font-display text-sm font-bold text-white transition duration-100 ease-[var(--ease-lock)] hover:brightness-90 active:brightness-75"
         >
           {confirmLabel}
         </button>

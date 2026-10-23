@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { IconCheck, IconChevronDown, IconX } from './icons';
 import { assignIdentityColors } from '@/lib/identity';
 import { formatVND } from '@/lib/money';
 import { computeShares, validateExpenseDraft, type ExpenseDraft } from '@/lib/split';
@@ -235,7 +235,7 @@ export function ExpenseEditor({
             ariaLabel="Số tiền khoản chi"
           />
           {capError && (
-            <p role="alert" className="mt-1.5 text-sm font-medium text-debt">
+            <p role="alert" className="mt-1.5 text-sm font-medium text-debt-ink">
               {AMOUNT_CAP_MESSAGE}
             </p>
           )}
@@ -255,13 +255,13 @@ export function ExpenseEditor({
               aria-checked={payerId === m.id}
               onClick={() => setPayerId(m.id)}
               className={cn(
-                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
+                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-100 ease-[var(--ease-lock)]',
                 payerId === m.id
                   ? 'border-brand bg-brand text-white'
                   : 'border-line-strong bg-card text-ink hover:border-brand-deep',
               )}
             >
-              <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
+              <Avatar name={m.name} colorIndex={colorOf(m.id)} size={24} />
               <span className="min-w-0 truncate">{m.name}</span>
             </button>
           ))}
@@ -273,7 +273,7 @@ export function ExpenseEditor({
           <span className={cn(labelClass, 'mb-0')}>Người cùng chia</span>
           <button
             type="button"
-            className="-mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
+            className="-mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
             onClick={() => setParticipantIds(allSelected ? [] : members.map((m) => m.id))}
           >
             {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
@@ -289,15 +289,15 @@ export function ExpenseEditor({
                 aria-pressed={active}
                 onClick={() => toggleParticipant(m.id)}
                 className={cn(
-                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
+                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-100 ease-[var(--ease-lock)]',
                   active
                     ? 'border-brand bg-brand-soft text-brand-deep'
                     : 'border-line-strong bg-card text-ink hover:border-brand-deep',
                 )}
               >
-                <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
+                <Avatar name={m.name} colorIndex={colorOf(m.id)} size={24} />
                 <span className="min-w-0 truncate">{m.name}</span>
-                {active && <Check size={14} aria-hidden className="shrink-0" />}
+                {active && <IconCheck size={14} aria-hidden className="shrink-0" />}
               </button>
             );
           })}
@@ -309,7 +309,7 @@ export function ExpenseEditor({
           Kiểu chia
         </span>
         <div
-          className="grid grid-cols-3 gap-1 rounded-xl border border-line-strong bg-card p-1"
+          className="grid grid-cols-3 gap-1 rounded-lg border border-line-strong bg-card p-1"
           role="radiogroup"
           aria-labelledby="split-mode-label"
         >
@@ -321,7 +321,7 @@ export function ExpenseEditor({
               aria-checked={mode === m}
               onClick={() => setMode(m)}
               className={cn(
-                'inline-flex min-h-11 items-center justify-center rounded-lg px-2 font-display text-sm font-bold transition',
+                'inline-flex min-h-11 items-center justify-center rounded-lg px-2 font-display text-sm font-bold transition duration-100 ease-[var(--ease-lock)]',
                 mode === m ? 'bg-ink text-white' : 'text-ink hover:bg-brand-soft/60',
               )}
             >
@@ -358,7 +358,7 @@ export function ExpenseEditor({
               aria-live="polite"
               className={cn(
                 'text-sm font-semibold',
-                preview.diff === 0 ? 'text-credit' : 'text-debt',
+                preview.diff === 0 ? 'text-credit-ink' : 'text-debt-ink',
               )}
             >
               Đã phân bổ {formatVND(preview.sum)} / {formatVND(amount)}
@@ -393,7 +393,7 @@ export function ExpenseEditor({
                     step="any"
                     inputMode="decimal"
                     aria-label={`Số phần của ${member.name}`}
-                    className="min-h-11 w-full min-w-0 rounded-xl border border-line-strong bg-card px-3 py-2.5 text-right text-base font-semibold text-ink outline-none transition focus:border-brand-deep"
+                    className="min-h-11 w-full min-w-0 rounded-lg border border-line-strong bg-card px-3 py-2.5 text-right text-base font-semibold text-ink outline-none transition duration-100 ease-[var(--ease-lock)] focus:border-brand-deep"
                     value={weights[id] ?? 1}
                     onChange={(e) =>
                       setWeights((prev) => ({ ...prev, [id]: Number(e.target.value) }))
@@ -416,7 +416,7 @@ export function ExpenseEditor({
           {hasRemainder && (
             <details className="mt-1">
               <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-medium text-brand-deep">
-                Vì sao có người hơn vài đồng? <ChevronDown size={14} aria-hidden />
+                Vì sao có người hơn vài đồng? <IconChevronDown size={14} aria-hidden />
               </summary>
               <p className="pt-1">
                 Phần lẻ vài đồng dồn cho người đầu danh sách để tổng khớp tuyệt đối.
@@ -428,7 +428,7 @@ export function ExpenseEditor({
 
       {/* Tóm tắt validation ngay trên nút Lưu (Mẫu Validation Thống Nhất). */}
       {touched && errors.length > 0 && (
-        <ul role="alert" className="grid gap-1 text-sm font-medium text-debt">
+        <ul role="alert" className="grid gap-1 text-sm font-medium text-debt-ink">
           {errors.map((e) => (
             <li key={e}>• {e}</li>
           ))}
@@ -437,7 +437,7 @@ export function ExpenseEditor({
 
       <div className="flex flex-wrap items-start gap-2">
         <PrimaryButton disabledReason={saveReason} onClick={handleSave}>
-          <Check size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
+          <IconCheck size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
         </PrimaryButton>
         {!initial && (
           <GhostButton disabled={errors.length > 0} onClick={handleSaveAndMore}>
@@ -445,7 +445,7 @@ export function ExpenseEditor({
           </GhostButton>
         )}
         <GhostButton onClick={handleCancel}>
-          <X size={16} /> Huỷ
+          <IconX size={16} /> Huỷ
         </GhostButton>
       </div>
     </div>

@@ -4,6 +4,52 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { Expense, Session } from '@/lib/types';
 
 /**
+ * C1 settle-lock (INTERFACE-SPEC §3, REDESIGN-V3): trả về `true` trong
+ * cửa sổ 240ms của một lần khoá — nơi gọi gắn class `animate-settle-lock`
+ * cho Ô SỐ quyết toán (Strip + hàng tổng) khi cờ này bật. Giá trị hiển
+ * thị LUÔN cập nhật ngay theo dữ liệu (hook không giữ/giấu số); chỉ
+ * ANIMATION mới được gộp debounce: thay đổi tới khi cửa sổ khoá trước
+ * chưa đóng chỉ đánh dấu "còn nợ một lần khoá" — khi cửa sổ đóng, đúng
+ * MỘT lần khoá nữa chạy ở giá trị cuối; animation không bao giờ bị khởi
+ * động lại giữa chừng. Lần render đầu không khoá (chưa có thay đổi).
+ * Cấm count-up tuyệt đối (C9): số không bao giờ chạy qua giá trị dở.
+ */
+export function useSettleLock(value: number): boolean {
+  const [locking, setLocking] = useState(false);
+  const stateRef = useRef({ seen: false, animating: false, pending: false });
+  const timerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const st = stateRef.current;
+    if (!st.seen) {
+      st.seen = true;
+      return;
+    }
+    if (st.animating) {
+      st.pending = true;
+      return;
+    }
+    const start = () => {
+      st.animating = true;
+      setLocking(true);
+      timerRef.current = window.setTimeout(() => {
+        st.animating = false;
+        setLocking(false);
+        if (st.pending) {
+          st.pending = false;
+          start();
+        }
+      }, 240);
+    };
+    start();
+  }, [value]);
+
+  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  return locking;
+}
+
+/**
  * Các hook hạ tầng của Session View (ARC-11): tách khỏi
  * session-view.tsx, logic + thứ tự đăng ký effect giữ nguyên như bản
  * gốc (expansion → strip-height → keyboard, theo thứ tự SessionView
@@ -79,9 +125,9 @@ export function useStripHeightPublisher(
   // đáy viewport -> sheet phủ đúng 41px trên cùng của Strip (harness
   // scripts/geometry-stress.mjs đo wrapBottom=702 > stripTop=661 ở
   // 390px). Đo theo đỉnh dock thì sheet dừng đúng đỉnh Strip ở mọi
-  // trạng thái: thu gọn (dock = cả phần Strip nhìn thấy) lẫn mở rộng
-  // (panel phía trên dock cũng thuộc Strip — luật «Strip không bao
-  // giờ bị sheet che» áp cho toàn section).
+  // trạng thái: thu gọn (neo tại cạnh trên section — xem D4-CT-6 ở
+  // publish) lẫn mở rộng (neo tại đỉnh dock — panel phía trên dock là
+  // bề mặt sheet mở từ đó, dock là phần Strip phải luôn lộ).
   useEffect(() => {
     const dock = dockRef.current;
     const root = rootRef.current;
@@ -90,8 +136,19 @@ export function useStripHeightPublisher(
     let lastPublished = '';
     const publish = () => {
       const rect = dock.getBoundingClientRect();
+      // D4-CT-6 (sửa W3 theo Verifier B): neo phải dừng tại CẠNH TRÊN
+      // của Strip SECTION, không phải đỉnh dock — section còn border-t
+      // 1px nằm trên dock, đo từ dock làm sheet phủ đúng 1,0px hairline
+      // ở mọi ca. Khi Strip THU GỌN, cạnh trên section là mốc neo. Khi
+      // Strip MỞ RỘNG, phần panel phía trên dock là bề mặt sheet được
+      // mở từ đó (sheet QR) — mốc neo giữ ở đỉnh dock để dock luôn lộ
+      // và panel sheet không bị bóp vào phần panel mở rộng.
+      const secRect = section ? section.getBoundingClientRect() : null;
+      const stripExpanded =
+        section?.querySelector('[data-strip-summary]')?.getAttribute('aria-expanded') === 'true';
+      const anchorTop = !stripExpanded && secRect && secRect.height > 0 ? secRect.top : rect.top;
       // Strip ẩn (desktop — rail thay thế): không chừa đáy.
-      const next = rect.height === 0 ? '0px' : `${Math.max(0, window.innerHeight - rect.top)}px`;
+      const next = rect.height === 0 ? '0px' : `${Math.max(0, window.innerHeight - anchorTop)}px`;
       if (next === lastPublished) return;
       lastPublished = next;
       root.style.setProperty('--strip-h', next);

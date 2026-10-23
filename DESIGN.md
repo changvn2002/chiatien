@@ -2,33 +2,33 @@
 name: Chia Tiền
 description: Chia tiền nhóm kiểu Việt Nam — quyết toán luôn trước mắt, kèm VietQR.
 colors:
-  primary: "#B45309"
-  primary-deep: "#92400E"
-  primary-soft: "#FAECD7"
-  strip: "#FFF7E8"
-  deck-sand: "#EFE6D8"
-  paper: "#F7F3EC"
+  primary: "#A5482F"
+  primary-deep: "#8C361E"
+  primary-soft: "#FFE0D7"
+  strip: "#FFFFFF"
+  deck-sand: "#DDD1CE"
+  paper: "#FDF5F2"
   card: "#FFFFFF"
-  ink: "#1C1917"
-  ink-2: "#5C554B"
-  muted: "#6F675C"
-  line: "#E6DDCF"
-  line-strong: "#8A7A5F"
-  credit: "#177245"
-  debt: "#B3352C"
-  identity-01: "#7C4A1E"
-  identity-02: "#8A5A2B"
-  identity-03: "#7A3B2E"
-  identity-04: "#946B00"
-  identity-05: "#5E503F"
-  identity-06: "#855C1F"
-  identity-07: "#4A6741"
-  identity-08: "#6E5636"
-  identity-09: "#654321"
-  identity-10: "#7D5A3C"
-  identity-11: "#596235"
-  identity-12: "#8C6A3F"
-  ink-inverse-segment: "#1C1917"
+  ink: "#140F0E"
+  ink-2: "#685E5B"
+  muted: "#685E5B"
+  line: "#DDD1CE"
+  line-strong: "#534946"
+  credit: "#1D7725"
+  debt: "#A80011"
+  identity-01: "#CF284D"
+  identity-02: "#353C1D"
+  identity-03: "#607200"
+  identity-04: "#4C654C"
+  identity-05: "#00423F"
+  identity-06: "#224A71"
+  identity-07: "#006CD3"
+  identity-08: "#061D9D"
+  identity-09: "#5E56DE"
+  identity-10: "#5637A7"
+  identity-11: "#9F43C3"
+  identity-12: "#8A5673"
+  ink-inverse-segment: "#140F0E"
 typography:
   display:
     fontFamily: "Be Vietnam Pro, Inter, ui-sans-serif, system-ui, sans-serif"
@@ -128,72 +128,72 @@ Hệ thống tiếp tục từ chối diện mạo template AI: không gradient 
 - Một màn hình làm việc; settlement luôn hiển thị (thu gọn) và mở rộng tại chỗ (toàn văn).
 - Mọi số tiền bằng **Inter + `tnum` đã kiểm chứng ở mức file** — xem Typography; Be Vietnam Pro chỉ gánh chữ display.
 - Action Deck: nút chính `+ Thêm khoản` bất biến vị trí + nhãn ở mọi trạng thái.
-- Màu đặc duy nhất (amber); độ sâu từ lớp tông phẳng + 1 bóng hướng lên duy nhất cho dải/sheet.
+- Màu đặc duy nhất (brand seed V3 #A5482F); độ sâu từ lớp tông phẳng + hairline — bóng bề mặt tĩnh = 0 từ REDESIGN-V3 (xem hiệu đính V3 cuối tài liệu).
 - Mọi phần tử tương tác ≥44×44px; biên control đạt ≥3:1 trên nền render thật; disabled không dùng opacity và luôn kèm lý do.
 - Ngân sách bề ngang cứng: không chuỗi dữ liệu nào được quyết định bề rộng layout (LAYOUT-SPEC §0.1).
 
 ## Colors
 
-Bảng màu giấy–mực ấm với một accent hổ phách và hai màu ngữ nghĩa số dư. Mọi tỉ lệ tương phản dưới đây tính bằng **công thức WCAG relative luminance trên nền render dự kiến thật** (script Python, 2026-10-23) — nền mà phần tử thật sự nằm (paper / trắng / strip / tint / sand), không tính trên nền lý tưởng. Ngưỡng: chữ ≥4.5:1; tín hiệu phân định non-text ≥3.0:1.
+Bảng màu giấy–mực hue-seed với một seed brand duy nhất và bộ semantic dịch shift +0,02 (REDESIGN-V3 — nguồn duy nhất: `redesign-v3/chiatien/COLOR-SYSTEM.md`, thang token chép nguyên byte vào `app/globals.css`). Mọi tỉ lệ tương phản dưới đây là **số đã ký trong COLOR-SYSTEM §3/§6** hoặc tính lại bằng công thức WCAG relative luminance (script Python, 2026-10-24) trên nền render thật. Ngưỡng: chữ ≥4.5:1; tín hiệu phân định non-text ≥3.0:1.
 
-### Primary
+### Primary — thang tonal brand (neo Material Deep Orange, LK-01/02/03)
 
-- **Deep Amber** (#B45309): giọng thương hiệu — nút chính, lựa chọn đang active, focus, kẻ đôi tổng kết. Trắng trên brand: **5.02:1**. Brand làm chữ: 5.02:1 trên trắng, **4.54:1 trên paper** (chỉ chữ lớn/link ngắn), 4.72:1 trên strip (chỉ nhãn ≥14px semibold).
-- **Dark Amber** (#92400E): hover/pressed của nút chính; chữ hành động trên tint/trắng/sand. **7.09:1** trên trắng, 6.41:1 trên paper, 6.09:1 trên Amber Tint, 6.66:1 trên strip, **5.73:1 trên Deck Sand** (cặp của trạng thái disabled), 6.27:1 trên editor tint.
-- **Amber Tint** (#FAECD7): nền chip đã chọn (người cùng chia), vùng lặng. Chữ trên tint luôn là Dark Amber hoặc Ink (15.03:1).
+- **Brand-500 · Seed** (#A5482F): giọng thương hiệu — nút chính «Chốt chia», mark, app icon. Trắng trên seed: **5.89:1**.
+- **Brand-600** (#8C361E): hover/pressed của nút chính; chữ hành động (vai cũ của `brand-deep`). **7.89:1** trên trắng, 7.33:1 trên paper, 6.35:1 trên Brand Tint, **5.29:1 trên Deck Sand** (cặp của trạng thái disabled), 6.40:1 trên editor.
+- **Brand-700** (#702612): kẻ đôi (hàng tổng + chân Strip) và focus ring — hai vai brand duy nhất trên ledger ngoài CTA (LK-22/LK-41). 9.88:1 trên paper, 10.63:1 trên trắng.
+- **Brand-100 · Tint** (#FFE0D7): nền chip đã chọn (người cùng chia), vùng lặng. Chữ trên tint luôn là Brand-600 (6.35:1) hoặc Ink (15.30:1).
+- Brand-300/400 (#EBA38F/#D67D65) **cấm trên màn quyết toán/QR/chia sẻ** (LK-41); brand-900 (#3A0F04) **không vai** — cấm gán cho bất kỳ bề mặt/chữ/mark nào.
 
-### Neutral & Surfaces
+### Neutral & Surfaces — thang hue-seed (C trần 0,010)
 
-- **Warm Paper** (#F7F3EC): nền app. Ink trên paper: **15.81:1**.
-- **Settlement Cream** (#FFF7E8, token `strip`, MỚI — thay Rail Cream #FFFBEB của v1): bề mặt dải quyết toán + cột quyết toán desktop. Ink **16.42:1** · ink-2 6.91:1 · muted 5.23:1 · credit 5.59:1 · debt 5.70:1 · brand-deep 6.66:1 · biên line-strong trên strip **3.92:1**.
-- **Deck Sand** (#EFE6D8, MỚI): bề mặt duy nhất của trạng thái disabled. Brand-deep trên sand 5.73:1 · ink 14.14:1 · ink-2 5.95:1.
-- **Card White** (#FFFFFF): bề mặt sheet, ô nhập, chip nghỉ. Ink 17.49:1.
-- **Ink** (#1C1917): chữ chính + mọi số tiền (Figure kế thừa màu Ink trừ khi mang ngữ nghĩa số dư).
-- **Ink-2** (#5C554B, MỚI): chữ phụ ấm cho meta ledger — đạt ≥4.5:1 trên **mọi** nền của hệ (paper 6.65 · trắng 7.35 · strip 6.91 · editor tint 6.50 · sand 5.95) nên là họ chữ phụ duy nhất được đứng trên tint.
-- **Warm Muted** (#6F675C): chữ phụ cấp 3 — chỉ trên paper (5.04:1), trắng (5.57:1), strip (5.23:1). Không đặt trên tint/sand.
-- **Warm Line** (#E6DDCF): hairline chia hàng trong bảng (1.35:1 trên trắng — **không bao giờ** là tín hiệu phân định duy nhất; luôn đi kèm khoảng trắng + thay đổi nội dung).
-- **Line Strong** (#8A7A5F): biên ô nhập/control + biên trên của Settlement Strip + biên trái cột quyết toán desktop — mọi nơi nó đóng vai phân định đều ≥3:1: trắng **4.18:1** · paper 3.77:1 · editor tint 3.69:1 · strip 3.92:1.
-- **Placeholder** (#786D5B): 5.08:1 trên trắng, 4.59:1 trên paper — không xám mờ.
+- **Paper** (#FDF5F2): nền app. Ink trên paper: **17.67:1**.
+- **Strip** (#FFFFFF, token `strip`): bề mặt dải quyết toán + cột quyết toán desktop (V3: Strip là chân bảng trắng cùng bề mặt với ledger, phân tầng bằng hairline — thay Settlement Cream của V2). Ink **19.01:1** · muted 6.29:1 · credit-solid 5.65:1 · debt-solid 7.86:1 · brand-600 7.89:1.
+- **Deck Sand** (#DDD1CE, neutral-200): bề mặt duy nhất của trạng thái disabled. Brand-600 trên sand 5.29:1 · ink 12.75:1 · muted 4.22:1 (muted không đứng trên sand — chỉ ink và brand-600 gánh chữ trên sand).
+- **Card White** (#FFFFFF): bề mặt sheet, ô nhập, chip nghỉ. Ink 19.01:1.
+- **Ink** (#140F0E, neutral-950): chữ chính + **mọi con số ở mọi frame** (LK-22 — kể cả số dư mang ngữ nghĩa: dấu +/− và chú thích dấu gánh ngữ nghĩa, số vẫn là Ink; trạng thái số dư đọc thêm qua nhãn/chip semantic ở kề bên).
+- **Muted / Placeholder** (#685E5B, neutral-600): họ chữ phụ duy nhất của V3 — paper 5.84:1 · trắng 6.29:1 · editor 5.10:1 (cặp placeholder/editor đã ký). Token `ink-2` giữ làm alias của muted cho meta ledger.
+- **Line** (#DDD1CE, neutral-200): hairline chia hàng trong bảng (1.49:1 trên trắng — **không bao giờ** là tín hiệu phân định duy nhất; luôn đi kèm khoảng trắng + thay đổi nội dung).
+- **Line Control** (#534946, neutral-700; token `line-strong` trỏ về đây): biên ô nhập/control + biên trên của Settlement Strip + biên trái cột quyết toán desktop — **8.10:1** trên paper · 8.72:1 trên trắng · 7.07:1 trên editor, mọi nơi đều ≥3:1.
 
-### Semantic
+### Semantic — instance dịch shift +0,02 (LK-13, đủ 4 phần bg/border/solid/ink)
 
-- **Ledger Green** (#177245): số dư dương — luôn kèm dấu `+` và chú thích dấu thường trực ở bảng số dư. Trắng trên green 5.95:1; green trên trắng 5.95:1, trên paper 5.38:1, trên strip 5.59:1.
-- **Brick Red** (#B3352C): số dư âm, phá huỷ, lỗi — luôn kèm dấu `−` hoặc chữ mô tả. Trắng trên brick 6.07:1; brick trên trắng 6.07:1, trên paper 5.48:1, trên strip 5.70:1.
+- **Credit** (được trả): bg #E4FDE3 · border #9CCD9B · solid #1D7725 · ink #004F09 (ink/bg **9.17:1** · trắng/solid 5.65:1) — luôn kèm dấu `+` và chú thích dấu thường trực ở bảng số dư.
+- **Debt** (còn nợ): bg #FFF2F0 · border #FFA096 · solid #A80011 · ink #6B0006 (ink/bg **11.80:1** · trắng/solid 7.86:1) — luôn kèm dấu `−` hoặc chữ mô tả.
+- **Warning** (đang chờ): bg #FFF3E9 · border #F1AD76 · solid #AB5E00 · ink #783F00 (ink/bg **7.67:1** · trắng/solid 4.85:1).
+- **Info**: bg #E4F0FF · solid #255EA6 (5.64:1 trên bg · 6.04:1 trên paper · trắng/solid 6.50:1).
 
-### Identity (danh tính thành viên — Panel-02 M-2)
+### Identity (danh tính thành viên — COLOR-SYSTEM §4, LK-14/15/16)
 
-Palette **riêng cho avatar**, 12 màu tông đất/ấm (`identity-01…12` ở frontmatter), mọi màu đạt ≥4.5:1 với chữ initials trắng (đo công thức WCAG, 2026-10-23): #7C4A1E (7.35) · #8A5A2B (5.87) · #7A3B2E (8.43) · #946B00 (4.81) · #5E503F (7.79) · #855C1F (5.92) · #4A6741 (6.35) · #6E5636 (6.89) · #654321 (8.83) · #7D5A3C (6.18) · #596235 (6.52) · #8C6A3F (4.94). Cơ chế gán (seed từ tên chuẩn hoá + thứ tự trong payload, chống trùng xác định trong nhóm) ở DESIGN-LANGUAGE §8.
+Palette **riêng cho avatar**, 12 ô của lens-11 (`identity-01…12` ở frontmatter) — đầu ra phép tìm kiếm max-min trên lưới OKLCH với ràng buộc kênh đĩa + initials + viền, KHÔNG phải nền đặc. Số ký I-1 (contrast của initials trên giấy / trên đĩa #FAF3F1): #CF284D (4.80/4.71) · #353C1D (10.75/10.55) · #607200 (5.00/4.91) · #4C654C (5.96/5.85) · #00423F (10.55/10.35) · #224A71 (8.54/8.38) · #006CD3 (4.78/4.69) · #061D9D (11.69/11.47) · #5E56DE (5.05/4.96) · #5637A7 (7.81/7.66) · #9F43C3 (4.80/4.71) · #8A5673 (5.33/5.23) — mọi ô ≥4.5:1 trên cả hai nền (test hồi quy trong `lib/identity.spec.ts`). Cơ chế render (đĩa + initials + viền) và cơ chế gán (QUYẾT ĐỊNH M-2: seed chỉ-tên + thứ tự chuẩn) ở mục Avatar và hiệu đính V3.
 
-**The Identity Palette Rule.** Màu danh tính chỉ lấy từ `identity-01…12`. **Cấm tuyệt đối** dùng `brand`, `brand-deep`, `credit`, `debt` làm màu avatar — màu ngữ nghĩa tiền và màu hành động không bao giờ đóng vai danh tính một con người (bản live để `#177245` Ledger Green lọt vào palette avatar — lỗi M-2). Ngược lại, màu `identity-*` không được dùng cho số dư, nút, focus hay trạng thái.
+**The Identity Palette Rule.** Màu danh tính chỉ lấy từ `identity-01…12`. **Cấm tuyệt đối** dùng `brand`, `credit`, `debt`, `warning` làm màu avatar — màu ngữ nghĩa tiền và màu hành động không bao giờ đóng vai danh tính một con người. Ngược lại, màu `identity-*` không được dùng cho số dư, nút, focus hay trạng thái. Bộ palette cũ của V2 chết hẳn (LK-14) — không hex nào của nó được quay lại ở bất kỳ sink nào.
 
-### Bảng tương phản (nền render dự kiến thật)
+### Bảng tương phản (số đã ký COLOR-SYSTEM §6 + đo lại 2026-10-24)
 
 | Chữ / tín hiệu | Nền thật | Tỉ lệ | Đạt |
 |---|---|---:|---|
-| Ink #1C1917 | paper #F7F3EC | 15.81:1 | AA ✓ |
-| Ink #1C1917 | trắng #FFFFFF | 17.49:1 | AA ✓ |
-| Ink #1C1917 | strip #FFF7E8 | 16.42:1 | AA ✓ |
-| Ink #1C1917 | Amber Tint #FAECD7 | 15.03:1 | AA ✓ |
-| Ink-2 #5C554B | paper / trắng / strip / tint / sand | 6.65 / 7.35 / 6.91 / 6.50 / 5.95:1 | AA ✓ (mọi nền) |
-| Muted #6F675C | paper / trắng / strip | 5.04 / 5.57 / 5.23:1 | AA ✓ (chỉ 3 nền này) |
-| Trắng #FFFFFF | brand #B45309 | 5.02:1 | AA ✓ |
-| Trắng #FFFFFF | brand-deep #92400E | 7.09:1 | AA ✓ |
-| Brand-deep #92400E | Amber Tint #FAECD7 | 6.09:1 | AA ✓ |
-| Brand-deep #92400E | strip #FFF7E8 | 6.66:1 | AA ✓ |
-| Brand-deep #92400E (disabled) | Deck Sand #EFE6D8 | 5.73:1 | AA ✓ |
-| Credit #177245 | trắng / paper / strip | 5.95 / 5.38 / 5.59:1 | AA ✓ |
-| Debt #B3352C | trắng / paper / strip | 6.07 / 5.48 / 5.70:1 | AA ✓ |
-| Placeholder #786D5B | trắng / paper | 5.08 / 4.59:1 | AA ✓ |
-| Line Strong #8A7A5F (non-text) | trắng / paper / tint / strip | 4.18 / 3.77 / 3.69 / 3.92:1 | ≥3:1 ✓ |
-| Focus (brand-deep, non-text) | paper | 6.41:1 | ≥3:1 ✓ |
+| Trắng #FFFFFF | brand-500 #A5482F | 5.89:1 | AA ✓ |
+| Trắng #FFFFFF | brand-600 #8C361E | 7.89:1 | AA ✓ |
+| Ink #140F0E | paper #FDF5F2 | 17.67:1 | AA ✓ |
+| Ink #140F0E | trắng #FFFFFF (strip/card) | 19.01:1 | AA ✓ |
+| Muted #685E5B | paper | 5.84:1 | AA ✓ |
+| Placeholder #685E5B | editor #F1E5E1 | 5.10:1 | AA ✓ |
+| Brand-600 #8C361E | tint #FFE0D7 | 6.35:1 | AA ✓ |
+| Brand-600 #8C361E (disabled) | Deck Sand #DDD1CE | 5.29:1 | AA ✓ |
+| Brand-700 #702612 (kẻ đôi/focus) | paper / trắng | 9.88 / 10.63:1 | ≥3:1 ✓ |
+| Line Control #534946 (non-text) | paper / trắng / editor | 8.10 / 8.72 / 7.07:1 | ≥3:1 ✓ |
+| Credit ink #004F09 | credit-bg #E4FDE3 | 9.17:1 | AA ✓ |
+| Debt ink #6B0006 | debt-bg #FFF2F0 | 11.80:1 | AA ✓ |
+| Warning ink #783F00 | warning-bg #FFF3E9 | 7.67:1 | AA ✓ |
+| Info solid #255EA6 | paper | 6.04:1 | AA ✓ |
 
 ### Named Rules
 
 **The No Gradient Rule.** Không gradient — trang trí, thương hiệu hay chữ — ở bất cứ đâu.
 
-**The One Amber Rule.** Hổ phách chỉ cho: hành động chính, lựa chọn đang active, focus, kẻ đôi tổng kết. Không nền trang trí, không icon tô amber hàng loạt, không chip nghỉ màu amber.
+**The One Brand Rule** (V2 gọi là One Amber Rule — đổi tên theo hệ màu V3, luật không đổi). Brand chỉ cho: hành động chính, lựa chọn đang active, focus, kẻ đôi tổng kết. Không nền trang trí, không icon tô brand hàng loạt, không chip nghỉ màu brand. Trên ledger/Strip, điểm brand ngoài tập đóng {CTA «Chốt chia» · kẻ đôi hàng tổng · kẻ đôi chân Strip · focus ring đang active} = 0 (LK-41).
 
-**The Selected States Rule (Panel-02 MINOR — hệ thống hoá ba mẫu "đã chọn").** Bản live dùng ba ngôn ngữ "đã chọn" trong cùng một sheet (amber đặc / amber tint + dấu tích / segmented ink) mà không khai luật — trên giấy căng thẳng với One Amber Rule. V2 khai thành **ba token có tên, mỗi mẫu một vai duy nhất, không hoán đổi**: (1) `chip-select-solid` (brand đặc, chữ trắng) = **chọn-1 mang tính cam kết tức thì** — người trả của khoản chi (radio semantics); (2) `chip-selected` (Amber Tint + chữ Dark Amber + dấu tích) = **chọn-nhiều đang tích luỹ** — người cùng chia (`aria-pressed`); (3) `segmented-selected-ink` (Ink đặc, chữ trắng) = **chuyển chế độ/chế độ xem** — segmented kiểu chia và mọi segmented control về sau. Ink ở mẫu (3) là ngoại lệ **đã khai** của One Amber Rule: segmented chuyển *chế độ làm việc*, không phải chọn *đối tượng tiền*, nên nó mang màu mực trung tính thay vì màu hành động — ghi rõ ở đây để hết căng thẳng trên giấy; mẫu thứ tư cho "đã chọn" bị cấm.
+**The Selected States Rule (Panel-02 MINOR — hệ thống hoá ba mẫu "đã chọn").** Bản live dùng ba ngôn ngữ "đã chọn" trong cùng một sheet (brand đặc / brand tint + dấu tích / segmented ink) mà không khai luật — trên giấy căng thẳng với One Brand Rule. V2 khai thành **ba token có tên, mỗi mẫu một vai duy nhất, không hoán đổi**: (1) `chip-select-solid` (brand đặc, chữ trắng) = **chọn-1 mang tính cam kết tức thì** — người trả của khoản chi (radio semantics); (2) `chip-selected` (Brand Tint + chữ Brand-600 + dấu tích) = **chọn-nhiều đang tích luỹ** — người cùng chia (`aria-pressed`); (3) `segmented-selected-ink` (Ink đặc, chữ trắng) = **chuyển chế độ/chế độ xem** — segmented kiểu chia và mọi segmented control về sau. Ink ở mẫu (3) là ngoại lệ **đã khai** của One Brand Rule: segmented chuyển *chế độ làm việc*, không phải chọn *đối tượng tiền*, nên nó mang màu mực trung tính thay vì màu hành động — ghi rõ ở đây để hết căng thẳng trên giấy; mẫu thứ tư cho "đã chọn" bị cấm.
 
 **The Strip Rule.** Settlement Strip không bao giờ vắng mặt trên màn làm việc và không bao giờ bị sheet che. Thu gọn nó vẫn là quyết toán (tổng + lệnh đầu); mở rộng nó là toàn văn. Không tồn tại bề mặt quyết toán thứ hai nào khác ngoài cột desktop — và cột đó là cùng một component ở dạng thường trực.
 
@@ -251,13 +251,13 @@ Nhịp: hàng ledger 52px, hàng quyết toán 56px; nhóm liên quan cách 8px,
 
 ## Elevation & Depth
 
-Độ sâu theo tông: bảng phẳng trên paper, Strip kem sâu hơn, sheet trắng. Hai bóng duy nhất: **Strip shadow** hướng lên (`0 -1px 2px rgba(28,25,23,.05), 0 -12px 32px rgba(28,25,23,.07)`) cho Strip + sheet; **Card shadow** của v1 chỉ còn cho card tạo mới ở Màn A (`0 1px 2px rgba(28,25,23,.05), 0 8px 24px rgba(28,25,23,.06)`). Không bóng cứng, không quầng màu, không kính mờ, không glow (loại tường minh ảnh hưởng Raycast-dark ở điểm này).
+Độ sâu theo tông và kẻ: bảng phẳng trên paper, Strip trắng cùng bề mặt với ledger, sheet trắng. **REDESIGN-V3: bóng trên bề mặt tĩnh = 0** (LK-32) — Strip phân tầng bằng hairline `line-control` phía trên, sheet phân tầng bằng lớp phủ + hairline; hai bóng của V2 (Strip shadow hướng lên, Card shadow) đã bị xoá cùng token `--shadow-card`/`--shadow-lift`. Không bóng cứng, không quầng màu, không kính mờ, không glow (loại tường minh ảnh hưởng Raycast-dark ở điểm này).
 
 ### Named Rules
 
 **The Flat Table Rule.** Ledger và bảng quyết toán là bảng: hàng chia bằng hairline hoặc kẻ đôi (ở hàng tổng), không bằng hộp bo tròn có nền riêng. Không card trong card; v2 đi xa hơn v1 — không card bao quanh bảng.
 
-**The Double Rule.** Hàng tổng luôn có kẻ đôi amber ở phía trên: hai đường `brand` cao 1px, cách nhau 3px (tổng vệt 5px), triển khai bằng hai pseudo-element để độ dày nằm trong token — không dùng `border-top: 3px double` vì độ dày của nó không kiểm soát được theo token. Đây là dấu chữ ký của hệ, xuất hiện ở: hàng tổng ledger, hàng tổng bảng quyết toán, chân OG, logo.
+**The Double Rule.** Hàng tổng luôn có kẻ đôi brand-700 ở phía trên: hai đường `brand-700` cao 1px, cách nhau 3px (tổng vệt 5px), triển khai bằng hai lớp background-image để độ dày nằm trong token — không dùng `border-top: 3px double` vì độ dày của nó không kiểm soát được theo token. Đây là dấu chữ ký của hệ — nó chính là hai cạnh của kênh ngang trong mark «Kẻ Đôi» — và chỉ sống ở đúng 2 vị trí {hàng tổng, chân Strip}, ≤1 cụm/viewport ở mọi frame (LK-22/LK-41).
 
 ## Shapes
 
@@ -267,10 +267,10 @@ Radius: sheet/dialog 16px (chỉ bo hai góc trên ở mobile), nút/ô nhập 1
 
 ### Buttons
 
-- **Primary:** nền Deep Amber đặc, nhãn Be Vietnam Pro 700 trắng 15px, radius 12px, cao 48px ở Deck/CTA chính (tối thiểu 44px ở nơi khác). Hover/pressed: Dark Amber. **Disabled:** nền Deck Sand + nhãn Dark Amber (5.73:1 trên sand) + biên line-strong + lý do 1 dòng ink-2 13px ngay tại nút (`aria-describedby`) + giữ focus được bằng `aria-disabled` — **không bao giờ dùng opacity**. Một nút chính mỗi bề mặt.
+- **Primary:** nền Brand-500 đặc, nhãn Be Vietnam Pro 700 trắng 15px, radius 12px, cao 48px ở Deck/CTA chính (tối thiểu 44px ở nơi khác). Hover/pressed: Brand-600. **Disabled:** nền Deck Sand + nhãn Brand-600 (5.29:1 trên sand) + biên line-strong + lý do 1 dòng ink-2 13px ngay tại nút (`aria-describedby`) + giữ focus được bằng `aria-disabled` — **không bao giờ dùng opacity**. Một nút chính mỗi bề mặt.
 - **Ghost:** nền trắng, viền `line`, nhãn Ink; hover viền brand + chữ brand-deep.
 - **Icon button:** 44×44px (48px trong Deck), nền trong suốt trên Strip / trắng trên paper, viền `line`; biến thể danger hover sang Brick Red. Luôn có `aria-label`.
-- **Focus (mọi control):** outline 2px Dark Amber (6.41:1 trên paper) offset 2px ở `:focus-visible`.
+- **Focus (mọi control):** outline 2px Brand-700 (9.88:1 trên paper) offset 2px ở `:focus-visible`.
 
 ### Action Deck & Settlement Strip (signature)
 
@@ -282,7 +282,7 @@ Hàng 52px, grid `minmax(0,1fr) auto`: trái 2 dòng (tên khoản Inter 500 15p
 
 ### Chips (thành viên)
 
-Chip ở Member Strip: avatar DiceBear 32px + tên truncate ≤96px + chấm trạng thái QR 8px (chấm/`Có QR` chỉ khẳng định với bank đã qua validation — Verified Claim Rule). Trong sheet, ba mẫu "đã chọn" theo **Selected States Rule**: chọn-1 (người trả) = `chip-select-solid` brand đặc chữ trắng (radio); chọn-nhiều (người cùng chia) = `chip-selected` Amber Tint + chữ Dark Amber + dấu tích (`aria-pressed`); segmented (kiểu chia) mẫu đã chọn = `segmented-selected-ink` Ink đặc chữ trắng. Không mẫu thứ tư.
+Chip ở Member Strip: đĩa avatar 28px (cơ chế đĩa + initials + viền ở mục Avatar) + tên truncate ≤96px + chấm trạng thái QR 8px (chấm/`Có QR` chỉ khẳng định với bank đã qua validation — Verified Claim Rule). Trong sheet, ba mẫu "đã chọn" theo **Selected States Rule**: chọn-1 (người trả) = `chip-select-solid` brand đặc chữ trắng (radio); chọn-nhiều (người cùng chia) = `chip-selected` Brand Tint + chữ Brand-600 + dấu tích (`aria-pressed`); segmented (kiểu chia) mẫu đã chọn = `segmented-selected-ink` Ink đặc chữ trắng. Không mẫu thứ tư.
 
 ### Sheets
 
@@ -290,13 +290,15 @@ Action Sheet neo trên Strip (mobile) / dialog 560px (desktop): header 52px (đ�
 
 ### Inputs / Fields
 
-Nền trắng, viền **Line Strong 1px** (≥3:1 trên mọi nền thật — bảng ở trên), radius 12px, chữ 16px. Focus: viền Dark Amber + outline toàn cục. Placeholder #786D5B — và placeholder phải vừa ở 320px, không cụt giữa từ (§0.1 luật 7 của LAYOUT-SPEC). **MoneyInput:** Figure (Inter tnum) căn phải, hậu tố `₫` ink-2, tự nhóm nghìn khi gõ, vùng chạm/focus của toàn khung ≥44px cao (diệt finding MoneyInput 24px của panel); **trần nhập 999.999.999.999 ₫** — không nhận thêm chữ số tại trần, dán vượt trần bị chặn kèm lỗi tại trường (Panel-02 M-4; quan hệ với trần sanitize `MAX_AMOUNT_VND = 10¹⁶` ở DESIGN-LANGUAGE §12.3). Lỗi: Brick Red + `role="alert"`, nêu vấn đề + cách sửa, tại trường **và** liệt kê ngay trên nút Lưu của sheet — theo **Mẫu Validation Thống Nhất** (DESIGN-LANGUAGE §13.1, Panel-02 D-5): một thời điểm kiểm, một vị trí lỗi, một nguồn hàm kiểm ở lib cho mỗi loại dữ kiện. Ô Số tài khoản dùng `accountNumberError` của `lib/vietqr.ts` (8–19 ký tự chữ-số sau chuẩn hoá, ≥1 chữ số — Panel-02 M-3).
+Nền trắng, viền **Line Control 1px** (≥3:1 trên mọi nền thật — bảng ở trên), radius 12px, chữ 16px. Focus: viền Brand-600 + outline toàn cục. Placeholder #685E5B — và placeholder phải vừa ở 320px, không cụt giữa từ (§0.1 luật 7 của LAYOUT-SPEC). **MoneyInput:** Figure (Inter tnum) căn phải, hậu tố `₫` ink-2, tự nhóm nghìn khi gõ, vùng chạm/focus của toàn khung ≥44px cao (diệt finding MoneyInput 24px của panel); **trần nhập 999.999.999.999 ₫** — không nhận thêm chữ số tại trần, dán vượt trần bị chặn kèm lỗi tại trường (Panel-02 M-4; quan hệ với trần sanitize `MAX_AMOUNT_VND = 10¹⁶` ở DESIGN-LANGUAGE §12.3). Lỗi: Debt solid #A80011 + `role="alert"`, nêu vấn đề + cách sửa, tại trường **và** liệt kê ngay trên nút Lưu của sheet — theo **Mẫu Validation Thống Nhất** (DESIGN-LANGUAGE §13.1, Panel-02 D-5): một thời điểm kiểm, một vị trí lỗi, một nguồn hàm kiểm ở lib cho mỗi loại dữ kiện. Ô Số tài khoản dùng `accountNumberError` của `lib/vietqr.ts` (8–19 ký tự chữ-số sau chuẩn hoá, ≥1 chữ số — Panel-02 M-3).
 
 **The Verified Claim Rule (Panel-02 T2-11).** Mọi khẳng định trên UI về một dữ kiện ("Có QR", "đã điền sẵn", trạng thái đã lưu/đã đồng bộ) chỉ được hiển thị khi dữ kiện đó đã qua kiểm chứng tương ứng tại thời điểm hiển thị; dữ liệu cũ chưa qua kiểm chứng phải kiểm lại khi hiển thị, không đạt thì hiện trạng thái trung thực thay vì giữ khẳng định. Khẳng định không suy được từ trạng thái đã kiểm chứng là một AI-tell loại provenance — cấm ở mọi bề mặt, gồm FAQ và bản copy.
 
 ### Avatar
 
-DiceBear `initials` sinh tại client (@dicebear/core + collection), **không gọi HTTP API** — cơ chế danh tính **viết lại theo Panel-02 M-2** (bản spec gốc ghim màu bằng hash của member id + palette 4 màu chứa cả credit/debt/brand: bị panel bác cả ba điểm). Nay: ký tự lấy từ tên hiển thị của thành viên; **màu suy xác định từ tên đã chuẩn hoá + thứ tự của thành viên trong mảng `members` của payload share v2** (FNV-1a-32 → `identity-01…12`), **không dùng member id** (import cấp id mới — gốc lỗi đổi màu xuyên máy); trong cùng một cuộc chia, màu được **gán phân biệt xác định** (thăm tuyến tính khi va chạm theo thứ tự payload) nên không hai thành viên nào trùng màu trong giới hạn nhóm 12 người. Palette danh tính riêng ở mục Colors (Identity Palette Rule — cấm brand/brand-deep/credit/debt làm màu người). Render bằng **SVG inline trong DOM** (không qua `<img>`) để glyph kế thừa Be Vietnam Pro 700 đã tải của trang — diệt lỗi fallback sans theo OS. Tên luôn đứng cạnh avatar — avatar không bao giờ là tín hiệu duy nhất. Chi tiết thuật toán + giới hạn: DESIGN-LANGUAGE §8.
+**Cơ chế V3 (LK-15/16 — thay hẳn DiceBear và nền đặc):** đĩa tròn nền neutral-50 #FAF3F1 **chung cho mọi thành viên, đĩa không mang identity, ĐÓNG BĂNG**; **initials** từ tên hiển thị, Inter 600 mang màu ô identity của thành viên (11px @ đĩa 28 · 12px @ 32 · 10px @ 24); **viền** solid cùng ô (2px @ 28/32 · 1,5px @ 24). Đĩa chuẩn ledger 28px, trần cứng 32px, ≤8 đĩa/viewport (>8 → 24px). Tên luôn đứng cạnh avatar — avatar không bao giờ là tín hiệu duy nhất (kênh 3: khung hình học theo chỉ số + tầng L). Identity tĩnh tuyệt đối: 0 animation/pulse/scale-khi-chọn (LK-17).
+
+**Cơ chế gán — QUYẾT ĐỊNH M-2 của wave V3 (2026-10-24, thay cơ chế (tên + ordinal) của Panel-02 M-2):** màu ứng viên chỉ suy từ **tên đã chuẩn hoá** — `fnv1a32(nameKey) % 12` → `identity-01…12` — ordinal bị bỏ khỏi seed; việc gán đi theo **thứ tự chuẩn** (nameKey tăng dần, ordinal gốc làm tie-break cuối cho tên trùng tuyệt đối) với thăm tuyến tính chống va chạm, rồi ánh xạ về vị trí gốc; nhóm >12 giữ vòng hai (màu, glyph). **Không dùng member id** ở bất kỳ bước nào. Hệ quả: tên phân biệt ⇒ màu chỉ phụ thuộc tập tên — bất biến chéo thứ tự/máy/id; tên trùng ⇒ tập màu của nhóm tên ổn định, gán cá nhân theo thứ tự chèn trong nhóm; thêm người chỉ đổi màu trong chuỗi va chạm chứa tên mới. Chi tiết thuật toán + test bất biến: `lib/identity.ts` / `lib/identity.spec.ts`. Palette danh tính riêng ở mục Colors (Identity Palette Rule — cấm brand/credit/debt/warning làm màu người).
 
 ### Navigation
 
@@ -304,7 +306,7 @@ Không tab bar, không stepper. AppBar: mark + tên (H1 duy nhất) + trạng th
 
 ### Settlement (bảng quyết toán)
 
-Ai trả ai trước, Số dư sau (kèm dòng chú thích `Dấu + là được nhận lại, dấu − là trả thêm.` thường trực), hàng tổng kẻ đôi cuối. Mỗi lệnh: avatar + tên hai đầu (truncate), mũi tên Lucide amber, Figure 700, nút VietQR **hoặc** trạng thái hạng nhất "Chưa có mã QR trên máy này" + 2 đường đi (LAYOUT-SPEC §5). Toàn văn copy được thành text cho Zalo/Messenger (định dạng giữ nguyên bản hiện hành).
+Ai trả ai trước, Số dư sau (kèm dòng chú thích `Dấu + là được nhận lại, dấu − là trả thêm.` thường trực), hàng tổng kẻ đôi cuối. Mỗi lệnh: avatar + tên hai đầu (truncate), glyph khía đôi tĩnh màu Ink (di sản mark B ở vai glyph quyết toán — không bao giờ là brand, không animate), Figure 700, nút VietQR **hoặc** trạng thái hạng nhất "Chưa có mã QR trên máy này" + 2 đường đi (LAYOUT-SPEC §5). Toàn văn copy được thành text cho Zalo/Messenger (định dạng giữ nguyên bản hiện hành).
 
 ### Share & VietQR — luật dữ liệu (BLOCKER)
 
@@ -324,7 +326,7 @@ Chỉ báo offline nằm **trong Settlement Strip** (dòng trên dòng chốt; �
 
 ## Motion
 
-Ba chuyển động duy nhất đã khai: mở sheet 160ms, mở rộng Strip 200ms, chèn hàng 120ms fade — chỉ `transform`/`opacity`, easing `cubic-bezier(0.2, 0, 0, 1)`. Không bounce/elastic, không animate layout (width/height/top). `prefers-reduced-motion`: tắt hết, xuất hiện tức thì. Mọi thời lượng đề xuất >200ms phải quay lại sửa tài liệu này trước khi implementation dùng.
+**Bộ motion C1–C9 của REDESIGN-V3** (INTERFACE-SPEC §3 — thay bộ ba chuyển động của V2): tập duration hợp lệ duy nhất {65, 90, 100, 125, 170, 190, 240}ms; mọi easing là token có tên — `--ease-lock: cubic-bezier(0.15, 0, 0, 1)` · `--ease-step: cubic-bezier(0.3, 0, 0, 1)` · `--ease-leave: cubic-bezier(0.3, 0, 1, 1)` (LK-37: easing vô danh = 0). Hạt nhân là C1 settle-lock 240ms cho ô số quyết toán (số luôn là `--ink` ở mọi frame); kẻ đôi tĩnh xuất hiện ở t=0 không animation riêng (C7); identity + QR tĩnh tuyệt đối (C8); cấm count-up/odometer, overshoot/bounce, stagger trên danh sách tiền (C9). Chỉ `transform`/`opacity`, không animate layout. `prefers-reduced-motion`: theo bảng rút gọn của C1–C9 (số đổi tức thì, displacement 0px).
 
 ## Do's and Don'ts
 
@@ -334,7 +336,7 @@ Ba chuyển động duy nhất đã khai: mở sheet 160ms, mở rộng Strip 20
 - **Do** giữ Strip luôn hiện và luôn đúng: nó là quyết toán, không phải bản xem trước của quyết toán.
 - **Do** để mọi chuỗi động truncate trong ô `min-width: 0` — dữ liệu dài là ca thường, không phải ca biên.
 - **Do** thiết kế disabled bằng bề mặt + lý do, giữ focus được.
-- **Do** tiêu amber chỉ cho hành động, lựa chọn, focus, kẻ đôi tổng kết.
+- **Do** tiêu brand chỉ cho hành động, lựa chọn, focus, kẻ đôi tổng kết.
 
 ### Don't
 
@@ -426,3 +428,17 @@ Một bề mặt workspace-có-dữ-kiện «trong ngân sách» khi số từ t
 **Phạm vi.** Công thức trên chỉ quản bề mặt **workspace-có-dữ-kiện**. Trần điểm của **trang chủ** (≤95 từ tĩnh mobile · ≤155 desktop gồm aside) và **workspace rỗng** (≤50 mobile, Strip thu gọn) ở mục hiệu đính 2026-10-23 **giữ nguyên không đổi** — Panel #04 đã kiểm đạt trên live (trang chủ 77 ≤ 95 mobile · 126 ≤ 155 desktop); đợt này không đo lại và không tuyên bố gì thêm về hai bề mặt đó.
 
 **Quy tắc Verified Claim cho tuyên bố ngân sách về sau.** Mọi tuyên bố «trong ngân sách» / «đã đóng Finding ngân sách» từ nay phải kèm đủ: bề mặt + fixture + bộ biến (M, E, Q, V, K) + phương pháp đếm ở mục này + số đo trên render của **chính build được tuyên bố**. Số suy từ mã nguồn, từ mẫu khác cỡ, hoặc từ build khác đều không được tuyên bố là số đo render. Finding ngân sách chỉ được đóng khi dự báo công thức khớp số đo render trong ±3 từ trên mọi bề mặt của fixture chuẩn (đợt này: khớp tuyệt đối 8/8).
+
+## Hiệu đính REDESIGN-V3 (2026-10-24 — hồ sơ redesign-v3/chiatien, verdict vòng 3 + LK-01→47)
+
+**Phạm vi hiệu đính.** Mục này ghi lại đợt thay hệ thiết kế V3 («Kẻ Đôi Kết Toán» / «Sổ kép hai cột kẻ») trên nền tài liệu V2 ở trên. Nơi nào thân tài liệu đã được sửa trực tiếp sang hệ V3 (frontmatter, mục Colors, Avatar, Elevation, Motion, Double Rule, Buttons/Inputs) thì bản sửa là hiện hành; mục này là sổ ghi quyết định để truy vết. Nguồn sự thật duy nhất của V3: `~/workspace/mini-apps/redesign-v3/chiatien/` (IDENTITY.md · COLOR-SYSTEM.md · TYPE-AND-ICON.md · INTERFACE-SPEC.md · assets/) — cấm dùng `assets-draft/`. Chuỗi cảnh báo DATA-04(ii), headline/bullets được bảo vệ và công thức ngân sách chữ ở hai mục hiệu đính ngay trên **không đổi một ký tự** trong đợt này.
+
+**Seed + thang token mới.** Brand seed khoá nguyên byte **#A5482F** (LK-02; sàn chroma vĩnh viễn 0,129 — LK-03), thang tonal brand-50…950 suy từ neo Material Deep Orange (LK-01), neutral hue-seed (paper #FDF5F2 · ink #140F0E · line-control #534946), semantic là instance dịch **+0,02** đủ 12/12 phần bg/border/solid/ink (LK-13), identity là **12 ô mới của lens-11** (LK-14 — bộ cũ chết hẳn). Toàn bộ thang đã chép nguyên byte vào `app/globals.css` từ `assets/tokens.css`; ba hex strict-white bị cấm (#A9404A · #4571A1 · #904530 — LK-04) xuất hiện 0 lần ở mọi sink. Mark mới «Kẻ Đôi»: một khối sổ bị kênh dọc 65:35 và kênh ngang cắt thành bốn khối, một path một fill — kẻ đôi tổng kết chính là hai cạnh của kênh ngang của mark. Bóng bề mặt tĩnh = 0 (token `--shadow-card`/`--shadow-lift` bị xoá; Strip phân tầng bằng hairline).
+
+**Cơ chế avatar đĩa/initials/viền.** Nền avatar đặc (kể cả DiceBear `backgroundColor`) chết hẳn (LK-16). Render mới: đĩa tròn neutral-50 #FAF3F1 chung cho mọi thành viên (đĩa không mang identity, ĐÓNG BĂNG — đổi đĩa = chữ ký I-1/I-2/I-3 hết hiệu lực), initials Inter 600 mang màu ô identity (11px @ đĩa 28 · 12px @ 32 · 10px @ 24), viền solid cùng ô (2px @ 28/32 · 1,5px @ 24); đĩa chuẩn 28px, trần 32px, ≤8 đĩa/viewport (>8 → 24px); kênh 3 giữ nguyên (khung hình học theo chỉ số + tầng L + tên đầy đủ luôn kề bên). Identity tĩnh tuyệt đối (LK-17). Một nguồn generated duy nhất cho cả ba sink (globals.css + `lib/identity.ts` + `lib/identity.spec.ts`) kèm test hồi quy a11y I-1 trong spec.
+
+**QUYẾT ĐỊNH M-2 (avatar seed).** Chốt hướng (i): **seed chỉ-tên + tie-break xác định theo thứ tự chuẩn** — chi tiết bằng chứng và thuật toán khoá ở `V3-IMPL-STATE.md` mục 1 và `lib/identity.ts`. Tóm tắt: ứng viên = `fnv1a32(nameKey) % 12` (bỏ ordinal khỏi seed); gán theo thứ tự chuẩn (nameKey↑, ordinal↑) với thăm tuyến tính + vòng hai (màu, glyph) cho nhóm >12; giới hạn ghi thẳng: tên phân biệt ⇒ màu chỉ phụ thuộc tập tên (bất biến chéo thứ tự/máy/id — đóng tranh chấp 2 của Panel #04 ở tầng cơ chế), tên trùng ⇒ tập màu của nhóm tên ổn định.
+
+**Motion C1–C9.** Bộ motion duy nhất của V3 (INTERFACE-SPEC §3, LK-35/37): duration chỉ thuộc tập {65, 90, 100, 125, 170, 190, 240}ms; easing chỉ là token có tên (`--ease-lock` · `--ease-step` · `--ease-leave`); C1 settle-lock 240ms là hạt nhân (số quyết toán luôn `--ink` ở mọi frame, debounce gộp một lần khoá ở giá trị cuối); sheet C4 enter 190ms/exit 125ms (keyframe `ct-sheet-in` cũ bị giết đích danh); kẻ đôi tĩnh t=0 (C7); identity + QR tĩnh tuyệt đối (C8); cấm count-up/odometer/overshoot/stagger (C9).
+
+**Layout «Sổ kép hai cột kẻ» 1:2:3** (INTERFACE-SPEC §1–§2, LK-32/29): desktop [ledger 640px @lg / 720px @xl][cột quyết toán 320/360px] kẻ dọc `border-l`, hai cột từ 900px (cột 288px); nhịp thở 8:16:24; hàng ledger 52px mobile / 56px desktop; bán kính Ledger/Deck/Strip = 0, control 8, sheet 16 chỉ ở hai góc trên (`rounded-xl` cấm ở vai mặc định); Deck phẳng hoá trên cùng bề mặt paper với ledger — hộp chỉ sống ở sheet/modal; Strip = chân bảng trắng cùng bề mặt với ledger, ngân sách chrome mobile ≤212px @ 844px; kẻ đôi ≤2 vị trí toàn app {hàng tổng, chân Strip} và ≤1 cụm/viewport (LK-22/41); tám luật D4-CT-1→8 (sàn tên trong Strip, thứ tự hy sinh bề rộng, giao 0 giữa các cụm, sheet × Strip, CTA/heading, chip thành viên) là hợp đồng nghiệm thu trên render thật.

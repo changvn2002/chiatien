@@ -159,17 +159,20 @@ describe('Panel #03 A — Strip thu gọn: nhãn «Quyết toán» tách hàng k
     expect(headerRow?.textContent).toContain('Tổng');
     expect(headerRow?.textContent).not.toContain('lệnh');
     if (longName) expect(headerRow?.textContent).not.toContain(LONG_NAME);
-    // Hàng 2 (lệnh đầu): 2 span tên flex-1 + min-w-0 + truncate (slot đọc
-    // được do flex chia đều, không còn span tự do bị ép về 0–2px), số
-    // tiền shrink-0 + whitespace-nowrap, cụm «+1 lệnh» shrink-0.
+    // Hàng 2 (lệnh đầu) — HỢP ĐỒNG MỚI (REDESIGN-V3, D4-CT-1 thay cơ
+    // chế flex của Finding A): lưới cột tên minmax(72px,1fr) @320 /
+    // minmax(96px,1fr) @≥390, CẤM min-width:0 trên ô tên (sàn lưới giữ
+    // tên không bị ép về 0–2px như SERIOUS của Panel #03); số tiền
+    // shrink-0 + whitespace-nowrap, cụm «+1 lệnh» có mặt trong hàng.
     const transferRow = rows.find((r) => r !== headerRow && /lệnh/.test(r.textContent ?? ''));
     expect(transferRow).toBeTruthy();
     expect(transferRow?.textContent).toContain('+1 lệnh');
+    expect(transferRow?.className).toContain('minmax(72px,1fr)');
+    expect(transferRow?.className).toContain('minmax(96px,1fr)');
     const nameSpans = [...(transferRow?.querySelectorAll('span.truncate') ?? [])];
     expect(nameSpans).toHaveLength(2);
     for (const s of nameSpans) {
-      expect(s.className).toContain('flex-1');
-      expect(s.className).toContain('min-w-0');
+      expect(s.className).not.toContain('min-w-0');
     }
     if (longName) {
       expect(nameSpans.some((s) => s.textContent === LONG_NAME)).toBe(true);
