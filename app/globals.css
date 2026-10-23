@@ -12,6 +12,8 @@
   --font-sans: 'Inter', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --ink: #1c1917;
+  /* Chữ phụ ấm (REDESIGN-V2): đạt ≥4.5:1 trên mọi nền của hệ — họ chữ phụ duy nhất đứng trên tint/sand. */
+  --ink-2: #5c554b;
   --muted: #6f675c;
   /* Placeholder: taupe ấm riêng, đạt 5.08:1 trên nền trắng (WCAG AA) — không dùng muted mờ. */
   --placeholder: #786d5b;
@@ -20,8 +22,12 @@
   --line-strong: #8a7a5f;
   --paper: #f7f3ec;
   --card: #ffffff;
-  /* Nền dải điều hướng (stepper) + Settlement Rail. */
-  --rail: #fffbeb;
+  /* Nền Settlement Strip + cột quyết toán desktop (REDESIGN-V2, token strip — thay Rail Cream #FFFBEB của v1). */
+  --strip: #fff7e8;
+  /* Alias chuyển tiếp: --rail trỏ về strip để code cũ dùng var(--rail) không vỡ; xoá khi mọi bề mặt đã chuyển sang strip. */
+  --rail: var(--strip);
+  /* Bề mặt duy nhất của trạng thái disabled (REDESIGN-V2). */
+  --deck-sand: #efe6d8;
   /* Nền editor trong sheet: brand-soft pha 40% trên paper. */
   --editor: #f8f0e4;
   /* Màu thương hiệu: hổ phách đậm (amber) — không gradient, không tím-xanh. */
@@ -31,25 +37,54 @@
   /* Màu ngữ nghĩa cho số dư: xanh lá = được nhận lại, đỏ gạch = phải trả thêm. */
   --credit: #177245;
   --debt: #b3352c;
+  /* Palette danh tính thành viên (REDESIGN-V2, Panel-02 M-2): CHỈ dùng cho avatar — cấm dùng cho số dư/nút/focus/trạng thái; ngược lại cấm brand/brand-deep/credit/debt làm màu avatar. Mọi màu đạt ≥4.5:1 với chữ initials trắng. */
+  --identity-01: #7c4a1e;
+  --identity-02: #8a5a2b;
+  --identity-03: #7a3b2e;
+  --identity-04: #946b00;
+  --identity-05: #5e503f;
+  --identity-06: #855c1f;
+  --identity-07: #4a6741;
+  --identity-08: #6e5636;
+  --identity-09: #654321;
+  --identity-10: #7d5a3c;
+  --identity-11: #596235;
+  --identity-12: #8c6a3f;
   --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 8px 24px rgba(28, 25, 23, 0.06);
   --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.06), 0 16px 40px rgba(28, 25, 23, 0.1);
 }
 
 @theme inline {
   --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
   --color-placeholder: var(--placeholder);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-paper: var(--paper);
   --color-card: var(--card);
-  --color-rail: var(--rail);
+  --color-strip: var(--strip);
+  /* Alias chuyển tiếp: --color-rail trỏ về strip để class cũ (bg-rail…) không vỡ; xoá khi đã chuyển hết sang strip. */
+  --color-rail: var(--strip);
+  --color-deck-sand: var(--deck-sand);
   --color-editor: var(--editor);
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-soft: var(--brand-soft);
   --color-credit: var(--credit);
   --color-debt: var(--debt);
+  --color-identity-01: var(--identity-01);
+  --color-identity-02: var(--identity-02);
+  --color-identity-03: var(--identity-03);
+  --color-identity-04: var(--identity-04);
+  --color-identity-05: var(--identity-05);
+  --color-identity-06: var(--identity-06);
+  --color-identity-07: var(--identity-07);
+  --color-identity-08: var(--identity-08);
+  --color-identity-09: var(--identity-09);
+  --color-identity-10: var(--identity-10);
+  --color-identity-11: var(--identity-11);
+  --color-identity-12: var(--identity-12);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
 }
@@ -71,6 +106,55 @@ body {
   font-family: var(--font-display);
   /* Số tiền và mọi con số hiển thị luôn thẳng cột theo từng chữ số. */
   font-variant-numeric: tabular-nums;
+}
+
+/* Figure (REDESIGN-V2): MỌI số tiền dùng Inter — Be Vietnam Pro không có tnum (đã kiểm chứng ở mức file)
+   nên đặt số ở font display là no-op im lặng. Inter có GSUB tnum thật. */
+.font-figure {
+  font-family: Inter, 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kẻ đôi tổng kết (REDESIGN-V2, dấu chữ ký của hệ): phần tử rỗng cao 5px — hai vệt brand cứng 1px
+   ở y=0 và y=4, cách nhau 3px. Triển khai bằng hai lớp background-image (mỗi lớp một vệt đặc 100%×1px,
+   background-repeat: no-repeat) — các điểm dừng là cứng/tuyệt đối, đây là vệt đặc chứ KHÔNG phải
+   gradient trang trí; không dùng border-top: 3px double vì độ dày của nó không kiểm soát được theo token. */
+.double-rule {
+  height: 5px;
+  background-image:
+    linear-gradient(var(--brand), var(--brand)), linear-gradient(var(--brand), var(--brand));
+  background-size:
+    100% 1px,
+    100% 1px;
+  background-position:
+    0 0,
+    0 4px;
+  background-repeat: no-repeat;
+}
+
+/* Bóng hướng lên DUY NHẤT của Settlement Strip + sheet (DESIGN.md mục
+   Elevation): Strip dính đáy đổ bóng LÊN ledger phía trên nó, không dùng
+   shadow-card của v1 cho bề mặt này. */
+.strip-shadow {
+  box-shadow:
+    0 -1px 2px rgba(28, 25, 23, 0.05),
+    0 -12px 32px rgba(28, 25, 23, 0.07);
+}
+
+@keyframes ct-strip-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-strip-in {
+  animation: ct-strip-in 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
@@ -163,7 +247,8 @@ html {
   .animate-sheet-in,
   .animate-fade-in,
   .animate-step-in,
-  .animate-toast-in {
+  .animate-toast-in,
+  .animate-strip-in {
     animation: none;
   }
 }

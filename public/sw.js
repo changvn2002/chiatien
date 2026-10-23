@@ -22,7 +22,7 @@
  * dọn cache cũ và precache lại shell mới ở lần ghé tiếp theo.
  */
 
-const CACHE_VERSION = 'v2-2026-10-23';
+const CACHE_VERSION = 'v3-2026-10-23';
 const SHELL_CACHE = `chiatien-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `chiatien-runtime-${CACHE_VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, RUNTIME_CACHE];

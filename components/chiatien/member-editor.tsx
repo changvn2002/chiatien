@@ -1,8 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Landmark, X } from 'lucide-react';
-import { BANKS, accountNumberError, normalizeAccountNumber } from '@/lib/vietqr';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Landmark, Trash2, X } from 'lucide-react';
+import {
+  findDuplicateMember,
+  memberNameKey,
+  normalizeMemberName,
+  parseBulkMemberNames,
+} from '@/lib/identity';
+import {
+  BANKS,
+  accountNumberError,
+  isValidAccountNumber,
+  normalizeAccountNumber,
+} from '@/lib/vietqr';
 import type { BankInfo, Member } from '@/lib/types';
 import { GhostButton, PrimaryButton, inputClass, labelClass } from './ui-bits';
 
@@ -12,67 +23,167 @@ export interface MemberDraft {
 }
 
 /**
- * Nội dung form thêm/sửa một thành viên — vỏ bottom-sheet/dialog do
- * components/chiatien/sheet.tsx đảm nhiệm. Thông tin ngân hàng là tuỳ chọn
- * và CHỈ lưu trên máy này (sổ ngân hàng per-device, DATA-04): điền thì các
- * giao dịch quyết toán trả cho người này mới có mã VietQR tại máy này.
+ * Nội dung Member Sheet (thêm/sửa người) — vỏ Sheet do sheet.tsx đảm
+ * nhiệm. Ngân hàng CHỈ lưu trên máy này (sổ per-device, DATA-04).
+ *
+ * REDESIGN-V2:
+ * - Thêm hàng loạt bằng dấu phẩy ở chế độ thêm mới (D-6): xem trước tại
+ *   chỗ, tên trùng (với nhóm hoặc trong chính danh sách) bị đánh dấu +
+ *   bỏ qua, phần hợp lệ vẫn thêm được; bulk KHÔNG hiện khối ngân hàng.
+ * - Chống trùng tên (D-3): chuẩn hoá NFC/trim/gộp khoảng trắng/hạ chữ
+ *   thường qua lib/identity; trùng -> lỗi tại trường nguyên văn
+ *   COPY-DIET §5 + đường mở đúng thành viên đã có.
+ * - Validation số tài khoản (M-3): accountNumberError của lib/vietqr là
+ *   nguồn sự thật duy nhất — kiểm khi blur + khi Lưu, lỗi nguyên văn của
+ *   lib hiện dưới ô, nút Lưu disabled-có-lý-do tới khi hợp lệ, dữ liệu
+ *   không đạt KHÔNG được lưu. Bank cũ không còn hợp lệ -> trạng thái
+ *   "Số tài khoản chưa hợp lệ — kiểm tra lại", không khẳng định Có QR.
  */
 export function MemberEditor({
   initial,
+  members = [],
+  autoEnableBank = false,
   onSave,
+  onSaveBulk,
+  onOpenExisting,
+  onDeleteRequest,
   onCancel,
 }: {
   initial?: Member;
+  /** Thành viên hiện có của cuộc chia — cho chống trùng tên + bulk. */
+  members?: Member[];
+  /** Mở từ khối thiếu-QR: công tắc ngân hàng bật sẵn + focus ô ngân hàng. */
+  autoEnableBank?: boolean;
   onSave: (draft: MemberDraft) => void;
+  onSaveBulk?: (names: string[]) => void;
+  onOpenExisting?: (member: Member) => void;
+  /** Xoá thành viên ở chân sheet (chỉ khi sửa) — cha xử lý confirm/chặn. */
+  onDeleteRequest?: (member: Member) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [wantsBank, setWantsBank] = useState(Boolean(initial?.bank));
+  const [wantsBank, setWantsBank] = useState(Boolean(initial?.bank) || autoEnableBank);
   const [bin, setBin] = useState(initial?.bank?.bin ?? BANKS[0].bin);
   const [accountNumber, setAccountNumber] = useState(initial?.bank?.accountNumber ?? '');
   const [accountName, setAccountName] = useState(initial?.bank?.accountName ?? '');
-  const [error, setError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [acctBlurred, setAcctBlurred] = useState(false);
+  const [bankError, setBankError] = useState('');
+  const bankSelectRef = useRef<HTMLSelectElement>(null);
+
+  // Mở từ khối thiếu-QR: focus vào ô ngân hàng khi sheet mở.
+  useEffect(() => {
+    if (autoEnableBank) bankSelectRef.current?.focus();
+  }, [autoEnableBank]);
+
+  const initialBankInvalid = Boolean(
+    initial?.bank && !isValidAccountNumber(initial.bank.accountNumber),
+  );
+
+  /* ---------------- Thêm hàng loạt (chỉ chế độ thêm mới) ---------------- */
+  const bulkParsed = useMemo(
+    () => (!initial && name.includes(',') ? parseBulkMemberNames(name) : []),
+    [initial, name],
+  );
+  const isBulk = bulkParsed.length >= 2;
+  const bulkAnalysis = useMemo(() => {
+    if (!isBulk) return { valid: [] as string[], duplicates: [] as string[] };
+    const valid: string[] = [];
+    const duplicates: string[] = [];
+    const seen = new Set<string>();
+    for (const part of bulkParsed) {
+      const key = memberNameKey(part);
+      if (seen.has(key) || findDuplicateMember(members, part)) duplicates.push(part);
+      else {
+        valid.push(part);
+        seen.add(key);
+      }
+    }
+    return { valid, duplicates };
+  }, [isBulk, bulkParsed, members]);
+
+  /* ---------------- Validation ngân hàng (M-3) ---------------- */
+  const acctError = wantsBank && !isBulk ? accountNumberError(accountNumber) : null;
+  const showAcctError = Boolean(
+    acctError && (acctBlurred || bankError || accountNumber.trim().length > 0),
+  );
+  // Nút Lưu disabled-có-lý-do CHỈ vì dữ liệu ngân hàng chưa hợp lệ —
+  // các lỗi tên còn lại chặn ở điểm Lưu kèm lỗi tại trường như Mẫu
+  // Validation Thống Nhất.
+  const bankSaveReason =
+    wantsBank && !isBulk
+      ? (acctError ??
+        (!accountName.trim() ? 'Chưa nhập tên chủ tài khoản.' : undefined) ??
+        undefined)
+      : undefined;
+
+  function buildBank(): BankInfo | null {
+    const bank = BANKS.find((b) => b.bin === bin);
+    if (!bank) {
+      setBankError('Chưa chọn ngân hàng.');
+      return null;
+    }
+    const err = accountNumberError(accountNumber);
+    if (err) {
+      setBankError(err);
+      return null;
+    }
+    if (!accountName.trim()) {
+      setBankError('Đã bật lưu tài khoản thì cần nhập tên chủ tài khoản.');
+      return null;
+    }
+    return {
+      bin: bank.bin,
+      bankName: bank.shortName,
+      accountNumber: normalizeAccountNumber(accountNumber),
+      accountName: accountName.trim().toUpperCase(),
+    };
+  }
 
   function handleSave() {
-    if (!name.trim()) {
-      setError('Chưa nhập tên thành viên.');
+    setNameError('');
+    setBankError('');
+
+    if (isBulk) {
+      if (bulkAnalysis.valid.length === 0) return;
+      if (onSaveBulk) onSaveBulk(bulkAnalysis.valid);
+      else bulkAnalysis.valid.forEach((n) => onSave({ name: n }));
+      return;
+    }
+
+    const trimmed = normalizeMemberName(name);
+    if (!trimmed) {
+      setNameError('Chưa nhập tên thành viên.');
+      return;
+    }
+    if (name.includes(',')) {
+      // Sửa một người (hoặc thêm đơn lẻ) mà tên chứa dấu phẩy: dấu phẩy là
+      // ký tự tách danh sách, không phải ký tự tên.
+      setNameError('Tên thành viên không chứa dấu phẩy — hãy bỏ dấu phẩy trong tên để lưu.');
+      return;
+    }
+    const duplicate = findDuplicateMember(members, trimmed, initial?.id);
+    if (duplicate) {
+      setNameError(
+        `Đã có thành viên tên “${duplicate.name}” trong cuộc chia này. Hãy thêm ký tự phân biệt (ví dụ họ hoặc biệt danh), hoặc mở thành viên đó để sửa.`,
+      );
       return;
     }
     if (wantsBank) {
-      const bank = BANKS.find((b) => b.bin === bin);
-      if (!bank) {
-        setError('Chưa chọn ngân hàng.');
-        return;
-      }
-      if (!accountNumber.trim()) {
-        setError('Đã bật lưu tài khoản thì cần nhập số tài khoản.');
-        return;
-      }
-      // M-3 (Panel #02): validate ĐỊNH DẠNG số tài khoản ngay tại điểm
-      // lưu — số rác ("abc", "12") bị chặn kèm lý do cụ thể, không lưu,
-      // thay vì lưu xong rồi UI vẫn khẳng định "có VietQR".
-      const acctError = accountNumberError(accountNumber);
-      if (acctError) {
-        setError(acctError);
-        return;
-      }
-      if (!accountName.trim()) {
-        setError('Đã bật lưu tài khoản thì cần nhập tên chủ tài khoản.');
-        return;
-      }
-      onSave({
-        name: name.trim(),
-        bank: {
-          bin: bank.bin,
-          bankName: bank.shortName,
-          accountNumber: normalizeAccountNumber(accountNumber),
-          accountName: accountName.trim().toUpperCase(),
-        },
-      });
+      const bank = buildBank();
+      if (!bank) return;
+      onSave({ name: trimmed, bank });
       return;
     }
-    onSave({ name: name.trim() });
+    onSave({ name: trimmed });
   }
+
+  const duplicateForAction = !isBulk ? findDuplicateMember(members, name, initial?.id) : undefined;
+  const saveLabel = isBulk
+    ? `Thêm ${bulkAnalysis.valid.length} người`
+    : initial
+      ? 'Lưu thành viên'
+      : 'Lưu thành viên';
 
   return (
     <div className="grid gap-4">
@@ -85,44 +196,78 @@ export function MemberEditor({
           className={inputClass}
           placeholder="Ví dụ: An, Bình, chị Chi…"
           value={name}
-          autoFocus
+          autoFocus={!autoEnableBank}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave();
           }}
         />
+        {!initial && (
+          <p className="mt-1 text-[13px] text-ink-2">
+            Thêm nhiều người một lúc: ngăn cách bằng dấu phẩy.
+          </p>
+        )}
+        {nameError && (
+          <div className="mt-1.5">
+            <p role="alert" className="text-sm font-medium text-debt">
+              {nameError}
+            </p>
+            {duplicateForAction && onOpenExisting && (
+              <button
+                type="button"
+                onClick={() => onOpenExisting(duplicateForAction)}
+                className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand-deep transition hover:text-ink"
+              >
+                Mở thành viên “{duplicateForAction.name}” để sửa
+              </button>
+            )}
+          </div>
+        )}
+        {isBulk && (
+          <div className="mt-2 grid gap-1">
+            <p role="status" className="text-sm font-medium text-ink">
+              Sẽ thêm {bulkAnalysis.valid.length} người: {bulkAnalysis.valid.join(' · ')}
+            </p>
+            {bulkAnalysis.duplicates.map((dup) => (
+              <p key={dup} className="text-sm font-medium text-debt">
+                “{dup}” đã có trong cuộc chia — sẽ bỏ qua
+              </p>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div>
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
-          <input
-            type="checkbox"
-            checked={wantsBank}
-            onChange={(e) => setWantsBank(e.target.checked)}
-            className="h-4 w-4 shrink-0 accent-brand"
-          />
-          <Landmark size={16} className="shrink-0 text-brand-deep" aria-hidden />
-          <span>Lưu tài khoản ngân hàng trên máy này (để tạo VietQR)</span>
-        </label>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          Tài khoản chỉ lưu trên máy này để tạo mã QR khi quyết toán — không nằm trong link chia sẻ,
-          không gửi đi đâu.
-        </p>
-        {/* DATA-09b: hướng dẫn trách nhiệm tại đúng điểm nhập — số tài
-            khoản là dữ liệu của người khác khi nhập hộ. */}
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          Chỉ nhập tài khoản của chính người này, khi họ đồng ý cho lưu trên máy này để nhận tiền
-          qua VietQR.
-        </p>
-      </div>
+      {!isBulk && (
+        <div>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+            <input
+              type="checkbox"
+              checked={wantsBank}
+              onChange={(e) => setWantsBank(e.target.checked)}
+              className="h-4 w-4 shrink-0 accent-brand"
+            />
+            <Landmark size={16} className="shrink-0 text-brand-deep" aria-hidden />
+            <span>Lưu tài khoản trên máy này để tạo VietQR</span>
+          </label>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+            Chỉ lưu trên máy này — không đi theo link chia sẻ. Ai nhận tiền qua QR thì lưu tài khoản
+            ngay trên máy của mình.
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+            Chỉ nhập tài khoản của chính người này, khi họ đồng ý cho lưu trên máy này để nhận tiền
+            qua VietQR.
+          </p>
+        </div>
+      )}
 
-      {wantsBank && (
+      {!isBulk && wantsBank && (
         <div className="grid gap-3">
           <div>
             <label className={labelClass} htmlFor="member-bank">
               Ngân hàng
             </label>
             <select
+              ref={bankSelectRef}
               id="member-bank"
               className={inputClass}
               value={bin}
@@ -147,7 +292,18 @@ export function MemberEditor({
                 placeholder="0123456789"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
+                onBlur={() => setAcctBlurred(true)}
               />
+              {initialBankInvalid && (
+                <p className="mt-1.5 text-sm font-medium text-debt">
+                  Số tài khoản chưa hợp lệ — kiểm tra lại
+                </p>
+              )}
+              {showAcctError && acctError && (
+                <p role="alert" className="mt-1.5 text-sm font-medium text-debt">
+                  {acctError}
+                </p>
+              )}
             </div>
             <div>
               <label className={labelClass} htmlFor="member-account-name">
@@ -165,20 +321,39 @@ export function MemberEditor({
         </div>
       )}
 
-      {error && (
+      {bankError && bankError !== acctError && (
         <p role="alert" className="text-sm font-medium text-debt">
-          {error}
+          {bankError}
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <PrimaryButton onClick={handleSave}>
-          <Check size={16} /> Lưu thành viên
+      <div className="flex flex-wrap items-start gap-2">
+        <PrimaryButton
+          disabledReason={
+            isBulk && bulkAnalysis.valid.length === 0
+              ? 'Tất cả tên đều đã có trong cuộc chia'
+              : bankSaveReason
+          }
+          onClick={handleSave}
+        >
+          <Check size={16} /> {saveLabel}
         </PrimaryButton>
         <GhostButton onClick={onCancel}>
           <X size={16} /> Huỷ
         </GhostButton>
       </div>
+
+      {initial && onDeleteRequest && (
+        <div className="border-t border-line pt-3">
+          <button
+            type="button"
+            onClick={() => onDeleteRequest(initial)}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-debt transition hover:bg-debt/10"
+          >
+            <Trash2 size={15} aria-hidden /> Xoá thành viên
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,15 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { formatVND } from '@/lib/money';
-import { simplifyDebts } from '@/lib/settle';
-import { computeBalances, totalSpent } from '@/lib/split';
+import { useState } from 'react';
+import { Link2, Plus, Trash2 } from 'lucide-react';
+import { formatVNDDisplay } from '@/lib/money';
+import { totalSpent } from '@/lib/split';
 import type { Session } from '@/lib/types';
-import { IconButton, PrimaryButton, inputClass } from './ui-bits';
+import {
+  GhostButton,
+  IconButton,
+  PrimaryButton,
+  StatusLine,
+  inputClass,
+  useOnlineStatus,
+} from './ui-bits';
 import { ConfirmDialog } from './sheet';
 
-/** Danh sách các cuộc chia đã lưu trên máy + form tạo mới. */
+/** Danh sách các cuộc chia đã lưu trên máy + form tạo mới (Màn A). */
 export function SessionList({
   sessions,
   onCreate,
@@ -23,14 +29,12 @@ export function SessionList({
 }) {
   const [title, setTitle] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
+  const [importUrl, setImportUrl] = useState('');
+  const [importError, setImportError] = useState('');
+  const online = useOnlineStatus();
 
-  const latest = sessions[0];
-  const latestSummary = useMemo(() => {
-    if (!latest) return null;
-    const transfers = simplifyDebts(computeBalances(latest));
-    const nameOf = (id: string) => latest.members.find((m) => m.id === id)?.name ?? 'Thành viên';
-    return { transfers, nameOf };
-  }, [latest]);
+  // Hàng gần nhất lên đầu: updatedAt giảm dần (như hiện hành).
+  const ordered = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
 
   function handleCreate() {
     const t = title.trim();
@@ -45,17 +49,41 @@ export function SessionList({
     input?.focus();
   }
 
+  /**
+   * Nhập từ link (cột phụ desktop, LAYOUT-SPEC §1.4): dữ liệu của một
+   * cuộc chia nằm trọn trong hash #chia= của link (lib/share.ts) và cơ
+   * chế import hiện hành của app chỉ chạy ở lần nạp trang
+   * (use-sessions bootstrap đọc hash một lần lúc mount). Vì vậy cách
+   * điều hướng sạch trong phạm vi bề mặt này là: trích phần #chia= từ
+   * link đã dán (bất kể link thuộc origin nào — dữ liệu tự chứa trong
+   * hash, không cần server của origin đó), gán vào URL hiện tại rồi
+   * reload để bootstrap nhập nó như một link được mở trực tiếp.
+   */
+  function handleImportFromLink() {
+    const raw = importUrl.trim();
+    if (!raw) return;
+    const hashStart = raw.indexOf('#chia=');
+    if (hashStart === -1) {
+      setImportError(
+        'Link này không mở được — có thể link đã bị cắt ngắn khi gửi, hoặc không còn đúng định dạng. Hãy nhờ người gửi copy lại link đầy đủ.',
+      );
+      return;
+    }
+    setImportError('');
+    window.location.hash = raw.slice(hashStart);
+    window.location.reload();
+  }
+
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="grid min-w-0 gap-6">
+      <div className="grid min-w-0 gap-6 lg:max-w-[720px]">
+        {/* Card tạo mới — primary CTA DUY NHẤT của Màn A cho hành động
+            tạo (D-11): input + nút xếp dọc full-width trong card. */}
         <div className="rounded-2xl border border-line bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
-          <label
-            className="mb-1.5 block font-display text-base font-bold text-ink"
-            htmlFor="new-session"
-          >
-            Tạo cuộc chia mới
-          </label>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <h2 className="mb-1.5 font-display text-base font-bold text-ink">
+            <label htmlFor="new-session">Tạo cuộc chia mới</label>
+          </h2>
+          <div className="flex flex-col gap-2">
             <input
               id="new-session"
               className={inputClass}
@@ -66,10 +94,13 @@ export function SessionList({
                 if (e.key === 'Enter') handleCreate();
               }}
             />
-            <PrimaryButton onClick={handleCreate} disabled={!title.trim()} className="shrink-0">
+            <PrimaryButton onClick={handleCreate} disabled={!title.trim()} className="w-full">
               <Plus size={16} /> Tạo cuộc chia
             </PrimaryButton>
           </div>
+          {/* Chỉ báo app-shell ở chân card tạo mới (D-2, LAYOUT-SPEC
+              §6.3): thường trực ở Màn A vì màn này chưa có Strip. */}
+          <StatusLine status={online} className="mt-3" />
         </div>
 
         {sessions.length === 0 ? (
@@ -82,25 +113,26 @@ export function SessionList({
               src="/products/brand/empty-state.webp"
               alt=""
               aria-hidden
-              className="mx-auto mb-3 max-h-[180px] w-auto"
+              className="mx-auto mb-3 max-h-[160px] w-auto"
               loading="lazy"
             />
-            <p className="font-display text-lg font-bold text-ink">Chưa có cuộc chia nào</p>
+            <h2 className="font-display text-lg font-bold text-ink">Chưa có cuộc chia nào</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              Chia tiền nhóm — quyết toán một lần, hết nợ nần. Dữ liệu chỉ lưu trên máy của bạn —
-              không cần tài khoản.
+              Dữ liệu chỉ lưu trên máy của bạn — không cần tài khoản.
             </p>
-            <PrimaryButton onClick={focusCreateInput} className="mt-4">
+            {/* Hành động tạo ở trạng thái rỗng chỉ là ghost/link (D-11):
+                primary CTA cho hành động tạo đã nằm ở card tạo mới. */}
+            <GhostButton onClick={focusCreateInput} className="mt-4">
               <Plus size={16} /> Tạo cuộc chia đầu tiên
-            </PrimaryButton>
+            </GhostButton>
           </div>
         ) : (
-          <ul className="grid gap-3">
-            {sessions.map((s) => (
-              <li
-                key={s.id}
-                className="flex min-w-0 items-center gap-2 rounded-2xl border border-line bg-card p-4 shadow-[var(--shadow-card)] transition hover:border-line-strong"
-              >
+          // Danh sách dạng BẢNG PHẲNG (LAYOUT-SPEC §1.4): bỏ chrome card
+          // (rounded/border/bg-card/shadow) ở wrapper + hàng — hàng ngăn
+          // nhau bằng hairline, đúng Flat Table Rule như ledger.
+          <ul className="grid">
+            {ordered.map((s) => (
+              <li key={s.id} className="flex min-w-0 items-center gap-2 border-b border-line py-3">
                 <button
                   type="button"
                   onClick={() => onOpen(s.id)}
@@ -109,11 +141,9 @@ export function SessionList({
                   <span className="block truncate font-display text-lg font-bold text-ink">
                     {s.title}
                   </span>
-                  <span className="mt-0.5 block truncate text-sm text-muted">
+                  <span className="font-figure mt-0.5 block truncate text-sm text-ink-2">
                     {s.members.length} người · {s.expenses.length} khoản ·{' '}
-                    <span className="font-display font-semibold text-ink">
-                      {formatVND(totalSpent(s))}
-                    </span>
+                    {formatVNDDisplay(totalSpent(s))}
                   </span>
                 </button>
                 <IconButton
@@ -129,49 +159,43 @@ export function SessionList({
         )}
       </div>
 
-      {/* Cột phải desktop: tóm tắt cuộc chia gần nhất — dạng tĩnh của Settlement Rail. */}
-      {latest && latestSummary && (
-        <aside
-          aria-label="Cuộc chia gần nhất"
-          className="sticky top-6 hidden rounded-2xl border border-line bg-rail p-4 lg:block"
-        >
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">Gần nhất</p>
-          <p className="mt-1 truncate font-display text-base font-bold text-ink">{latest.title}</p>
-          <p className="mt-1 text-sm text-muted">
-            Tổng{' '}
-            <span className="font-display font-bold text-ink">{formatVND(totalSpent(latest))}</span>{' '}
-            · {latest.members.length} người · {latest.expenses.length} khoản
+      {/* Cột phụ desktop (LAYOUT-SPEC §1.4): hành động nhanh "Nhập từ
+          link" + 3 dòng "dữ liệu ở đâu" dạng chữ. KHÔNG còn aside tóm
+          tắt quyết toán tĩnh của cuộc chia gần nhất. */}
+      <aside
+        aria-label="Nhập từ link và thông tin dữ liệu"
+        className="sticky top-6 hidden lg:block"
+      >
+        <h2 className="font-display text-base font-bold text-ink">Nhập từ link</h2>
+        <p className="mt-1 text-sm text-ink-2">
+          Dán link cuộc chia đã nhận để mở bản sao trên máy này.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            aria-label="Link cuộc chia"
+            className={inputClass}
+            placeholder="Dán link có #chia=…"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleImportFromLink();
+            }}
+          />
+          <GhostButton onClick={handleImportFromLink} disabled={!importUrl.trim()}>
+            <Link2 size={16} /> Nhập từ link
+          </GhostButton>
+        </div>
+        {importError && (
+          <p role="alert" className="mt-2 text-sm font-medium text-debt">
+            {importError}
           </p>
-          {latestSummary.transfers.length > 0 ? (
-            <ul className="mt-3 grid gap-1.5 border-t border-line pt-3 text-sm">
-              {latestSummary.transfers.slice(0, 2).map((t, i) => (
-                <li key={i} className="flex min-w-0 items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate">
-                    {latestSummary.nameOf(t.fromId)} → {latestSummary.nameOf(t.toId)}
-                  </span>
-                  <span className="font-display font-bold whitespace-nowrap text-ink">
-                    {formatVND(t.amount)}
-                  </span>
-                </li>
-              ))}
-              {latestSummary.transfers.length > 2 && (
-                <li className="text-muted">+{latestSummary.transfers.length - 2} lệnh nữa</li>
-              )}
-            </ul>
-          ) : (
-            <p className="mt-3 border-t border-line pt-3 text-sm text-muted">
-              Chưa có lệnh chuyển nào.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => onOpen(latest.id)}
-            className="mt-3 inline-flex min-h-11 items-center font-display text-sm font-bold text-brand-deep transition hover:text-ink"
-          >
-            Mở cuộc chia này
-          </button>
-        </aside>
-      )}
+        )}
+        <ul className="mt-5 grid gap-1.5 border-t border-line pt-4 text-sm text-ink-2">
+          <li>Dữ liệu lưu trên máy này — không cần tài khoản.</li>
+          <li>Link chia sẻ không chứa thông tin ngân hàng.</li>
+          <li>Không có mạng vẫn dùng được.</li>
+        </ul>
+      </aside>
 
       <ConfirmDialog
         open={pendingDelete !== null}

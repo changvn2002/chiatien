@@ -1,10 +1,25 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, Link2, Pencil, Plus, Trash2, TriangleAlert } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Link2,
+  List,
+  MoreHorizontal,
+  MoveRight,
+  Pencil,
+  Plus,
+  Trash2,
+  TriangleAlert,
+  Users,
+} from 'lucide-react';
 import { newId } from '@/lib/id';
-import { formatVND } from '@/lib/money';
-import { computeBalances, computeShares, totalSpent } from '@/lib/split';
+import { assignIdentityColors, normalizeMemberName } from '@/lib/identity';
+import { formatVND, formatVNDDisplay } from '@/lib/money';
+import { computeBalances, computeShares, sumBalances, totalSpent } from '@/lib/split';
 import { buildSettlementText, simplifyDebts } from '@/lib/settle';
 import { buildShareUrl } from '@/lib/share';
 import { expenseDraftKey } from '@/lib/storage';
@@ -14,15 +29,14 @@ import { cn } from '@/lib/utils';
 import {
   Avatar,
   GhostButton,
-  IconButton,
-  OfflineNotice,
   PrimaryButton,
+  StatusLine,
   copyText,
   useOnlineStatus,
 } from './ui-bits';
 import { ExpenseEditor, type ExpenseSave } from './expense-editor';
 import { MemberEditor, type MemberDraft } from './member-editor';
-import { Settlement } from './settlement';
+import { SettlementPanel } from './settlement';
 import { ConfirmDialog, Sheet } from './sheet';
 
 const MODE_LABELS: Record<Expense['mode'], string> = {
@@ -30,27 +44,6 @@ const MODE_LABELS: Record<Expense['mode'], string> = {
   custom: 'Tuỳ chỉnh số tiền',
   shares: 'Theo phần',
 };
-
-type Step = 1 | 2 | 3;
-
-const STEP_LABELS: Record<Step, string> = {
-  1: 'Thành viên',
-  2: 'Khoản chi',
-  3: 'Thanh toán',
-};
-
-/** Bước suy từ dữ liệu khi mở một cuộc chia (LAYOUT-SPEC §7). */
-function deriveStep(session: Session): Step {
-  if (session.members.length === 0) return 1;
-  if (session.expenses.length === 0) return 2;
-  return 3;
-}
-
-function stepFromUrl(): Step | null {
-  if (typeof window === 'undefined') return null;
-  const v = new URLSearchParams(window.location.search).get('buoc');
-  return v === '1' || v === '2' || v === '3' ? (Number(v) as Step) : null;
-}
 
 /** Gắn mốc thời gian sửa đổi — để ngoài component cho lint react-hooks/purity. */
 function touch(session: Session, partial: Partial<Session>): Session {
@@ -72,30 +65,39 @@ function expenseFromDraft(draft: ExpenseSave): Expense {
   };
 }
 
+type MemberEditState =
+  { kind: 'new'; focusBank: boolean } | { kind: 'edit'; member: Member; focusBank: boolean } | null;
+
 /**
- * Màn hình chi tiết một cuộc chia: wizard 3 bước (Thành viên → Khoản chi →
- * Thanh toán) + Settlement Rail dính luôn hiện kết quả rút gọn và CTA của
- * bước. Bước lưu ở ?buoc= để Back trình duyệt quay lại bước trước. Mọi thay
- * đổi đi qua onChange để app.tsx lưu bền vào localStorage.
+ * Màn làm việc MỘT MÀN HÌNH (REDESIGN-V2, "Settlement in Sight"): bỏ
+ * toàn bộ wizard/stepper/?buoc= (link cũ có ?buoc= bị bỏ qua lặng lẽ).
+ * Mobile: AppBar 48px + Member Strip 56px + Ledger phẳng cuộn nội bộ +
+ * Settlement Strip dính đáy (thu gọn = tổng + lệnh đầu; mở rộng tại chỗ
+ * = SettlementPanel toàn văn, tối đa 70dvh, đẩy 1 history state).
+ * Desktop ≥1024: lưới 2 cột — trái Command Bar + Member Strip + Ledger,
+ * phải SettlementPanel thường trực (biến thể stacked) + StatusLine cuối cột.
  */
 export function SessionView({
   session,
-  initialStep,
+  startExpanded = false,
+  onBack,
   onChange,
   onDelete,
   onNotifyUndo,
 }: {
   session: Session;
-  initialStep?: Step;
+  startExpanded?: boolean;
+  onBack: () => void;
   onChange: (next: Session) => void;
   onDelete: () => void;
   onNotifyUndo: (label: string, undo: () => void) => void;
 }) {
-  const [step, setStep] = useState<Step>(() => initialStep ?? stepFromUrl() ?? deriveStep(session));
-  const [memberEditing, setMemberEditing] = useState<Member | 'new' | null>(null);
+  const [expanded, setExpanded] = useState(startExpanded);
+  const [memberEditing, setMemberEditing] = useState<MemberEditState>(null);
   const [expenseEditing, setExpenseEditing] = useState<Expense | 'new' | null>(null);
+  const [expenseAction, setExpenseAction] = useState<Expense | null>(null);
+  const [sessionActionOpen, setSessionActionOpen] = useState(false);
   const [memberNotice, setMemberNotice] = useState('');
-  const [lockNotice, setLockNotice] = useState('');
   const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareState, setShareState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -105,70 +107,129 @@ export function SessionView({
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(false);
   const [pendingDeleteMember, setPendingDeleteMember] = useState<Member | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(session.title);
+  const [stripFlash, setStripFlash] = useState(false);
+  const [deckNotice, setDeckNotice] = useState('');
+  const [focusedExpenseId, setFocusedExpenseId] = useState<string | null>(null);
   const online = useOnlineStatus();
-  const statusRef = useRef<HTMLParagraphElement>(null);
-  const firstRenderRef = useRef(true);
+  const memberStripRef = useRef<HTMLDivElement>(null);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const pushedRef = useRef(false);
 
   const balances = useMemo(() => computeBalances(session), [session]);
   const transfers = useMemo(() => simplifyDebts(balances), [balances]);
   const total = totalSpent(session);
+  const discrepancy = sumBalances(balances);
+  const colors = useMemo(() => assignIdentityColors(session.members), [session.members]);
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
+  const sortedExpenses = useMemo(
+    () => [...session.expenses].sort((a, b) => b.createdAt - a.createdAt),
+    [session.expenses],
+  );
+  const allSettled = session.expenses.length > 0 && transfers.length === 0;
+  const firstTransfer = transfers[0];
 
-  const canStep2 = session.members.length >= 1;
-  const canStep3 = canStep2 && session.expenses.length >= 1;
-
-  function lockReason(target: Step): string {
-    if (target === 2 && !canStep2) return 'Thêm ít nhất 1 người để sang bước Khoản chi.';
-    if (target === 3 && !canStep3)
-      return canStep2
-        ? 'Thêm ít nhất 1 khoản chi để sang bước Thanh toán.'
-        : 'Thêm ít nhất 1 người và 1 khoản chi để sang bước Thanh toán.';
-    return '';
-  }
-
-  function goStep(next: Step) {
-    const reason = lockReason(next);
-    if (reason) {
-      setLockNotice(reason);
-      return;
+  /* ---------------- Mở rộng dải + history + Esc theo lớp ---------------- */
+  function expandStrip(push = true) {
+    if (expandedRef.current) return;
+    setExpanded(true);
+    if (push && typeof window !== 'undefined') {
+      window.history.pushState({ ctStrip: true }, '', window.location.href);
+      pushedRef.current = true;
     }
-    setLockNotice('');
-    setStep(next);
-    const url = new URL(window.location.href);
-    url.searchParams.set('buoc', String(next));
-    window.history.pushState(null, '', url);
+  }
+  function collapseStrip(fromPopState = false) {
+    if (!expandedRef.current) return;
+    setExpanded(false);
+    if (!fromPopState && pushedRef.current) {
+      pushedRef.current = false;
+      window.history.back();
+    }
   }
 
-  // Back/Forward của trình duyệt di chuyển giữa các bước (không thoát cuộc chia).
   useEffect(() => {
+    if (startExpanded) {
+      // Mở sẵn do import: cũng đẩy 1 history state để Back thu gọn trước.
+      window.history.pushState({ ctStrip: true }, '', window.location.href);
+      pushedRef.current = true;
+    }
     function onPopState() {
-      const fromUrl = stepFromUrl();
-      if (fromUrl) setStep(fromUrl);
+      if (expandedRef.current) {
+        pushedRef.current = false;
+        setExpanded(false);
+      }
     }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
+    // Chỉ chạy khi mount: startExpanded là điều kiện mở ban đầu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Chuyển bước -> focus về dòng trạng thái của bước mới (A11Y-03).
+  // Phím desktop (LAYOUT-SPEC §7) + Esc lùi lớp. Sheet tự xử lý Esc của nó
+  // bằng listener capture + stopPropagation, nên handler này (bubble) chỉ
+  // nhận Esc khi KHÔNG có sheet nào mở.
   useEffect(() => {
-    if (firstRenderRef.current) {
-      firstRenderRef.current = false;
-      return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        if (expandedRef.current) collapseStrip();
+        else onBack();
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const typing =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        Boolean(target?.isContentEditable);
+      if (typing) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        const id =
+          focusedExpenseId ??
+          (document.activeElement as HTMLElement | null)
+            ?.closest?.('[data-expense-row]')
+            ?.getAttribute('data-expense-row') ??
+          null;
+        const expense = session.expenses.find((e) => e.id === id);
+        if (expense) setExpenseAction(expense);
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key === 'n' || event.key === 'N') {
+        if (session.members.length > 0) setExpenseEditing('new');
+      } else if (event.key === 'm' || event.key === 'M') {
+        setMemberEditing({ kind: 'new', focusBank: false });
+      } else if (event.key === 'c' || event.key === 'C') {
+        if (expandedRef.current) void handleCopySettlement();
+      }
     }
-    statusRef.current?.focus({ preventScroll: true });
-  }, [step]);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+    // handleCopySettlement/onBack/collapseStrip đọc state qua ref/setter ổn
+    // định; deps theo các giá trị dữ liệu mà handler thật sự dùng.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, focusedExpenseId, onBack]);
 
   function patch(partial: Partial<Session>) {
     onChange(touch(session, partial));
   }
 
+  /* ---------------- Thành viên ---------------- */
+  function openMember(member: Member, focusBank = false) {
+    setMemberEditing({ kind: 'edit', member, focusBank });
+  }
+
   function saveMember(draft: MemberDraft) {
-    if (memberEditing === 'new') {
+    if (memberEditing?.kind === 'new') {
       patch({ members: [...session.members, { id: newId(), ...draft }] });
-    } else if (memberEditing) {
+    } else if (memberEditing?.kind === 'edit') {
+      const id = memberEditing.member.id;
       patch({
         members: session.members.map((m) =>
-          m.id === memberEditing.id ? { ...m, name: draft.name, bank: draft.bank } : m,
+          m.id === id ? { ...m, name: draft.name, bank: draft.bank } : m,
         ),
       });
     }
@@ -176,13 +237,23 @@ export function SessionView({
     setMemberNotice('');
   }
 
+  function saveBulkMembers(names: string[]) {
+    const created = names.map((name) => ({ id: newId(), name: normalizeMemberName(name) }));
+    patch({ members: [...session.members, ...created] });
+    setMemberEditing(null);
+    setMemberNotice('');
+  }
+
   function requestDeleteMember(member: Member) {
-    const referenced = session.expenses.some(
+    const related = session.expenses.filter(
       (e) => e.payerId === member.id || e.participantIds.includes(member.id),
     );
-    if (referenced) {
+    setMemberEditing(null);
+    if (related.length > 0) {
       setMemberNotice(
-        `Không xoá được ${member.name} vì đã có khoản chi liên quan. Hãy sửa/xoá các khoản chi đó trước.`,
+        `Không xoá được ${member.name} vì đã có khoản chi liên quan: ${related
+          .map((e) => `“${e.title}”`)
+          .join(', ')}. Hãy sửa/xoá các khoản chi đó trước.`,
       );
       return;
     }
@@ -198,7 +269,8 @@ export function SessionView({
     onNotifyUndo(`Đã xoá thành viên ${name}`, () => onChange(snapshot));
   }
 
-  function saveExpense(draft: ExpenseSave) {
+  /* ---------------- Khoản chi ---------------- */
+  function applyExpenseDraft(draft: ExpenseSave) {
     if (draft.id) {
       patch({
         expenses: session.expenses.map((e) =>
@@ -208,6 +280,10 @@ export function SessionView({
     } else {
       patch({ expenses: [...session.expenses, expenseFromDraft(draft)] });
     }
+  }
+
+  function saveExpense(draft: ExpenseSave) {
+    applyExpenseDraft(draft);
     setExpenseEditing(null);
   }
 
@@ -220,6 +296,7 @@ export function SessionView({
     onNotifyUndo(`Đã xoá khoản chi "${title}"`, () => onChange(snapshot));
   }
 
+  /* ---------------- Copy / chia sẻ ---------------- */
   async function handleCopySettlement() {
     const ok = await copyText(buildSettlementText(session, balances, transfers));
     setSettledCopied(ok);
@@ -236,377 +313,443 @@ export function SessionView({
   }
 
   function openShare() {
+    if (session.expenses.length === 0) {
+      setDeckNotice('Có khoản chi đầu tiên rồi mới chia sẻ được');
+      return;
+    }
+    setDeckNotice('');
     setShareState('idle');
     setShareOpen(true);
   }
 
-  const firstTransfer = transfers[0];
-  const transferSummary = firstTransfer
-    ? `${nameOf(firstTransfer.fromId)} → ${nameOf(firstTransfer.toId)} ${formatVND(firstTransfer.amount)}${transfers.length > 1 ? ` +${transfers.length - 1} lệnh` : ''}`
-    : null;
+  function focusMemberStrip() {
+    memberStripRef.current?.scrollIntoView({ block: 'nearest' });
+    memberStripRef.current?.focus({ preventScroll: true });
+    setStripFlash(true);
+    window.setTimeout(() => setStripFlash(false), 600);
+  }
 
-  const railSummary =
-    step === 1 && !canStep2
-      ? 'Thêm ít nhất 1 người để tiếp tục'
-      : step === 2 && !canStep3
-        ? 'Thêm ít nhất 1 khoản chi để tiếp tục'
-        : (transferSummary ??
-          (session.expenses.length > 0
-            ? 'Đã cân bằng — không ai nợ ai'
-            : `${session.members.length} người · chưa có khoản chi`));
+  function commitTitle() {
+    const next = titleDraft.trim();
+    setTitleEditing(false);
+    if (next && next !== session.title) patch({ title: next });
+    else setTitleDraft(session.title);
+  }
 
-  const stepCta =
-    step === 1 ? (
-      <PrimaryButton disabled={!canStep2} onClick={() => goStep(2)} className="shrink-0">
-        Tiếp tục: Khoản chi
-      </PrimaryButton>
-    ) : step === 2 ? (
-      <PrimaryButton disabled={!canStep3} onClick={() => goStep(3)} className="shrink-0">
-        Tiếp tục: Thanh toán
-      </PrimaryButton>
+  /* ---------------- Các khối dùng chung ---------------- */
+  const panelProps = {
+    session,
+    balances,
+    transfers,
+    copied: settledCopied,
+    copyFailed: settledCopyFailed,
+    onCopy: handleCopySettlement,
+    onShare: openShare,
+    onEditMember: (m: Member, opts?: { focusBank?: boolean }) =>
+      openMember(m, opts?.focusBank ?? false),
+  };
+
+  const memberStrip = (
+    <div
+      ref={memberStripRef}
+      tabIndex={-1}
+      aria-label="Thành viên"
+      className={cn(
+        'flex h-14 shrink-0 items-center gap-2 outline-none',
+        stripFlash && 'rounded-xl outline-2 outline-brand-deep',
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
+        {session.members.map((m, idx) => (
+          <button
+            key={m.id}
+            type="button"
+            aria-label={m.name}
+            title={m.name}
+            onClick={() => openMember(m)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-card pr-3 pl-1 transition hover:border-line-strong"
+          >
+            <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={32} />
+            <span className="max-w-[96px] truncate text-sm font-semibold text-ink">{m.name}</span>
+            <span
+              aria-hidden
+              className={cn(
+                'h-2 w-2 shrink-0 rounded-full',
+                hasBank(m) ? 'bg-credit' : 'border border-line-strong bg-transparent',
+              )}
+            />
+            <span className="sr-only">{hasBank(m) ? 'Có QR' : 'Chưa có QR'}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}
+        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
+      >
+        <Plus size={16} aria-hidden /> Thêm
+      </button>
+    </div>
+  );
+
+  const emptyLedger =
+    session.members.length === 0 ? (
+      <div className="max-h-[240px] py-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/products/brand/empty-state.webp"
+          alt=""
+          aria-hidden
+          className="mb-2 max-h-[120px] w-auto"
+          loading="lazy"
+        />
+        <p className="text-sm text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
+        <button
+          type="button"
+          onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}
+          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep"
+        >
+          <Plus size={16} aria-hidden /> Thêm người
+        </button>
+      </div>
+    ) : session.expenses.length === 0 ? (
+      <div className="max-h-[240px] py-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/products/brand/empty-state.webp"
+          alt=""
+          aria-hidden
+          className="mb-2 max-h-[120px] w-auto"
+          loading="lazy"
+        />
+        <p className="text-sm text-ink">
+          Chưa có khoản chi nào. Ghi khoản đầu tiên: ai trả, bao nhiêu, chia cho ai.
+        </p>
+        <button
+          type="button"
+          onClick={() => setExpenseEditing('new')}
+          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep"
+        >
+          <Plus size={16} aria-hidden /> Thêm khoản chi
+        </button>
+      </div>
     ) : null;
 
-  return (
-    <div className="pb-32 lg:pb-0">
-      {/* Tiêu đề phiên — 2 dòng riêng để không phần tử nào ép ngang 390px (panel §7.1). */}
-      <div>
-        <input
-          aria-label="Tên cuộc chia"
-          className="-mx-2 w-[calc(100%+1rem)] min-w-0 rounded-xl border border-transparent bg-transparent px-2 py-1.5 font-display text-2xl font-bold text-ink outline-none transition focus:border-line-strong focus:bg-card sm:text-[28px]"
-          value={session.title}
-          onChange={(e) => patch({ title: e.target.value })}
-        />
-        <div className="mt-2 flex flex-wrap gap-2">
-          <GhostButton onClick={openShare}>
-            <Link2 size={16} /> Chia sẻ link
-          </GhostButton>
-          <GhostButton
-            onClick={() => setConfirmDeleteSession(true)}
-            className="hover:border-debt hover:text-debt"
-          >
-            <Trash2 size={16} /> Xoá
-          </GhostButton>
-        </div>
-      </div>
-
-      {/* Stepper dính — điều hướng thật giữa 3 bước. */}
-      <nav
-        aria-label="Các bước của cuộc chia"
-        className="sticky top-0 z-30 -mx-4 mt-4 border-y border-line bg-rail px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border"
-      >
-        <ol className="flex h-[52px] items-center">
-          {([1, 2, 3] as Step[]).map((n, idx) => {
-            const done = n < step;
-            const active = n === step;
-            const locked = lockReason(n) !== '';
-            return (
-              <li key={n} className={cn('flex items-center', idx < 2 && 'min-w-0 flex-1')}>
-                <button
-                  type="button"
-                  aria-current={active ? 'step' : undefined}
-                  aria-disabled={locked || undefined}
-                  onClick={() => goStep(n)}
-                  className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-full pr-1"
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold',
-                      done && 'bg-credit text-white',
-                      active && 'bg-brand text-white',
-                      !done && !active && 'border border-line-strong bg-card text-muted',
-                    )}
-                  >
-                    {done ? <Check size={14} /> : n}
-                  </span>
-                  <span
-                    className={cn(
-                      'truncate font-display text-sm font-bold',
-                      active ? 'text-ink' : 'text-muted',
-                    )}
-                  >
-                    {STEP_LABELS[n]}
-                  </span>
-                </button>
-                {idx < 2 && (
-                  <span aria-hidden className="mx-1 min-w-3 flex-1 border-t border-line" />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-      {lockNotice && (
-        <p role="status" className="mt-2 text-sm font-medium text-brand-deep">
-          {lockNotice}
+  const ledger = (
+    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto lg:flex-none lg:overflow-visible">
+      {memberNotice && (
+        <p
+          role="alert"
+          className="mb-3 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
+        >
+          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+          <span>{memberNotice}</span>
         </p>
       )}
-
-      <div className="items-start gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div key={step} className="animate-step-in mt-5 min-w-0 lg:max-w-[720px]">
-          {step === 1 && (
-            <section aria-label="Thành viên">
-              <p ref={statusRef} tabIndex={-1} className="mb-3 text-sm text-muted outline-none">
-                {session.members.length} người · Ai nhận tiền qua QR thì lưu tài khoản ngay trên máy
-                của mình.
-              </p>
-              {memberNotice && (
-                <p
-                  role="alert"
-                  className="mb-3 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
-                >
-                  <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
-                  <span>{memberNotice}</span>
-                </p>
-              )}
-              {session.members.length === 0 ? (
-                <p className="rounded-2xl border border-line bg-card p-5 text-sm text-muted shadow-[var(--shadow-card)]">
-                  Chưa có thành viên nào. Thêm người vào để bắt đầu ghi khoản chi.
-                </p>
-              ) : (
-                <div className="rounded-2xl border border-line bg-card px-4 shadow-[var(--shadow-card)] sm:px-5">
-                  <ul className="divide-y divide-line">
-                    {session.members.map((m) => (
-                      <li key={m.id} className="flex min-w-0 items-center gap-3 py-3">
-                        <Avatar id={m.id} name={m.name} size={38} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-ink">{m.name}</p>
-                          <p className="truncate text-xs text-muted">
-                            {hasBank(m)
-                              ? 'Đã lưu ngân hàng trên máy này — có VietQR tại đây'
-                              : 'Chưa lưu ngân hàng trên máy này — chưa có VietQR tại đây'}
-                          </p>
-                        </div>
-                        <IconButton title={`Sửa ${m.name}`} onClick={() => setMemberEditing(m)}>
-                          <Pencil size={16} />
-                        </IconButton>
-                        <IconButton
-                          title={`Xoá ${m.name}`}
-                          danger
-                          onClick={() => requestDeleteMember(m)}
+      {emptyLedger}
+      {session.expenses.length > 0 && (
+        <>
+          <ul className="divide-y divide-line border-t border-line">
+            {sortedExpenses.map((e) => {
+              const shares = computeShares(e);
+              const isExpanded = expandedExpenseId === e.id;
+              return (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    data-expense-row={e.id}
+                    onFocus={() => setFocusedExpenseId(e.id)}
+                    onClick={() => setExpenseAction(e)}
+                    className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-left lg:min-h-[56px]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-[15px] font-medium text-ink">
+                        {e.title}
+                      </span>
+                      <span className="block truncate text-[13px] text-ink-2">
+                        {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
+                        {e.participantIds.length} người
+                      </span>
+                    </span>
+                    <span className="font-figure max-w-[136px] text-[15px] font-semibold whitespace-nowrap text-ink">
+                      {formatVNDDisplay(e.amount)}
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <ul className="grid gap-0.5 border-t border-line py-1.5">
+                      {e.participantIds.map((id) => (
+                        <li
+                          key={id}
+                          className="flex min-h-[32px] min-w-0 items-center justify-between gap-3 text-sm"
                         >
-                          <Trash2 size={16} />
-                        </IconButton>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                          <span className="min-w-0 truncate text-ink-2">{nameOf(id)}</span>
+                          <span className="font-figure font-semibold whitespace-nowrap text-ink">
+                            {formatVNDDisplay(shares[id] ?? 0)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="double-rule mt-1" aria-hidden />
+          <div className="flex min-h-[48px] items-center justify-between gap-3">
+            <span className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+              Tổng chi · {session.expenses.length} khoản
+            </span>
+            <span className="font-figure text-[19px] font-bold whitespace-nowrap text-ink">
+              {formatVNDDisplay(total)}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const stripSummaryContent = (
+    <>
+      <span className="shrink-0 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+        Tổng
+      </span>
+      <span className="font-figure shrink-0 text-[19px] font-bold whitespace-nowrap text-ink">
+        {formatVNDDisplay(total)}
+      </span>
+      {session.members.length === 0 ? (
+        <span className="min-w-0 flex-1 truncate text-sm text-ink-2">Chưa có khoản chi nào</span>
+      ) : session.expenses.length === 0 ? (
+        <span className="min-w-0 flex-1 truncate text-sm text-ink-2">Chưa có gì để quyết toán</span>
+      ) : allSettled ? (
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium text-ink">
+          <Check size={15} className="shrink-0 text-credit" aria-hidden />
+          <span className="truncate">Đã cân hết — không ai nợ ai</span>
+        </span>
+      ) : firstTransfer ? (
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-ink">
+          <span className="min-w-0 truncate">{nameOf(firstTransfer.fromId)}</span>
+          <MoveRight size={14} className="shrink-0 text-brand" aria-hidden />
+          <span className="min-w-0 truncate">{nameOf(firstTransfer.toId)}</span>
+          <span className="font-figure shrink-0 font-semibold whitespace-nowrap">
+            {formatVNDDisplay(firstTransfer.amount)}
+          </span>
+          {transfers.length > 1 && (
+            <span className="shrink-0 text-ink-2">+{transfers.length - 1} lệnh</span>
+          )}
+        </span>
+      ) : null}
+    </>
+  );
+
+  return (
+    <div className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col lg:h-auto lg:min-h-0">
+      {/* Scrim paper 60% trên ledger khi dải mở rộng (mobile). */}
+      {expanded && <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 lg:hidden" />}
+
+      {/* AppBar của Màn B: mark + tên cuộc chia (H1) + nút ⋯ */}
+      <div className="flex h-12 shrink-0 items-center gap-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/products/brand/chiatien-logo.svg" alt="" aria-hidden width={28} height={28} />
+        {titleEditing ? (
+          <input
+            aria-label="Tên cuộc chia"
+            autoFocus
+            className="min-w-0 flex-1 rounded-xl border border-line-strong bg-card px-2 py-1.5 font-display text-[19px] font-bold text-ink outline-none focus:border-brand-deep"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitTitle();
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setTitleDraft(session.title);
+              setTitleEditing(true);
+            }}
+            className="min-w-0 flex-1 rounded-xl px-1 text-left"
+            title="Chạm để sửa tên cuộc chia"
+          >
+            <h1 className="truncate font-display text-[19px] leading-tight font-bold text-ink">
+              {session.title}
+            </h1>
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Hành động của cuộc chia"
+          onClick={() => setSessionActionOpen(true)}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-card"
+        >
+          <MoreHorizontal size={20} aria-hidden />
+        </button>
+      </div>
+
+      <div className="grid min-h-0 min-w-0 flex-1 items-start lg:grid-cols-[minmax(0,640px)_320px] lg:gap-8 xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12">
+        <div className="flex min-h-0 min-w-0 flex-col self-stretch lg:self-auto">
+          {/* Command Bar desktop */}
+          <div className="hidden h-[52px] shrink-0 items-center gap-2 lg:flex">
+            <PrimaryButton
+              disabledReason={
+                session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
+              }
+              onClick={() => setExpenseEditing('new')}
+            >
+              <Plus size={16} aria-hidden /> Thêm khoản
+            </PrimaryButton>
+            <GhostButton onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}>
+              <Plus size={16} aria-hidden /> Thêm người
+            </GhostButton>
+            <span className="ml-auto flex items-center gap-2 text-xs text-ink-2">
+              <span>
+                <kbd className="font-mono">N</kbd> thêm khoản
+              </span>
+              <span>
+                <kbd className="font-mono">M</kbd> thêm người
+              </span>
+              <span>
+                <kbd className="font-mono">⌘K</kbd> hành động
+              </span>
+            </span>
+          </div>
+          {memberStrip}
+          {ledger}
+        </div>
+
+        {/* Cột quyết toán desktop — cùng SettlementPanel, biến thể stacked. */}
+        <aside
+          aria-label="Quyết toán"
+          className="sticky top-6 hidden border-l border-line-strong pl-6 lg:block"
+        >
+          <h2 className="mb-3 font-display text-[19px] font-bold text-ink">Quyết toán</h2>
+          <SettlementPanel {...panelProps} variant="stacked" />
+          <StatusLine status={online} className="mt-4" />
+        </aside>
+      </div>
+
+      <p className="mt-2 hidden h-8 shrink-0 items-center text-xs text-ink-2 lg:flex">
+        N thêm khoản · M thêm người · ⌘K hành động của hàng · C copy quyết toán khi dải mở · Esc lùi
+        lớp
+      </p>
+
+      {/* Settlement Strip mobile — layout thật dính đáy của cột flex. */}
+      <section
+        data-strip
+        aria-label="Quyết toán"
+        className="strip-shadow relative z-20 -mx-4 shrink-0 border-t border-line-strong bg-strip px-4 sm:-mx-6 sm:px-6 lg:hidden"
+      >
+        {expanded && (
+          <div className="animate-strip-in max-h-[70dvh] overflow-y-auto pt-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="font-display text-[19px] font-bold text-ink">Quyết toán</h2>
               <button
                 type="button"
-                onClick={() => setMemberEditing('new')}
-                className="mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-card font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep active:bg-brand-soft/50"
+                onClick={() => collapseStrip()}
+                className="inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
               >
-                <Plus size={16} /> Thêm người
+                Thu gọn <ChevronDown size={15} aria-hidden />
               </button>
-            </section>
-          )}
-
-          {step === 2 && (
-            <section aria-label="Khoản chi">
-              <p ref={statusRef} tabIndex={-1} className="mb-3 text-sm text-muted outline-none">
-                {session.expenses.length} khoản · Tổng{' '}
-                <span className="font-display font-bold text-ink">{formatVND(total)}</span>
-              </p>
-              {session.members.length === 0 ? (
-                <p className="rounded-2xl border border-line bg-card p-5 text-sm text-muted shadow-[var(--shadow-card)]">
-                  Cần có thành viên trước khi ghi khoản chi.
-                </p>
-              ) : session.expenses.length === 0 ? (
-                <p className="rounded-2xl border border-line bg-card p-5 text-sm text-muted shadow-[var(--shadow-card)]">
-                  Chưa có khoản chi nào. Ghi khoản đầu tiên: ai trả, bao nhiêu, chia cho ai.
-                </p>
-              ) : (
-                <div className="rounded-2xl border border-line bg-card px-4 shadow-[var(--shadow-card)] sm:px-5">
-                  <ul className="divide-y divide-line">
-                    {[...session.expenses]
-                      .sort((a, b) => a.createdAt - b.createdAt)
-                      .map((e) => {
-                        const shares = computeShares(e);
-                        const expanded = expandedExpenseId === e.id;
-                        return (
-                          <li key={e.id} className="py-3">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <button
-                                type="button"
-                                aria-expanded={expanded}
-                                onClick={() => setExpandedExpenseId(expanded ? null : e.id)}
-                                className="min-w-0 flex-1 text-left"
-                              >
-                                <span className="block truncate font-semibold text-ink">
-                                  {e.title}
-                                </span>
-                                <span className="block truncate text-sm text-muted">
-                                  <strong className="font-semibold text-ink">
-                                    {nameOf(e.payerId)}
-                                  </strong>{' '}
-                                  đã trả · {MODE_LABELS[e.mode]} cho {e.participantIds.length} người
-                                </span>
-                              </button>
-                              <span className="font-display text-base font-bold whitespace-nowrap text-ink">
-                                {formatVND(e.amount)}
-                              </span>
-                              <ChevronDown
-                                size={16}
-                                aria-hidden
-                                className={cn(
-                                  'shrink-0 text-muted transition-transform',
-                                  expanded && 'rotate-180',
-                                )}
-                              />
-                              <IconButton
-                                title="Sửa khoản chi"
-                                onClick={() => setExpenseEditing(e)}
-                              >
-                                <Pencil size={16} />
-                              </IconButton>
-                              <IconButton
-                                title="Xoá khoản chi"
-                                danger
-                                onClick={() => setPendingDeleteExpense(e)}
-                              >
-                                <Trash2 size={16} />
-                              </IconButton>
-                            </div>
-                            {expanded && (
-                              <ul className="mt-2 grid gap-1 border-t border-line pt-2">
-                                {e.participantIds.map((id) => (
-                                  <li
-                                    key={id}
-                                    className="flex min-w-0 items-baseline justify-between gap-3 text-xs text-muted"
-                                  >
-                                    <span className="min-w-0 truncate">{nameOf(id)}</span>
-                                    <span className="font-display text-xs font-bold whitespace-nowrap text-ink">
-                                      {formatVND(shares[id] ?? 0)}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              )}
-              {session.members.length >= 1 && (
-                <button
-                  type="button"
-                  onClick={() => setExpenseEditing('new')}
-                  className="mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-card font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep active:bg-brand-soft/50"
-                >
-                  <Plus size={16} /> Thêm khoản chi
-                </button>
-              )}
-            </section>
-          )}
-
-          {step === 3 && (
-            <>
-              <p ref={statusRef} tabIndex={-1} className="sr-only">
-                Bước 3: Thanh toán
-              </p>
-              {session.members.length > 0 && session.expenses.length > 0 ? (
-                <Settlement
-                  session={session}
-                  balances={balances}
-                  transfers={transfers}
-                  copied={settledCopied}
-                  copyFailed={settledCopyFailed}
-                  onCopy={handleCopySettlement}
-                  onShare={openShare}
-                  onEditMember={(m) => setMemberEditing(m)}
-                  offlineNotice={<OfflineNotice status={online} className="mb-3 hidden lg:flex" />}
-                />
-              ) : (
-                <p className="rounded-2xl border border-line bg-card p-5 text-sm text-muted shadow-[var(--shadow-card)]">
-                  Cần có thành viên và ít nhất một khoản chi để xem quyết toán.
-                </p>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Settlement Rail desktop — cột phải dính; ẩn ở bước 3 (nội dung đã là chính văn). */}
-        {step !== 3 && (
-          <aside
-            aria-label="Tóm tắt quyết toán"
-            className="sticky top-[68px] mt-5 hidden rounded-2xl border border-line bg-rail p-4 lg:block"
-          >
-            <OfflineNotice status={online} className="mb-2" />
-            <p className="text-xs font-semibold tracking-wide text-muted uppercase">Tổng chi</p>
-            <p className="mt-0.5 font-display text-xl font-extrabold text-ink">
-              {formatVND(total)}
-            </p>
-            <p className="mt-1 truncate text-sm text-muted">{railSummary}</p>
-            <div className="mt-4">
-              <PrimaryButton
-                className="w-full"
-                disabled={step === 1 ? !canStep2 : !canStep3}
-                onClick={() => goStep(step === 1 ? 2 : 3)}
-              >
-                {step === 1 ? 'Tiếp tục: Khoản chi' : 'Tiếp tục: Thanh toán'}
-              </PrimaryButton>
             </div>
-          </aside>
+            <SettlementPanel {...panelProps} variant="row" />
+            <div className="pb-3" />
+          </div>
         )}
-      </div>
-
-      {/* Settlement Rail mobile — dính đáy, CTA của bước luôn trong tầm tay. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-rail lg:hidden">
-        <div className="mx-auto w-full max-w-[1120px] px-4 py-2.5">
-          <OfflineNotice status={online} className="mb-1.5" />
-          {step === 3 ? (
-            <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                {transfers.length > 0 ? `Còn ${transfers.length} lần chuyển` : 'Đã cân bằng'}
-              </p>
-              <PrimaryButton onClick={handleCopySettlement} className="shrink-0">
-                {settledCopied ? <Check size={16} /> : <Copy size={16} />}
-                {settledCopied ? 'Đã copy!' : 'Copy bản quyết toán'}
-              </PrimaryButton>
-              <GhostButton onClick={openShare} className="shrink-0 bg-rail">
-                Chia sẻ link
-              </GhostButton>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-sm font-bold whitespace-nowrap text-ink">
-                  Tổng chi {formatVND(total)}
-                </p>
-                <p className="truncate text-xs text-muted">{railSummary}</p>
-              </div>
-              {stepCta}
-            </div>
-          )}
+        <StatusLine status={online} className="min-h-[28px] items-center" />
+        <button
+          type="button"
+          data-strip-summary
+          aria-expanded={expanded}
+          onClick={() => (expanded ? collapseStrip() : expandStrip())}
+          className="flex min-h-[36px] w-full flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-left"
+        >
+          {stripSummaryContent}
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep">
+            Quyết toán
+            {discrepancy !== 0 && (
+              <span
+                aria-label="Có cảnh báo lệch số dư"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-debt text-[11px] font-bold text-white"
+              >
+                !
+              </span>
+            )}
+            {expanded ? <ChevronDown size={15} aria-hidden /> : <ChevronUp size={15} aria-hidden />}
+          </span>
+        </button>
+        {deckNotice && (
+          <p role="status" className="pb-1 text-[13px] text-ink-2">
+            {deckNotice}
+          </p>
+        )}
+        {/* Action Deck */}
+        <div className="flex min-h-[56px] items-start gap-2 pb-2">
+          <div className="min-w-0 flex-1 [&>*]:w-full">
+            <PrimaryButton
+              disabledReason={
+                session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
+              }
+              onClick={() => setExpenseEditing('new')}
+              className="w-full text-[15px]"
+            >
+              <Plus size={16} aria-hidden /> Thêm khoản
+            </PrimaryButton>
+          </div>
+          <button
+            type="button"
+            aria-label="Chia sẻ link"
+            aria-disabled={session.expenses.length === 0 || undefined}
+            onClick={openShare}
+            className={cn(
+              'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep',
+              session.expenses.length === 0 && 'cursor-not-allowed text-ink-2',
+            )}
+          >
+            <Link2 size={18} aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Thành viên"
+            onClick={focusMemberStrip}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep"
+          >
+            <Users size={18} aria-hidden />
+          </button>
         </div>
-      </div>
+      </section>
 
-      {/* Sheet sửa/thêm thành viên */}
+      {/* Member Sheet */}
       <Sheet
         open={memberEditing !== null}
         onClose={() => setMemberEditing(null)}
-        title={memberEditing === 'new' ? 'Thêm thành viên' : 'Sửa thành viên'}
-        tinted
+        title={memberEditing?.kind === 'edit' ? 'Sửa thành viên' : 'Thêm thành viên'}
       >
         {memberEditing !== null && (
           <MemberEditor
-            key={memberEditing === 'new' ? 'new' : memberEditing.id}
-            initial={memberEditing === 'new' ? undefined : memberEditing}
+            key={memberEditing.kind === 'edit' ? memberEditing.member.id : 'new'}
+            initial={memberEditing.kind === 'edit' ? memberEditing.member : undefined}
+            members={session.members}
+            autoEnableBank={memberEditing.focusBank}
             onSave={saveMember}
+            onSaveBulk={saveBulkMembers}
+            onOpenExisting={(m) => openMember(m)}
+            onDeleteRequest={
+              memberEditing.kind === 'edit'
+                ? () => requestDeleteMember(memberEditing.member)
+                : undefined
+            }
             onCancel={() => setMemberEditing(null)}
           />
         )}
       </Sheet>
 
-      {/* Sheet sửa/thêm khoản chi */}
+      {/* Expense Sheet */}
       <Sheet
         open={expenseEditing !== null}
         onClose={() => setExpenseEditing(null)}
         title={expenseEditing === 'new' ? 'Thêm khoản chi' : 'Sửa khoản chi'}
         wide
-        tinted
       >
         {expenseEditing !== null && (
           <ExpenseEditor
@@ -618,19 +761,121 @@ export function SessionView({
               expenseEditing === 'new' ? null : expenseEditing.id,
             )}
             onSave={saveExpense}
+            onSaveAndMore={applyExpenseDraft}
             onCancel={() => setExpenseEditing(null)}
           />
         )}
       </Sheet>
 
-      {/* ShareSheet — link chỉ mang thành viên, khoản chi và kết quả ai nợ ai (DATA-04). */}
+      {/* Expense Action Sheet — bảng hành động của hàng ledger */}
+      <Sheet
+        open={expenseAction !== null}
+        onClose={() => setExpenseAction(null)}
+        title={expenseAction ? expenseAction.title : 'Khoản chi'}
+      >
+        {expenseAction && (
+          <div className="grid">
+            <button
+              type="button"
+              onClick={() => {
+                setExpenseEditing(expenseAction);
+                setExpenseAction(null);
+              }}
+              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            >
+              <Pencil size={16} aria-hidden /> Sửa khoản chi
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setExpandedExpenseId(expenseAction.id);
+                setExpenseAction(null);
+              }}
+              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+            >
+              <List size={16} aria-hidden /> Xem phần chia từng người
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingDeleteExpense(expenseAction);
+                setExpenseAction(null);
+              }}
+              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
+            >
+              <Trash2 size={16} aria-hidden /> Xoá khoản chi
+            </button>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Session Action Sheet — nơi DUY NHẤT chứa Xoá cuộc chia */}
+      <Sheet
+        open={sessionActionOpen}
+        onClose={() => setSessionActionOpen(false)}
+        title="Cuộc chia này"
+      >
+        <div className="grid">
+          <button
+            type="button"
+            onClick={() => {
+              setSessionActionOpen(false);
+              onBack();
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+          >
+            <Users size={16} aria-hidden /> Tất cả cuộc chia
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionActionOpen(false);
+              openShare();
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+          >
+            <Link2 size={16} aria-hidden /> Chia sẻ link
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionActionOpen(false);
+              void handleCopySettlement();
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+          >
+            <Copy size={16} aria-hidden /> Copy bản quyết toán
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionActionOpen(false);
+              setTitleDraft(session.title);
+              setTitleEditing(true);
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
+          >
+            <Pencil size={16} aria-hidden /> Đổi tên cuộc chia
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionActionOpen(false);
+              setConfirmDeleteSession(true);
+            }}
+            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
+          >
+            <Trash2 size={16} aria-hidden /> Xoá cuộc chia
+          </button>
+        </div>
+      </Sheet>
+
+      {/* Share Sheet — link chỉ mang thành viên, khoản chi và kết quả ai nợ ai (DATA-04). */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Chia sẻ cuộc chia này">
         <p className="text-sm leading-relaxed text-ink">
           Link gồm thành viên, khoản chi và kết quả ai nợ ai. Thông tin ngân hàng không nằm trong
           link — mã QR chỉ hiện trên máy đã lưu tài khoản của người nhận.
         </p>
-        {/* Preview số liệu cụ thể của chính cuộc chia sắp gửi (UI-11 /
-            DATA-04(ii)): người gửi đối chiếu được trước khi link rời máy. */}
         <p className="mt-3 rounded-xl bg-paper px-3 py-2.5 text-sm font-medium text-ink">
           Link sẽ chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
           tổng {formatVND(total)}
@@ -654,12 +899,13 @@ export function SessionView({
             <p className="mb-1.5 text-sm text-muted">
               Trình duyệt không cho copy tự động — hãy copy thủ công link này:
             </p>
-            <input
+            <textarea
               readOnly
               aria-label="Link chia sẻ cuộc chia"
               value={shareUrl}
               onFocus={(e) => e.target.select()}
               className="w-full rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
+              rows={3}
             />
           </div>
         )}

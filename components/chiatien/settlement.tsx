@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
-import { ArrowRight, Check, Copy, Link2, Pencil, QrCode, TriangleAlert } from 'lucide-react';
-import { formatVND } from '@/lib/money';
+import { Check, Copy, Link2, MoveRight, Pencil, QrCode, TriangleAlert } from 'lucide-react';
+import { assignIdentityColors } from '@/lib/identity';
+import { formatVND, formatVNDDisplay } from '@/lib/money';
 import { owedByMember, paidByMember, sumBalances } from '@/lib/split';
 import { buildSettlementText } from '@/lib/settle';
 import { buildShareUrl } from '@/lib/share';
@@ -28,15 +29,32 @@ function transferContent(sessionTitle: string, fromName: string): string {
 
 type QrState = { status: 'loading' } | { status: 'ready'; dataUrl: string } | { status: 'error' };
 
+export type SettlementPanelProps = {
+  session: Session;
+  balances: Record<string, number>;
+  transfers: Transfer[];
+  copied: boolean;
+  copyFailed: boolean;
+  onCopy: () => void;
+  onShare: () => void;
+  onEditMember: (member: Member, opts?: { focusBank?: boolean }) => void;
+  /**
+   * 'row' = hàng lệnh một dòng (dải mở rộng mobile, đủ rộng);
+   * 'stacked' = biến thể xếp chồng cho cột desktop hẹp 320–360px
+   * (dòng 1 tên + mũi tên, dòng 2 tiền + nút VietQR căn phải).
+   */
+  variant?: 'row' | 'stacked';
+};
+
 /**
- * Bước 3 — Thanh toán: "Ai trả ai" TRƯỚC (giá trị cốt lõi), "Số dư từng
- * người" SAU kèm chú thích dấu +/−. VietQR dựng payload EMVCo và vẽ QR
- * 100% tại máy này từ tài khoản đã lưu local (DATA-08) — không ảnh ngoài,
- * không dữ liệu ngân hàng rời máy. Máy chưa lưu tài khoản của người nhận
- * thì hiện trạng thái hạng nhất "Chưa có mã QR trên máy này" với 2 đường
- * đi tiếp (DATA-04).
+ * Bảng quyết toán DÙNG CHUNG (REDESIGN-V2): dải mở rộng mobile và cột
+ * quyết toán desktop thường trực là CÙNG một component — "Ai trả ai"
+ * trước, khối thiếu-QR GOM THEO NGƯỜI NHẬN, "Số dư từng người" kèm dòng
+ * chú thích dấu thường trực, hàng tổng kẻ đôi, CTA chân. VietQR dựng
+ * payload EMVCo + vẽ QR 100% tại máy này từ bank đã lưu local và ĐÃ QUA
+ * validation (hasBank) — không ảnh ngoài, không dữ liệu ngân hàng rời máy.
  */
-export function Settlement({
+export function SettlementPanel({
   session,
   balances,
   transfers,
@@ -45,28 +63,40 @@ export function Settlement({
   onCopy,
   onShare,
   onEditMember,
-  offlineNotice,
-}: {
-  session: Session;
-  balances: Record<string, number>;
-  transfers: Transfer[];
-  copied: boolean;
-  copyFailed: boolean;
-  onCopy: () => void;
-  onShare: () => void;
-  onEditMember: (member: Member) => void;
-  offlineNotice?: React.ReactNode;
-}) {
+  variant = 'row',
+}: SettlementPanelProps) {
   const [openQr, setOpenQr] = useState<number | null>(null);
   const [qrState, setQrState] = useState<QrState>({ status: 'loading' });
-  const [askedIndex, setAskedIndex] = useState<number | null>(null);
+  const [askedId, setAskedId] = useState<string | null>(null);
   const paid = paidByMember(session);
   const owed = owedByMember(session);
   // Chốt chặn toàn vẹn: dữ liệu hợp lệ luôn cho tổng số dư = 0. Nếu khác 0
-  // (dữ liệu lạ lọt qua mọi lớp), phải cảnh báo to thay vì trình bày một
+  // (dữ liệu lạ lọt qua mọi lớp), phải cảnh báo thay vì trình bày một
   // quyết toán lệch như thể đã khớp hết.
   const discrepancy = sumBalances(balances);
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
+  const colors = useMemo(() => assignIdentityColors(session.members), [session.members]);
+  const colorOf = (id: string) => {
+    const idx = session.members.findIndex((m) => m.id === id);
+    return idx >= 0 ? (colors[idx] ?? 0) : 0;
+  };
+  const totalTransfers = transfers.reduce((s, t) => s + t.amount, 0);
+  const allSettled = transfers.length === 0 && session.expenses.length > 0;
+
+  // Người nhận còn thiếu bank local — GOM theo người nhận (D-1): mỗi
+  // người đúng một khối, đếm số lệnh + tổng tiền tới họ.
+  const missingRecipients = useMemo(() => {
+    const byRecipient = new Map<string, { member: Member; count: number; total: number }>();
+    for (const t of transfers) {
+      const recipient = session.members.find((m) => m.id === t.toId);
+      if (!recipient || hasBank(recipient)) continue;
+      const entry = byRecipient.get(recipient.id) ?? { member: recipient, count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += t.amount;
+      byRecipient.set(recipient.id, entry);
+    }
+    return [...byRecipient.values()];
+  }, [transfers, session.members]);
 
   const openTransfer = openQr !== null ? transfers[openQr] : undefined;
   const openRecipient = openTransfer
@@ -78,10 +108,8 @@ export function Settlement({
   useEffect(() => {
     if (!openTransfer || !openRecipient || !hasBank(openRecipient)) return;
     let cancelled = false;
-    // Lý do (CQ-02): reset trạng thái QR về 'loading' đồng bộ ngay khi mở
-    // một lệnh chuyển mới — nếu để render cũ hiển thị trong lúc chờ sinh
-    // QR mới, người dùng có thể quét nhầm mã của lệnh trước. Đây là đồng
-    // bộ với thao tác mở sheet (hệ thống ngoài), không phải derived state.
+    // Reset về 'loading' đồng bộ khi mở lệnh mới để người dùng không quét
+    // nhầm mã của lệnh trước trong lúc chờ sinh QR mới.
     /* eslint-disable react-hooks/set-state-in-effect */
     setQrState({ status: 'loading' });
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -100,200 +128,236 @@ export function Settlement({
     return () => {
       cancelled = true;
     };
-    // Lý do (CQ-02): nameOf/session.title là hàm/giá trị suy từ session —
-    // đưa vào deps sẽ sinh lại QR mỗi lần session đổi identity dù lệnh mở
-    // không đổi; effect chỉ được chạy khi ĐỔI LỆNH MỞ (openQr) hoặc đúng
-    // lệnh/người nhận đó thay đổi, nên deps dừng ở ba giá trị này.
+    // nameOf/session.title suy từ session — đưa vào deps sẽ sinh lại QR mỗi
+    // lần session đổi identity dù lệnh mở không đổi; chỉ chạy theo lệnh mở.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openQr, openTransfer, openRecipient]);
 
-  async function handleAsk(recipient: Member, index: number) {
+  async function handleAsk(recipient: Member) {
     const link = buildShareUrl(session);
     const text = `Đây là link chốt tiền của nhóm mình: ${link} — mở trên máy của bạn để xem ai nợ ai và mã QR của bạn.`;
     const ok = await copyText(text);
     if (ok) {
-      setAskedIndex(index);
-      window.setTimeout(() => setAskedIndex(null), 3000);
+      setAskedId(recipient.id);
+      window.setTimeout(() => setAskedId(null), 3000);
     }
   }
 
   return (
     <section aria-label="Quyết toán" className="grid gap-6">
-      <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-ink">Ai trả ai</h2>
-          {/* Desktop: rail ẩn ở bước 3 nên hai hành động chính nằm ở đây. */}
-          <div className="hidden gap-2 lg:flex">
-            <PrimaryButton onClick={onCopy}>
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
-            </PrimaryButton>
-            <GhostButton onClick={onShare}>
-              <Link2 size={16} /> Chia sẻ link
-            </GhostButton>
-          </div>
-        </div>
-        {offlineNotice}
-        <span className="sr-only" role="status">
-          {copied ? 'Đã sao chép bản quyết toán vào bộ nhớ tạm.' : ''}
-        </span>
-        {discrepancy !== 0 && (
-          <p
-            role="alert"
-            className="mb-3 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
-          >
-            <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
-            <span>
-              Số dư chưa cân bằng: còn {formatVND(Math.abs(discrepancy))} chưa có người chịu, nên
-              quyết toán bên dưới chưa khớp hết. Hãy kiểm tra lại các khoản chi “Tuỳ chỉnh số tiền”
-              — tổng các phần chia phải đúng bằng số tiền của khoản chi.
-            </span>
-          </p>
-        )}
-        {copyFailed && (
-          <>
-            <p role="alert" className="mb-2 text-sm font-medium text-debt">
-              Trình duyệt không cho copy tự động — hãy chọn và copy thủ công phần dưới đây.
-            </p>
-            <textarea
-              readOnly
-              rows={7}
-              aria-label="Bản quyết toán dạng chữ để copy thủ công"
-              value={buildSettlementText(session, balances, transfers)}
-              onFocus={(e) => e.target.select()}
-              className="mb-3 w-full rounded-xl border border-line-strong bg-card p-3 text-base text-ink outline-none focus:border-brand-deep"
-            />
-          </>
-        )}
-
-        <div className="rounded-2xl border border-line bg-card px-4 shadow-[var(--shadow-card)] sm:px-5">
-          {transfers.length === 0 ? (
-            <p className="py-4 text-sm text-ink">Mọi người đã cân bằng — không ai nợ ai.</p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {transfers.map((t, i) => {
-                const recipient = session.members.find((m) => m.id === t.toId);
-                const canQr = recipient !== undefined && hasBank(recipient);
-                return (
-                  <li key={`${t.fromId}-${t.toId}-${i}`} className="py-3">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2">
-                      <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-ink">
-                        <Avatar id={t.fromId} name={nameOf(t.fromId)} size={24} />
-                        <span className="truncate">{nameOf(t.fromId)}</span>
-                      </span>
-                      <ArrowRight size={15} className="shrink-0 text-brand" aria-hidden />
-                      <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-ink">
-                        <Avatar id={t.toId} name={nameOf(t.toId)} size={24} />
-                        <span className="truncate">{nameOf(t.toId)}</span>
-                      </span>
-                      <span className="ml-auto font-display text-base font-bold whitespace-nowrap text-ink">
-                        {formatVND(t.amount)}
-                      </span>
-                      {canQr && (
-                        <button
-                          type="button"
-                          aria-expanded={openQr === i}
-                          onClick={() => setOpenQr(i)}
-                          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 font-display text-xs font-bold text-white transition hover:bg-brand-deep active:bg-brand-deep"
-                        >
-                          <QrCode size={14} /> VietQR
-                        </button>
-                      )}
-                    </div>
-                    {canQr ? (
-                      <p className="mt-1.5 text-xs text-muted">
-                        QR từ tài khoản đã lưu trên máy này
-                      </p>
-                    ) : (
-                      recipient && (
-                        <div className="mt-2 rounded-xl bg-paper px-3 py-3">
-                          <p className="text-sm font-semibold text-ink">
-                            Chưa có mã QR trên máy này
-                          </p>
-                          <p className="mt-0.5 text-sm leading-relaxed text-muted">
-                            {recipient.name} chưa lưu tài khoản trên máy này. Nhờ {recipient.name}{' '}
-                            mở link trên máy của {recipient.name} để thấy mã QR, hoặc nhập tài khoản
-                            của {recipient.name} tại đây.
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleAsk(recipient, i)}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line-strong bg-card px-3 text-sm font-semibold text-brand-deep transition hover:border-brand-deep"
-                            >
-                              {askedIndex === i ? <Check size={15} /> : <Link2 size={15} />}
-                              {askedIndex === i
-                                ? 'Đã copy lời nhắn!'
-                                : `Nhờ ${recipient.name} mở link trên máy của ${recipient.name}`}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onEditMember(recipient)}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition hover:border-brand-deep hover:text-brand-deep"
-                            >
-                              <Pencil size={15} />
-                              Nhập tài khoản của {recipient.name} trên máy này
-                            </button>
-                          </div>
-                          <span className="sr-only" role="status">
-                            {askedIndex === i ? 'Đã sao chép lời nhắn kèm link chia sẻ.' : ''}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="mb-1 font-display text-lg font-bold text-ink">Số dư từng người</h2>
-        <p className="mb-3 text-sm text-muted">
-          Số dư dương (+) nghĩa là được nhận lại khi quyết toán; số dư âm (−) nghĩa là phải trả
-          thêm.
+      <span className="sr-only" role="status">
+        {copied ? 'Đã sao chép bản quyết toán vào bộ nhớ tạm.' : ''}
+      </span>
+      {discrepancy !== 0 && (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
+        >
+          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
+            Số dư chưa cân bằng: còn {formatVND(Math.abs(discrepancy))} chưa có người chịu, nên
+            quyết toán bên dưới chưa khớp hết. Hãy kiểm tra lại các khoản chi “Tuỳ chỉnh số tiền” —
+            tổng các phần chia phải đúng bằng số tiền của khoản chi.
+          </span>
         </p>
-        <div className="rounded-2xl border border-line bg-card px-4 shadow-[var(--shadow-card)] sm:px-5">
+      )}
+      {copyFailed && (
+        <>
+          <p role="alert" className="mb-2 text-sm font-medium text-debt">
+            Trình duyệt không cho copy tự động — hãy chọn và copy thủ công phần dưới đây.
+          </p>
+          <textarea
+            readOnly
+            rows={7}
+            aria-label="Bản quyết toán dạng chữ để copy thủ công"
+            value={buildSettlementText(session, balances, transfers)}
+            onFocus={(e) => e.target.select()}
+            className="mb-3 w-full rounded-xl border border-line-strong bg-card p-3 text-base text-ink outline-none focus:border-brand-deep"
+          />
+        </>
+      )}
+
+      <div>
+        <h2 className="mb-2 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+          Ai trả ai
+        </h2>
+        {allSettled ? (
+          <p className="flex items-center gap-2 py-2 text-sm font-medium text-ink">
+            <Check size={16} className="shrink-0 text-credit" aria-hidden />
+            Đã cân hết — không ai nợ ai
+          </p>
+        ) : transfers.length === 0 ? (
+          <p className="py-2 text-sm text-ink-2">Chưa có gì để quyết toán</p>
+        ) : (
           <ul className="divide-y divide-line">
-            {session.members.map((m) => {
-              const b = balances[m.id] ?? 0;
-              return (
-                <li key={m.id} className="flex min-w-0 items-center gap-3 py-3">
-                  <Avatar id={m.id} name={m.name} size={32} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-ink">{m.name}</p>
-                    <p className="text-xs text-muted">
-                      Đã trả{' '}
-                      <span className="font-display font-semibold text-ink">
-                        {formatVND(paid[m.id] ?? 0)}
-                      </span>{' '}
-                      · Phải chịu{' '}
-                      <span className="font-display font-semibold text-ink">
-                        {formatVND(owed[m.id] ?? 0)}
-                      </span>
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      'font-display text-sm font-bold whitespace-nowrap',
-                      b > 0 && 'text-credit',
-                      b < 0 && 'text-debt',
-                      b === 0 && 'text-muted',
-                    )}
-                  >
-                    {b > 0 ? '+' : ''}
-                    {formatVND(b)}
+            {transfers.map((t, i) => {
+              const recipient = session.members.find((m) => m.id === t.toId);
+              const canQr = recipient !== undefined && hasBank(recipient);
+              const names = (
+                <>
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Avatar name={nameOf(t.fromId)} colorIndex={colorOf(t.fromId)} size={24} />
+                    <span className="line-clamp-2 min-w-0 font-semibold text-ink">
+                      {nameOf(t.fromId)}
+                    </span>
                   </span>
+                  <MoveRight size={15} className="shrink-0 text-brand" aria-hidden />
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Avatar name={nameOf(t.toId)} colorIndex={colorOf(t.toId)} size={24} />
+                    <span className="line-clamp-2 min-w-0 font-semibold text-ink">
+                      {nameOf(t.toId)}
+                    </span>
+                  </span>
+                </>
+              );
+              const amountAndQr = (
+                <>
+                  <span className="font-figure text-base font-bold whitespace-nowrap text-ink">
+                    {formatVNDDisplay(t.amount)}
+                  </span>
+                  {canQr && (
+                    <button
+                      type="button"
+                      aria-expanded={openQr === i}
+                      onClick={() => setOpenQr(i)}
+                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 font-display text-xs font-bold text-white transition hover:bg-brand-deep active:bg-brand-deep"
+                    >
+                      <QrCode size={14} /> VietQR
+                    </button>
+                  )}
+                </>
+              );
+              return (
+                <li key={`${t.fromId}-${t.toId}-${i}`} data-transfer-row={`${t.fromId}-${t.toId}`}>
+                  {variant === 'stacked' ? (
+                    <div className="min-h-[52px] py-2">
+                      <div className="flex min-w-0 items-center gap-1.5">{names}</div>
+                      <div className="mt-1 flex shrink-0 items-center justify-end gap-2">
+                        {amountAndQr}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid min-h-[56px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">{names}</div>
+                      <div className="flex shrink-0 items-center gap-2">{amountAndQr}</div>
+                    </div>
+                  )}
                 </li>
               );
             })}
           </ul>
+        )}
+
+        {/* Khối thiếu-QR gom theo NGƯỜI NHẬN (D-1): hàng phẳng cùng bảng —
+            hairline trên/dưới, không nền, không bo góc, không hộp lồng. */}
+        {missingRecipients.map(({ member, count, total }) => (
+          <div key={member.id} className="border-y border-line py-3">
+            <p className="text-sm font-semibold text-ink">
+              Chưa có mã QR trên máy này — {member.name}
+            </p>
+            <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
+              {member.name} chưa lưu tài khoản trên máy này, nên {count} lệnh chuyển tới{' '}
+              {member.name} (tổng {formatVNDDisplay(total)}) chưa có mã QR tại đây.
+            </p>
+            <div className="mt-2 grid gap-2">
+              <button
+                type="button"
+                onClick={() => handleAsk(member)}
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 font-display text-sm font-bold text-white transition hover:bg-brand-deep active:bg-brand-deep"
+              >
+                {askedId === member.id ? <Check size={15} /> : <Link2 size={15} />}
+                Nhắn xin QR của {member.name}
+              </button>
+              <GhostButton onClick={() => onEditMember(member, { focusBank: true })}>
+                <Pencil size={15} />
+                Nhập tài khoản của {member.name} trên máy này
+              </GhostButton>
+            </div>
+            {askedId === member.id && (
+              <p role="status" className="mt-2 text-sm font-medium text-brand-deep">
+                Đã copy lời nhắn — dán vào Zalo/Messenger để gửi {member.name}.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h2 className="mb-1 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+          Số dư từng người
+        </h2>
+        {/* Chú thích dấu THƯỜNG TRỰC ở đầu bảng (R3-F2). */}
+        <p className="mb-2 text-[13px] text-ink-2">Dấu + là được nhận lại, dấu − là trả thêm.</p>
+        <ul className="divide-y divide-line">
+          {session.members.map((m, idx) => {
+            const b = balances[m.id] ?? 0;
+            return (
+              <li
+                key={m.id}
+                className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={32} />
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 font-semibold text-ink">{m.name}</p>
+                    <p className="font-figure text-[13px] text-ink-2">
+                      Đã trả {formatVNDDisplay(paid[m.id] ?? 0)} · Phải chịu{' '}
+                      {formatVNDDisplay(owed[m.id] ?? 0)}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    'font-figure text-base font-bold whitespace-nowrap',
+                    b > 0 && 'text-credit',
+                    b < 0 && 'text-debt',
+                    b === 0 && 'text-ink-2',
+                  )}
+                >
+                  {b > 0 ? '+' : ''}
+                  {formatVNDDisplay(b)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="double-rule mt-3" aria-hidden />
+        <div className="flex min-h-[44px] items-center justify-between gap-3">
+          <span className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+            Tổng chuyển
+          </span>
+          <span className="font-figure text-[19px] font-bold whitespace-nowrap text-ink">
+            {formatVNDDisplay(totalTransfers)}
+          </span>
         </div>
       </div>
 
-      {/* Sheet VietQR — QR sinh local, khung 220px cố định không nhảy layout. */}
+      {/* CTA chân panel: copy là chính; khi đã cân hết, chia sẻ link là
+          thứ đáng gửi nên hoán trọng lượng (LAYOUT-SPEC §3). */}
+      {allSettled ? (
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton onClick={onShare} className="flex-1">
+            <Link2 size={16} /> Chia sẻ link
+          </PrimaryButton>
+          <GhostButton onClick={onCopy}>
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
+          </GhostButton>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton onClick={onCopy} className="flex-1">
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
+          </PrimaryButton>
+          <GhostButton onClick={onShare}>
+            <Link2 size={16} /> Chia sẻ link
+          </GhostButton>
+        </div>
+      )}
+
+      {/* QR Sheet — chỉ mở khi hasBank(người nhận): điều kiện kiểm chứng
+          cho câu "đã điền sẵn" (Verified Claim Rule). Khung 220px giữ chỗ. */}
       <Sheet
         open={openQr !== null && !!openRecipient && hasBank(openRecipient)}
         onClose={() => setOpenQr(null)}
@@ -303,9 +367,9 @@ export function Settlement({
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-[220px] w-[220px] shrink-0 items-center justify-center rounded-xl border border-line bg-white p-2">
               {qrState.status === 'ready' ? (
-                // Lý do (CQ-02): src là data URL do thư viện qrcode sinh
-                // tại máy — next/image không xử lý data URL và QR phải
-                // hiển thị offline, nên <img> thường là đúng ở đây.
+                // src là data URL do thư viện qrcode sinh tại máy —
+                // next/image không xử lý data URL và QR phải hiển thị
+                // offline, nên <img> thường là đúng ở đây.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={qrState.dataUrl}
@@ -320,49 +384,48 @@ export function Settlement({
                 </p>
               ) : (
                 <p role="status" className="text-sm text-muted">
-                  Đang tạo mã QR…
+                  Đang tạo mã…
                 </p>
               )}
             </div>
             <dl className="grid w-full gap-1.5 text-sm">
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Ngân hàng</dt>
-                <dd className="min-w-0 truncate font-medium text-ink">
+                <dd className="min-w-0 font-medium break-words text-ink">
                   {openRecipient.bank.bankName}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Số tài khoản</dt>
-                <dd className="font-mono font-medium break-all text-ink">
+                <dd className="font-figure font-medium break-all text-ink">
                   {openRecipient.bank.accountNumber}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Chủ tài khoản</dt>
-                <dd className="min-w-0 truncate font-medium text-ink">
+                <dd className="min-w-0 font-medium break-words text-ink">
                   {openRecipient.bank.accountName}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Số tiền</dt>
-                <dd className="font-display font-bold whitespace-nowrap text-ink">
+                <dd className="font-figure font-bold whitespace-nowrap text-ink">
                   {formatVND(openTransfer.amount)}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Nội dung</dt>
-                <dd className="min-w-0 font-mono text-right font-medium break-all text-ink">
+                <dd className="min-w-0 text-right font-medium break-all text-ink">
                   {transferContent(session.title, nameOf(openTransfer.fromId))}
                 </dd>
               </div>
             </dl>
-            <p className="text-center text-xs leading-relaxed text-muted">
+            <p className="text-center text-[13px] leading-relaxed text-ink-2">
               QR từ tài khoản đã lưu trên máy này. Quét bằng app ngân hàng — số tiền và nội dung đã
               điền sẵn.
             </p>
-            {/* SEC-12.6: xác nhận khớp danh tính trước khi quét — QR đúng
-                định dạng vẫn có thể trỏ tới tài khoản nhập sai từ đầu. */}
-            <p className="text-center text-xs leading-relaxed font-semibold text-brand-deep">
+            {/* SEC-12.6: xác nhận khớp danh tính trước khi quét. */}
+            <p className="text-center text-[13px] leading-relaxed font-semibold text-brand-deep">
               Trước khi quét, hãy kiểm tra tên chủ tài khoản ở trên khớp đúng người bạn định chuyển
               — nếu sai tên, đừng quét, hãy sửa lại tài khoản đã lưu.
             </p>
@@ -372,3 +435,6 @@ export function Settlement({
     </section>
   );
 }
+
+/** Tên cũ giữ làm alias cho mọi nơi gọi còn sót — component là một. */
+export const Settlement = SettlementPanel;

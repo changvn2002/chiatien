@@ -1,77 +1,80 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { WifiOff } from 'lucide-react';
+import { IDENTITY_PALETTE, initialsOf } from '@/lib/identity';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
 /* Avatar DiceBear — style initials, sinh 100% tại client (offline).   */
 /*                                                                     */
-/* Đọc source @dicebear/initials 9.4.2: glyph lấy từ SEED              */
-/* (getInitials(prng.seed.trim()) — 1 từ lấy 2 ký tự đầu, nhiều từ    */
-/* lấy ký tự đầu của từ đầu + từ cuối). Vì vậy seed PHẢI là tên thành  */
-/* viên thì avatar mới hiện đúng chữ cái của người đó. Màu nền thì     */
-/* ngược lại: ghim đúng 1 màu bằng hash ổn định của member id và       */
-/* truyền mảng backgroundColor 1 phần tử — sửa tên không đổi màu       */
-/* avatar, đúng kỷ luật "định danh ổn định theo id".                   */
+/* Cơ chế danh tính M-2 (DESIGN-LANGUAGE §8, DESIGN.md mục Avatar):    */
+/* màu KHÔNG còn suy từ member id nữa — import qua share link cấp id   */
+/* mới nên cơ chế cũ làm cùng một người đổi màu giữa hai máy, lại      */
+/* không chống trùng màu trong nhóm và palette cũ còn chứa cả màu      */
+/* ngữ nghĩa tiền (#177245). Nay màu được gán ở tầng dữ liệu:          */
+/* assignIdentityColors() trong lib/identity.ts suy màu xác định từ    */
+/* tên đã chuẩn hoá + ordinal của thành viên trong mảng members của    */
+/* payload (FNV-1a-32 → IDENTITY_PALETTE, thăm tuyến tính chống        */
+/* trùng), và component này CHỈ nhận colorIndex đã gán sẵn — nó        */
+/* không tự chọn màu. Glyph cũng lấy từ cùng nguồn sự thật đó:         */
+/* seed = initialsOf(name) của lib/identity.ts.                        */
+/*                                                                     */
+/* Render bằng SVG INLINE trong DOM (createAvatar(...).toString() qua */
+/* dangerouslySetInnerHTML), KHÔNG qua <img>/data URI: <img> không     */
+/* dùng được webfont của trang nên glyph từng rơi về sans mặc định     */
+/* theo OS; SVG inline kế thừa Be Vietnam Pro 700 đã tải của trang.    */
 /* ------------------------------------------------------------------ */
 
-/** Họ ấm khoá palette cho nền avatar (hex không '#', theo schema DiceBear). */
-const AVATAR_PALETTE = [
-  'B45309',
-  '92400E',
-  'B3352C',
-  '177245',
-  '854D0E',
-  '7C2D12',
-  '9A3412',
-  'A16207',
-];
+const avatarSvgCache = new Map<string, string>();
 
-function avatarBackground(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
-}
-
-const avatarCache = new Map<string, string>();
-
-function avatarDataUri(id: string, name: string): string {
-  const key = `${id}|${name}`;
-  const cached = avatarCache.get(key);
+function avatarSvg(name: string, colorIndex: number): string {
+  const paletteSize = IDENTITY_PALETTE.length;
+  // Guard runtime: colorIndex luôn bắt buộc ở tầng type, nhưng một caller
+  // chưa migrate mà truyền undefined không được làm sập cả màn hình —
+  // rơi về màu đầu palette thay vì NaN -> undefined.replace crash.
+  const safeIndex = Number.isFinite(colorIndex) ? Math.trunc(colorIndex) : 0;
+  const idx = ((safeIndex % paletteSize) + paletteSize) % paletteSize;
+  const key = `${name}|${idx}`;
+  const cached = avatarSvgCache.get(key);
   if (cached) return cached;
-  const uri = createAvatar(initials, {
-    seed: name,
-    backgroundColor: [avatarBackground(id)],
+  const svg = createAvatar(initials, {
+    seed: initialsOf(name),
+    // IDENTITY_PALETTE giữ dạng '#RRGGBB'; schema DiceBear cần hex không '#'.
+    backgroundColor: [IDENTITY_PALETTE[idx].replace('#', '')],
     textColor: ['ffffff'],
-    // Style initials hỗ trợ fontFamily (schema có sẵn option này).
-    fontFamily: ['Be Vietnam Pro', 'Arial', 'sans-serif'],
+    fontFamily: ['Be Vietnam Pro', 'Inter', 'sans-serif'],
     fontWeight: 700,
     fontSize: 46,
-  }).toDataUri();
-  avatarCache.set(key, uri);
-  return uri;
+  }).toString();
+  avatarSvgCache.set(key, svg);
+  return svg;
 }
 
-/** Avatar tròn DiceBear initials — data URI nội bộ, không gọi mạng. */
-export function Avatar({ id, name, size = 36 }: { id: string; name: string; size?: number }) {
-  const uri = useMemo(() => avatarDataUri(id, name), [id, name]);
+/**
+ * Avatar tròn DiceBear initials — SVG inline sinh tại client, không gọi
+ * mạng. `colorIndex` là chỉ số palette danh tính ĐÃ được gán ở tầng dữ
+ * liệu (assignIdentityColors ở lib/identity.ts) cho vị trí của thành
+ * viên trong cuộc chia; component không suy màu từ id hay từ tên.
+ */
+export function Avatar({
+  name,
+  colorIndex,
+  size = 36,
+}: {
+  name: string;
+  colorIndex: number;
+  size?: number;
+}) {
+  const svg = useMemo(() => avatarSvg(name, colorIndex), [name, colorIndex]);
   return (
-    // Lý do (CQ-02): src là data URI SVG do DiceBear sinh tại client —
-    // next/image không tối ưu được data URI và sẽ phá tính offline của
-    // avatar, nên dùng <img> thường là lựa chọn đúng ở đây.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={uri}
-      alt=""
+    <span
       aria-hidden
-      width={size}
-      height={size}
-      className="shrink-0 rounded-full"
+      className="inline-flex shrink-0 overflow-hidden rounded-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
       style={{ width: size, height: size }}
-      draggable={false}
+      dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
 }
@@ -85,29 +88,60 @@ export function PrimaryButton({
   children,
   onClick,
   disabled,
+  disabledReason,
   className,
   type,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
+  /**
+   * Trạng thái disabled CÓ LÝ DO (DESIGN-LANGUAGE §6): khi có giá trị,
+   * nút render bằng bề mặt deck-sand + chữ brand-deep + biên line-strong,
+   * giữ focus được bằng aria-disabled (KHÔNG dùng thuộc tính disabled
+   * cứng, KHÔNG opacity), onClick không chạy, và dòng lý do hiện ngay
+   * dưới nút, được nút trỏ tới bằng aria-describedby. Không có
+   * disabledReason -> hành vi disabled thường như trước.
+   */
+  disabledReason?: string;
   className?: string;
   type?: 'button' | 'submit';
 }) {
-  return (
+  const reactId = useId();
+  const reasonId = `primary-reason-${reactId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const reasonDisabled = Boolean(disabledReason);
+
+  const button = (
     <button
       type={type ?? 'button'}
-      onClick={onClick}
-      disabled={disabled}
+      onClick={reasonDisabled ? undefined : onClick}
+      disabled={reasonDisabled ? undefined : disabled}
+      aria-disabled={reasonDisabled || undefined}
+      aria-describedby={reasonDisabled ? reasonId : undefined}
       className={cn(
         // Disabled KHÔNG dùng opacity mờ (panel §7.2): nền Amber Tint + chữ
         // Dark Amber đạt 6.09:1 — đọc rõ là "chưa bấm được", không như bị khoá.
         'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-brand px-4 py-2.5 font-display text-sm font-bold text-white transition hover:bg-brand-deep active:bg-brand-deep disabled:cursor-not-allowed disabled:border-line-strong disabled:bg-brand-soft disabled:text-brand-deep disabled:hover:bg-brand-soft',
+        // Disabled-có-lý-do (DESIGN-LANGUAGE §6): bề mặt deck-sand là bề
+        // mặt disabled duy nhất của hệ — brand-deep trên sand đạt 5.73:1.
+        reasonDisabled &&
+          'cursor-not-allowed border-line-strong bg-deck-sand text-brand-deep hover:bg-deck-sand active:bg-deck-sand',
         className,
       )}
     >
       {children}
     </button>
+  );
+
+  if (!reasonDisabled) return button;
+
+  return (
+    <span className="inline-flex flex-col items-stretch gap-1">
+      {button}
+      <span id={reasonId} className="text-[13px] text-ink-2">
+        {disabledReason}
+      </span>
+    </span>
   );
 }
 
@@ -233,8 +267,44 @@ export function useOnlineStatus(): OnlineStatus {
 }
 
 /**
+ * Dòng trạng thái THƯỜNG TRỰC của app-shell (LAYOUT-SPEC §6.3, D-2):
+ * cùng một component ở mọi bề mặt (Màn A: chân card tạo mới; Màn B:
+ * trong Settlement Strip), suy trạng thái ngay khi mount qua
+ * useOnlineStatus nên hiện đúng cả sau reload lạnh lúc offline.
+ * Phần tử LUÔN hiển thị — không biến mất, không opacity-0 khi nghỉ:
+ * online -> "Đã lưu trên máy này" (đây cũng là chỉ báo lưu thường trực,
+ * thay cho nhãn "Đã lưu" thoáng qua ở AppBar); offline -> câu offline
+ * kèm icon WifiOff; vừa có mạng lại -> "Đã có mạng trở lại" (trạng thái
+ * 'back' tự quay về 'online' sau 3 giây trong useOnlineStatus).
+ * aria-live="polite" chỉ để THÔNG BÁO THAY ĐỔI trạng thái cho screen
+ * reader; nội dung nhìn thấy không phụ thuộc vào live region.
+ */
+export function StatusLine({ status, className }: { status: OnlineStatus; className?: string }) {
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className={cn('flex items-center gap-1.5 text-[13px] font-medium text-ink-2', className)}
+    >
+      {status === 'offline' ? (
+        <>
+          <WifiOff size={14} aria-hidden className="shrink-0" />
+          <span>Đang offline — vẫn chia tiền được, dữ liệu lưu trên máy này.</span>
+        </>
+      ) : status === 'back' ? (
+        <span>Đã có mạng trở lại</span>
+      ) : (
+        <span>Đã lưu trên máy này</span>
+      )}
+    </p>
+  );
+}
+
+/**
  * Dòng chỉ báo trạng thái mạng — thông tin trạng thái, không phải lỗi:
  * không nền đỏ, không chặn thao tác, aria-live polite cho screen reader.
+ * (Giữ cho tương thích với các bề mặt chưa chuyển sang StatusLine; bề
+ * mặt mới dùng StatusLine thường trực ở trên.)
  */
 export function OfflineNotice({ status, className }: { status: OnlineStatus; className?: string }) {
   if (status === 'online') return null;

@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
+import { assignIdentityColors } from '@/lib/identity';
 import { formatVND } from '@/lib/money';
 import { computeShares, validateExpenseDraft, type ExpenseDraft } from '@/lib/split';
 import { clearExpenseDraft, loadExpenseDraft, saveExpenseDraft } from '@/lib/storage';
 import type { Expense, Member, SplitMode } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, GhostButton, PrimaryButton, inputClass, labelClass } from './ui-bits';
-import { MoneyInput } from './money-input';
+import { AMOUNT_CAP_MESSAGE, MoneyInput } from './money-input';
 
 const MODE_LABELS: Record<SplitMode, string> = {
   equal: 'Chia đều',
@@ -16,37 +17,43 @@ const MODE_LABELS: Record<SplitMode, string> = {
   shares: 'Theo phần',
 };
 
+/** Giải thích 1 dòng TẠI ĐIỂM CHỌN cho cả 3 kiểu chia (COPY-DIET §2 dòng 11). */
+const MODE_HINTS: Record<SplitMode, string> = {
+  equal: 'Chia đều cho những người được chọn.',
+  custom: 'Nhập đúng số tiền từng người chịu — tổng phải khớp.',
+  shares: 'Ví dụ: ở 2/3 đêm thì nhập 2 phần.',
+};
+
 export interface ExpenseSave extends ExpenseDraft {
   id?: string;
 }
 
 /**
- * Nội dung form thêm/sửa khoản chi — vỏ bottom-sheet/dialog do
- * components/chiatien/sheet.tsx đảm nhiệm: tên, số tiền, người trả, nhóm
- * người cùng chia và 1 trong 3 kiểu chia. Lỗi validate hiển thị trực tiếp,
- * nút Lưu chỉ bấm được khi khoản chi hợp lệ — đặc biệt kiểu tuỳ chỉnh bắt
- * tổng phải khớp.
+ * Nội dung Expense Sheet (thêm/sửa khoản) — vỏ Sheet do sheet.tsx đảm
+ * nhiệm. Mẫu Validation Thống Nhất (DESIGN-LANGUAGE §13.1): một nguồn
+ * kiểm duy nhất là validateExpenseDraft của lib/split.ts; lỗi tại trường
+ * + tóm tắt role="alert" ngay trên nút Lưu; nút Lưu disabled-CÓ-LÝ-DO
+ * ngay từ trạng thái mở đầu (lý do = điều còn thiếu gần nhất).
  *
- * Draft đang nhập (W5-06 / backlog F4): khi được cấp draftKey, mọi thay
- * đổi trong form được giữ vào localStorage và khôi phục nguyên trạng khi
- * form mở lại — reload trang (hoặc lỡ tay đóng tab) không còn làm mất
- * khoản đang gõ dở. Draft bị xoá khi lưu thành công hoặc bấm Huỷ.
+ * Draft đang nhập (W5-06): draftKey -> giữ localStorage, khôi phục khi mở
+ * lại kèm dòng "Đã khôi phục nội dung bạn nhập dở…".
  */
 export function ExpenseEditor({
   members,
   initial,
   draftKey,
   onSave,
+  onSaveAndMore,
   onCancel,
 }: {
   members: Member[];
   initial?: Expense;
   draftKey?: string;
   onSave: (draft: ExpenseSave) => void;
+  /** "Lưu & thêm nữa": lưu nhưng sheet Ở LẠI (session-view không đóng). */
+  onSaveAndMore?: (draft: ExpenseSave) => void;
   onCancel: () => void;
 }) {
-  // Draft khôi phục được đọc MỘT lần lúc form mở; có draft thì nội dung
-  // đang nhập dở thắng giá trị ban đầu — đó chính là thứ người dùng cần lại.
   const [restoredDraft] = useState<ExpenseDraft | null>(() =>
     draftKey ? loadExpenseDraft(draftKey) : null,
   );
@@ -65,13 +72,17 @@ export function ExpenseEditor({
   const [weights, setWeights] = useState<Record<string, number>>(
     restoredDraft?.weights ?? initial?.weights ?? {},
   );
-  // Chỉ "la" lỗi sau khi người dùng đã bắt đầu thao tác — mở form ra chưa
-  // nhập gì mà đã thấy danh sách lỗi đỏ là báo lỗi cho việc họ chưa làm.
   const [touched, setTouched] = useState(false);
+  const [capError, setCapError] = useState(false);
+  const [savedMoreNotice, setSavedMoreNotice] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Giá trị hiệu lực: người tham gia chưa từng sửa ô của mình thì dùng mặc định
-  // hiển thị trên form (tuỳ chỉnh = 0đ, trọng số = 1 phần) — tránh validate
-  // chặn oan trong khi giao diện đang hiển thị một giá trị hợp lệ.
+  const colors = useMemo(() => assignIdentityColors(members), [members]);
+  const colorOf = (id: string) => {
+    const idx = members.findIndex((m) => m.id === id);
+    return idx >= 0 ? (colors[idx] ?? 0) : 0;
+  };
+
   const effectiveCustom = useMemo(
     () => Object.fromEntries(participantIds.map((id) => [id, custom[id] ?? 0])),
     [participantIds, custom],
@@ -91,6 +102,24 @@ export function ExpenseEditor({
   };
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const errors = validateExpenseDraft(draft, memberIds);
+
+  // Lý do disabled của nút Lưu — điều còn thiếu GẦN NHẤT, có ngay từ lúc
+  // sheet vừa mở (COPY-DIET §5, R3-10).
+  const customSum = participantIds.reduce((s, id) => s + (custom[id] ?? 0), 0);
+  const saveReason =
+    errors.length === 0
+      ? undefined
+      : amount <= 0
+        ? 'Nhập số tiền để lưu khoản chi'
+        : !memberIds.includes(payerId)
+          ? 'Chọn người trả để lưu khoản chi'
+          : participantIds.length === 0
+            ? 'Chọn ít nhất 1 người cùng chia để lưu khoản chi'
+            : mode === 'custom' && customSum !== amount
+              ? 'Tổng các phần chưa khớp số tiền khoản chi'
+              : !title.trim()
+                ? 'Nhập tên khoản chi để lưu'
+                : errors[0];
 
   const preview = useMemo(() => {
     if (amount <= 0 || participantIds.length === 0) return null;
@@ -112,16 +141,31 @@ export function ExpenseEditor({
     return { kind: 'computed' as const, shares };
   }, [amount, participantIds, mode, custom, effectiveCustom, effectiveWeights, payerId, title]);
 
-  // Giữ draft liên tục theo từng thay đổi — reload ở bất kỳ thời điểm nào
-  // cũng khôi phục được đúng nội dung đang hiển thị trong form.
   useEffect(() => {
     if (!draftKey) return;
     saveExpenseDraft(draftKey, { title, amount, payerId, participantIds, mode, custom, weights });
   }, [draftKey, title, amount, payerId, participantIds, mode, custom, weights]);
 
   function handleSave() {
+    if (errors.length > 0) return;
     if (draftKey) clearExpenseDraft(draftKey);
     onSave({ ...draft, id: initial?.id });
+  }
+
+  function handleSaveAndMore() {
+    if (errors.length > 0) return;
+    const savedTitle = title;
+    if (draftKey) clearExpenseDraft(draftKey);
+    if (onSaveAndMore) onSaveAndMore({ ...draft, id: initial?.id });
+    else onSave({ ...draft, id: initial?.id });
+    // Reset tên khoản + số tiền; GIỮ người trả / kiểu chia / người cùng chia.
+    setTitle('');
+    setAmount(0);
+    setCustom({});
+    setWeights({});
+    setCapError(false);
+    setSavedMoreNotice(`Đã lưu khoản ${savedTitle} — ghi tiếp khoản mới`);
+    requestAnimationFrame(() => titleInputRef.current?.focus());
   }
 
   function handleCancel() {
@@ -148,12 +192,18 @@ export function ExpenseEditor({
           bỏ bản nháp này.
         </p>
       )}
+      {savedMoreNotice && (
+        <p role="status" aria-live="polite" className="text-sm font-medium text-brand-deep">
+          {savedMoreNotice}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="expense-title">
             Khoản chi
           </label>
           <input
+            ref={titleInputRef}
             id="expense-title"
             className={inputClass}
             placeholder="Ví dụ: Tiền phòng, Ăn tối, Xăng xe…"
@@ -164,7 +214,20 @@ export function ExpenseEditor({
         </div>
         <div>
           <span className={labelClass}>Số tiền</span>
-          <MoneyInput value={amount} onChange={setAmount} ariaLabel="Số tiền khoản chi" />
+          <MoneyInput
+            value={amount}
+            onChange={(v) => {
+              setAmount(v);
+              setCapError(false);
+            }}
+            onCapError={() => setCapError(true)}
+            ariaLabel="Số tiền khoản chi"
+          />
+          {capError && (
+            <p role="alert" className="mt-1.5 text-sm font-medium text-debt">
+              {AMOUNT_CAP_MESSAGE}
+            </p>
+          )}
         </div>
       </div>
 
@@ -187,7 +250,7 @@ export function ExpenseEditor({
                   : 'border-line-strong bg-card text-ink hover:border-brand-deep',
               )}
             >
-              <Avatar id={m.id} name={m.name} size={22} />
+              <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
               <span className="truncate">{m.name}</span>
             </button>
           ))}
@@ -221,7 +284,7 @@ export function ExpenseEditor({
                     : 'border-line-strong bg-card text-ink hover:border-brand-deep',
                 )}
               >
-                <Avatar id={m.id} name={m.name} size={22} />
+                <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
                 <span className="truncate">{m.name}</span>
                 {active && <Check size={14} aria-hidden className="shrink-0" />}
               </button>
@@ -255,15 +318,7 @@ export function ExpenseEditor({
             </button>
           ))}
         </div>
-        {/* Panel §7.11: giải thích "Theo phần" ngay tại điểm chọn, 1 dòng. */}
-        {mode === 'shares' && (
-          <p className="mt-2 text-sm text-muted">Ví dụ: ở 2/3 đêm thì nhập 2 phần.</p>
-        )}
-        {mode === 'custom' && (
-          <p className="mt-2 text-sm text-muted">
-            Nhập đúng số tiền từng người phải chịu — tổng phải khớp số tiền khoản chi.
-          </p>
-        )}
+        <p className="mt-2 text-sm text-ink-2">{MODE_HINTS[mode]}</p>
       </div>
 
       {mode === 'custom' && participantIds.length > 0 && (
@@ -272,15 +327,16 @@ export function ExpenseEditor({
             const member = members.find((m) => m.id === id);
             if (!member) return null;
             return (
-              <div key={id} className="flex items-center gap-3">
-                <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-ink">
-                  <Avatar id={member.id} name={member.name} size={24} />
-                  <span className="truncate">{member.name}</span>
+              <div key={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                  <Avatar name={member.name} colorIndex={colorOf(member.id)} size={24} />
+                  <span className="line-clamp-2 min-w-0">{member.name}</span>
                 </span>
                 <MoneyInput
-                  className="w-40 shrink-0 sm:w-44"
+                  className="w-[136px] shrink-0"
                   value={custom[id] ?? 0}
                   onChange={(v) => setCustom((prev) => ({ ...prev, [id]: v }))}
+                  onCapError={() => setCapError(true)}
                   ariaLabel={`Số tiền ${member.name} phải chịu`}
                 />
               </div>
@@ -309,29 +365,31 @@ export function ExpenseEditor({
             const member = members.find((m) => m.id === id);
             if (!member) return null;
             return (
-              <div key={id} className="flex items-center gap-2 sm:gap-3">
-                <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-ink">
-                  <Avatar id={member.id} name={member.name} size={24} />
-                  <span className="truncate">{member.name}</span>
+              <div key={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                  <Avatar name={member.name} colorIndex={colorOf(member.id)} size={24} />
+                  <span className="line-clamp-2 min-w-0">{member.name}</span>
                 </span>
-                {preview?.kind === 'computed' && (
-                  <span className="hidden font-display text-sm whitespace-nowrap text-muted min-[420px]:inline">
-                    ≈ {formatVND(preview.shares[id] ?? 0)}
-                  </span>
-                )}
-                <input
-                  type="number"
-                  min={0}
-                  step="any"
-                  inputMode="decimal"
-                  aria-label={`Số phần của ${member.name}`}
-                  className="min-h-11 w-20 shrink-0 rounded-xl border border-line-strong bg-card px-3 py-2.5 text-right font-display text-base font-semibold text-ink outline-none transition focus:border-brand-deep sm:w-24"
-                  value={weights[id] ?? 1}
-                  onChange={(e) =>
-                    setWeights((prev) => ({ ...prev, [id]: Number(e.target.value) }))
-                  }
-                />
-                <span className="shrink-0 text-sm text-muted">phần</span>
+                <span className="flex w-[136px] shrink-0 items-center gap-2">
+                  {preview?.kind === 'computed' && (
+                    <span className="font-figure hidden text-sm whitespace-nowrap text-ink-2 min-[420px]:inline">
+                      ≈ {formatVND(preview.shares[id] ?? 0)}
+                    </span>
+                  )}
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    inputMode="decimal"
+                    aria-label={`Số phần của ${member.name}`}
+                    className="min-h-11 w-full min-w-0 rounded-xl border border-line-strong bg-card px-3 py-2.5 text-right text-base font-semibold text-ink outline-none transition focus:border-brand-deep"
+                    value={weights[id] ?? 1}
+                    onChange={(e) =>
+                      setWeights((prev) => ({ ...prev, [id]: Number(e.target.value) }))
+                    }
+                  />
+                  <span className="shrink-0 text-sm text-ink-2">phần</span>
+                </span>
               </div>
             );
           })}
@@ -339,10 +397,10 @@ export function ExpenseEditor({
       )}
 
       {mode === 'equal' && preview?.kind === 'computed' && (
-        <div className="text-sm text-muted">
+        <div className="text-sm text-ink-2">
           <p>
             Mỗi người chịu{' '}
-            <span className="font-display font-bold text-ink">{formatVND(equalShare)}</span>
+            <span className="font-figure font-bold text-ink">{formatVND(equalShare)}</span>
           </p>
           {hasRemainder && (
             <details className="mt-1">
@@ -357,6 +415,7 @@ export function ExpenseEditor({
         </div>
       )}
 
+      {/* Tóm tắt validation ngay trên nút Lưu (Mẫu Validation Thống Nhất). */}
       {touched && errors.length > 0 && (
         <ul role="alert" className="grid gap-1 text-sm font-medium text-debt">
           {errors.map((e) => (
@@ -365,10 +424,15 @@ export function ExpenseEditor({
         </ul>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <PrimaryButton disabled={errors.length > 0} onClick={handleSave}>
+      <div className="flex flex-wrap items-start gap-2">
+        <PrimaryButton disabledReason={saveReason} onClick={handleSave}>
           <Check size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
         </PrimaryButton>
+        {!initial && (
+          <GhostButton disabled={errors.length > 0} onClick={handleSaveAndMore}>
+            Lưu &amp; thêm nữa
+          </GhostButton>
+        )}
         <GhostButton onClick={handleCancel}>
           <X size={16} /> Huỷ
         </GhostButton>
