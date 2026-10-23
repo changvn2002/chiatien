@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+
+@source "../components";
+@source "../lib";
+@source "../app";
+
+:root {
+  color-scheme: light;
+  /* Font tự host (Fontsource, import trong app/layout.tsx). */
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --ink: #1c1917;
+  --muted: #6f675c;
+  /* Placeholder: taupe ấm riêng, đạt 5.1:1 trên nền trắng (WCAG AA) — không dùng muted mờ. */
+  --placeholder: #786d5b;
+  --line: #e6ddcf;
+  --paper: #f7f3ec;
+  --card: #ffffff;
+  /* Màu thương hiệu: hổ phách đậm (amber) — không gradient, không tím-xanh. */
+  --brand: #b45309;
+  --brand-deep: #92400e;
+  --brand-soft: #faecd7;
+  /* Màu ngữ nghĩa cho số dư: xanh lá = được nhận lại, đỏ gạch = phải trả thêm. */
+  --credit: #177245;
+  --debt: #b3352c;
+  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 8px 24px rgba(28, 25, 23, 0.06);
+  --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.06), 0 16px 40px rgba(28, 25, 23, 0.1);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-placeholder: var(--placeholder);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-credit: var(--credit);
+  --color-debt: var(--debt);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  /* Số tiền và mọi con số hiển thị luôn thẳng cột theo từng chữ số. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
+::selection {
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
+
+/* Focus bàn phím luôn thấy rõ ở mọi control — vòng hổ phách đậm trên nền sáng. */
+:focus-visible {
+  outline: 2px solid var(--brand-deep);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--brand);
+}
+
+button {
+  /* Bỏ độ trễ chạm hai lần trên mobile; thao tác chốt tiền phải tức thì. */
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}

@@ -1,0 +1,10 @@
+.next
+node_modules
+out
+build
+pnpm-lock.yaml
+next-env.d.ts
+public
+*.md
+.claude
+.impeccable

@@ -1,0 +1,175 @@
+import type { Expense, Session } from './types';
+
+/**
+ * Tính phần mỗi người phải chịu cho một khoản chi + cân bằng số dư.
+ *
+ * Nguyên tắc bất biến: tổng phần chịu của một khoản chi LUÔN bằng đúng số tiền
+ * của khoản đó (nguyên đồng) — phần lẻ do làm tròn được phân bổ xác định:
+ *  - equal : chia sàn, số dư lẻ cộng 1đ cho những người đầu danh sách tham gia.
+ *  - custom: lấy đúng số người dùng nhập (validate bắt tổng phải khớp).
+ *  - shares: phương pháp phần dư lớn nhất (largest remainder) theo trọng số.
+ */
+
+/** Phần mỗi người tham gia phải chịu, theo member id. Chỉ gồm người tham gia. */
+export function computeShares(expense: Expense): Record<string, number> {
+  const { amount, participantIds, mode } = expense;
+  const result: Record<string, number> = {};
+  if (participantIds.length === 0 || amount <= 0) {
+    for (const id of participantIds) result[id] = 0;
+    return result;
+  }
+
+  if (mode === 'custom') {
+    for (const id of participantIds) result[id] = Math.max(0, Math.round(expense.custom[id] ?? 0));
+    return result;
+  }
+
+  if (mode === 'shares') {
+    const weights = participantIds.map((id) => {
+      const w = expense.weights[id];
+      return typeof w === 'number' && w > 0 ? w : 0;
+    });
+    const totalWeight = weights.reduce((s, w) => s + w, 0);
+    if (totalWeight <= 0) {
+      // Không có trọng số hợp lệ — rơi về chia đều để tổng vẫn bảo toàn.
+      return computeShares({ ...expense, mode: 'equal' });
+    }
+    const raw = weights.map((w) => (amount * w) / totalWeight);
+    const floors = raw.map((r) => Math.floor(r));
+    let remainder = amount - floors.reduce((s, v) => s + v, 0);
+    // Cộng 1đ cho các phần có phần thập phân lớn nhất; hoà thì theo thứ tự tham gia.
+    const order = participantIds
+      .map((id, i) => ({ id, i, frac: raw[i] - floors[i] }))
+      .sort((a, b) => b.frac - a.frac || a.i - b.i);
+    participantIds.forEach((id, i) => {
+      result[id] = floors[i];
+    });
+    for (const entry of order) {
+      if (remainder <= 0) break;
+      result[entry.id] += 1;
+      remainder -= 1;
+    }
+    return result;
+  }
+
+  // equal
+  const n = participantIds.length;
+  const base = Math.floor(amount / n);
+  let remainder = amount - base * n;
+  for (const id of participantIds) {
+    result[id] = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder -= 1;
+  }
+  return result;
+}
+
+export interface ExpenseDraft {
+  title: string;
+  amount: number;
+  payerId: string;
+  participantIds: string[];
+  mode: Expense['mode'];
+  custom: Record<string, number>;
+  weights: Record<string, number>;
+}
+
+/**
+ * Kiểm tra một khoản chi trước khi lưu. Trả về danh sách lỗi tiếng Việt
+ * (rỗng = hợp lệ). UI hiển thị nguyên văn các lỗi này cho người dùng.
+ */
+export function validateExpenseDraft(draft: ExpenseDraft, memberIds: string[]): string[] {
+  const errors: string[] = [];
+  const memberSet = new Set(memberIds);
+
+  if (!draft.title.trim()) errors.push('Chưa nhập tên khoản chi.');
+  if (!Number.isFinite(draft.amount) || draft.amount <= 0) errors.push('Số tiền phải lớn hơn 0.');
+  else if (!Number.isInteger(draft.amount)) errors.push('Số tiền phải là số nguyên đồng.');
+  if (!memberSet.has(draft.payerId)) errors.push('Chưa chọn người trả tiền.');
+  if (draft.participantIds.length === 0) errors.push('Chọn ít nhất 1 người cùng chia khoản này.');
+  for (const id of draft.participantIds) {
+    if (!memberSet.has(id)) errors.push('Có người tham gia không còn trong danh sách thành viên.');
+  }
+
+  if (draft.mode === 'custom' && draft.participantIds.length > 0) {
+    let sum = 0;
+    for (const id of draft.participantIds) {
+      const v = draft.custom[id];
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+        errors.push('Mỗi người tham gia cần một số tiền từ 0 trở lên.');
+        break;
+      }
+      sum += v;
+    }
+    if (errors.length === 0 && sum !== draft.amount) {
+      errors.push(
+        `Tổng các phần tuỳ chỉnh (${sum.toLocaleString('vi-VN')}đ) chưa bằng số tiền khoản chi (${draft.amount.toLocaleString('vi-VN')}đ).`,
+      );
+    }
+  }
+
+  if (draft.mode === 'shares' && draft.participantIds.length > 0) {
+    for (const id of draft.participantIds) {
+      const w = draft.weights[id];
+      if (typeof w !== 'number' || !Number.isFinite(w) || w <= 0) {
+        errors.push('Mỗi người tham gia cần một trọng số lớn hơn 0.');
+        break;
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Số dư của từng thành viên trong một cuộc chia:
+ *   số dư = tổng đã trả − tổng phải chịu.
+ * Số dư dương = người khác đang nợ lại mình (sẽ nhận tiền khi quyết toán).
+ * Tổng mọi số dư luôn = 0.
+ */
+export function computeBalances(session: Session): Record<string, number> {
+  const balances: Record<string, number> = {};
+  for (const m of session.members) balances[m.id] = 0;
+  for (const expense of session.expenses) {
+    if (!(expense.payerId in balances)) balances[expense.payerId] = 0;
+    balances[expense.payerId] += expense.amount;
+    const shares = computeShares(expense);
+    for (const [id, owed] of Object.entries(shares)) {
+      if (!(id in balances)) balances[id] = 0;
+      balances[id] -= owed;
+    }
+  }
+  return balances;
+}
+
+/**
+ * Tổng mọi số dư của một cuộc chia. Với dữ liệu hợp lệ con số này LUÔN = 0;
+ * UI quyết toán dùng nó làm chốt chặn cuối: khác 0 là phải cảnh báo to cho
+ * người dùng, tuyệt đối không trình bày một quyết toán lệch như đã khớp.
+ */
+export function sumBalances(balances: Record<string, number>): number {
+  return Object.values(balances).reduce((s, v) => s + v, 0);
+}
+
+/** Tổng số tiền đã chi trong một cuộc chia. */
+export function totalSpent(session: Session): number {
+  return session.expenses.reduce((s, e) => s + e.amount, 0);
+}
+
+/** Tổng số tiền từng người đã trả (theo member id). */
+export function paidByMember(session: Session): Record<string, number> {
+  const paid: Record<string, number> = {};
+  for (const m of session.members) paid[m.id] = 0;
+  for (const e of session.expenses) paid[e.payerId] = (paid[e.payerId] ?? 0) + e.amount;
+  return paid;
+}
+
+/** Tổng số tiền từng người phải chịu (theo member id). */
+export function owedByMember(session: Session): Record<string, number> {
+  const owed: Record<string, number> = {};
+  for (const m of session.members) owed[m.id] = 0;
+  for (const e of session.expenses) {
+    const shares = computeShares(e);
+    for (const [id, v] of Object.entries(shares)) owed[id] = (owed[id] ?? 0) + v;
+  }
+  return owed;
+}
