@@ -564,23 +564,32 @@ async function measureSheetVsStrip(width) {
 }
 
 /* ---------------- Ma trận Esc-focus (Finding G) ---------------- */
+// Panel #04 (alertdialog): dialog XÁC NHẬN nay mang role="alertdialog"
+// và THAY THẾ sheet cha (1 panel trong DOM), nên bộ selector GENERIC
+// của ma trận này phải khớp cả hai role — nếu chỉ tìm [role="dialog"],
+// 2 ca chuỗi kết thúc ở dialog xác nhận sẽ timeout ở waitFor và đọc
+// sai stillOpen. Các phép đo sheet CỤ THỂ (khoản chi/share/hành động)
+// vẫn chỉ nhắm [role="dialog"] vì đó là Sheet thường.
+const ANY_DIALOG = '[role="dialog"], [role="alertdialog"]';
+const ANY_DIALOG_CLOSE =
+  '[role="dialog"] button[aria-label="Đóng"], [role="alertdialog"] button[aria-label="Đóng"]';
 async function focusCase(name, openFn) {
   await setViewport(390, true);
   await gotoHomeSeeded();
   await openSession('Chuyến đi stress');
   await openFn();
-  await waitFor(`document.querySelector('[role="dialog"]')`, 8000, name + ' dialog');
+  await waitFor(`document.querySelector('${ANY_DIALOG}')`, 8000, name + ' dialog');
   await sleep(350);
   const openerDesc = await ev(`${DESCRIBE}(document.activeElement)`);
   await pressEscape();
   await sleep(650);
   const after = await ev(`${DESCRIBE}(document.activeElement)`);
-  const stillOpen = await ev(`Boolean(document.querySelector('[role="dialog"]'))`);
+  const stillOpen = await ev(`Boolean(document.querySelector('${ANY_DIALOG}'))`);
   const ok = !stillOpen && after.tag !== 'BODY';
   results.focus.push({ name, openerDesc, after, stillOpen, ok });
   check('focus ' + name, ok, `after=${JSON.stringify(after)} stillOpen=${stillOpen}`);
   if (stillOpen) {
-    await ev(`document.querySelector('[role="dialog"] button[aria-label="Đóng"]')?.click()`);
+    await ev(`document.querySelector('${ANY_DIALOG_CLOSE}')?.click()`);
     await sleep(400);
   }
 }

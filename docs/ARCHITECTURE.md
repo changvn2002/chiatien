@@ -41,6 +41,31 @@ Trình duyệt người dùng
 Phụ thuộc một chiều: `app` → `components` → `lib`. Vòng phụ thuộc = 0
 (madge, kiểm ở các đợt chấm checklist).
 
+### Session view — ranh giới module (ARC-11)
+
+`session-view.tsx` từng là một file 1.056 dòng ôm mọi trách nhiệm của
+Màn B. Từ v1.4.x nó được tách thuần cấu trúc (không đổi hành vi, không
+đổi giao diện) thành các module cùng thư mục `components/chiatien/`:
+
+| File | Trách nhiệm |
+|---|---|
+| `session-view.tsx` | **Composition root**: giữ state của phiên, dữ liệu dẫn xuất (số dư, lệnh quyết toán, tổng, màu danh tính), handler nghiệp vụ (thành viên, khoản chi, copy/chia sẻ, tiêu đề), `panelProps` dùng chung cho hai biến thể SettlementPanel, khung lưới 2 cột (Command Bar desktop + cột quyết toán desktop) và lắp các module dưới. Bề mặt export không đổi: `SessionView` (app.tsx + test import từ đây). |
+| `session-view-helpers.ts` | Helper thuần ngoài component: `touch` (đóng dấu `updatedAt`), `expenseFromDraft`, type `MemberEditState`. |
+| `session-view-hooks.ts` | Ba hook hạ tầng: `useStripExpansion` (mở/thu gọn Settlement Strip + history push/popstate), `useStripHeightPublisher` (xuất bản `--strip-h` từ dock để Sheet không che Strip), `useSessionKeyboard` (Esc lùi lớp, N/M/C/⌘K). Thứ tự đăng ký effect giữ nguyên: expansion → strip-height → keyboard. |
+| `session-app-bar.tsx` | AppBar của Màn B: tiêu đề phiên (H1 duy nhất của workspace, sửa tại chỗ) + nút mở bảng hành động. |
+| `session-member-strip.tsx` | Rail thành viên ngang: chip avatar + chấm trạng thái ngân hàng + nút Thêm. |
+| `session-ledger.tsx` | Cột sổ: thông báo thành viên, hai trạng thái rỗng, danh sách khoản chi kèm phần chia mở rộng tại hàng, hàng tổng chân cột. |
+| `session-settlement-strip.tsx` | Dải quyết toán mobile: tóm tắt (tổng + lệnh đầu), panel mở rộng, DOCK neo đáy (StatusLine + nút tóm tắt + Action Deck). |
+| `session-sheets.tsx` | Wiring mọi lớp phủ: Member/Expense Sheet, bảng hành động của hàng sổ và của cuộc chia, Share Sheet cảnh báo 2 lớp, ba ConfirmDialog xoá. |
+
+Vì sao tách như vậy: mỗi khối trên là một trách nhiệm thật của file
+gốc (khung view, rail, sổ, dải quyết toán, lớp phủ, hạ tầng effect) —
+tách theo đúng các đường nối đó để diff hành vi bằng 0 và review từng
+module độc lập được. Bất biến: không module con nào import ngược
+`session-view.tsx` (phụ thuộc vẫn một chiều, state + handler chỉ sống
+ở composition root và truyền xuống bằng props); `lib/` không đổi một
+byte trong đợt tách này.
+
 ## 3. Data flow
 
 1. **Nạp:** `use-sessions` gọi `loadSessions()` (localStorage → sanitize)

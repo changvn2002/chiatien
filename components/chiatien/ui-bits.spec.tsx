@@ -36,6 +36,17 @@ describe('Avatar — SVG không chứa attribution DiceBear (Panel #03 MINOR)', 
     expect(container.querySelector('svg')).toBeTruthy();
   });
 
+  it('thẻ <svg> gốc mang aria-hidden="true" (Panel #04 F-R2-02), chỉ gắn một lần', () => {
+    const { container } = render(<Avatar name="Nguyễn Văn An" colorIndex={0} />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeTruthy();
+    expect(svg!.getAttribute('aria-hidden')).toBe('true');
+    // Chỉ thẻ svg gốc được gắn — không lặp thuộc tính ở phần tử con nào
+    // (span bọc ngoài cũng mang aria-hidden riêng, nên đếm trong svg).
+    expect(svg!.outerHTML.match(/aria-hidden="true"/g)).toHaveLength(1);
+    expect(svg!.innerHTML).not.toContain('aria-hidden');
+  });
+
   it('nút chứa avatar: accessible name suy từ textContent không dính attribution', () => {
     const { container } = render(
       <button type="button">

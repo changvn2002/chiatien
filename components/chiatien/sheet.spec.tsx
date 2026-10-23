@@ -119,15 +119,45 @@ describe('Sheet / ConfirmDialog — trả focus sau Esc (D-7)', () => {
     await waitFor(() => expect(document.activeElement).toBe(opener));
   });
 
+  // HỢP ĐỒNG MỚI (Panel #04 MINOR, khai báo thay đổi test): ConfirmDialog
+  // nay là role="alertdialog" (trước đây test này khoá role="dialog").
+  // Hành vi Esc + trả focus giữ nguyên; chỉ role truy vấn đổi theo
+  // hợp đồng ngữ nghĩa mới. Test Sheet thường ở trên giữ nguyên 'dialog'.
   it('ConfirmDialog: Esc huỷ dialog và document.activeElement trở về nút đã mở', async () => {
     render(<ConfirmHarness />);
     const opener = screen.getByRole('button', { name: 'Mở confirm kiểm focus' });
     opener.focus();
     expect(document.activeElement).toBe(opener);
     fireEvent.click(opener);
-    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+});
+
+describe('ConfirmDialog — ngữ nghĩa alertdialog (Panel #04 MINOR)', () => {
+  it('role=alertdialog + aria-describedby trỏ đúng đoạn message hệ quả; tên = câu hỏi xác nhận', () => {
+    render(<ConfirmHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mở confirm kiểm focus' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.getAttribute('aria-label')).toBe('Xoá mục kiểm focus?');
+    const describedBy = dialog.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    const messageEl = document.getElementById(describedBy!);
+    expect(messageEl).toBeTruthy();
+    expect(messageEl!.tagName).toBe('P');
+    expect(messageEl!.textContent).toContain('Hộp thoại xác nhận dùng để đo focus sau Esc.');
+  });
+
+  it('Sheet thường giữ role=dialog và không mang aria-describedby khi không truyền', () => {
+    render(<SheetHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mở sheet kiểm focus' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('aria-describedby')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 });

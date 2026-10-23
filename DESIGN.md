@@ -377,3 +377,52 @@ Ba chuyển động duy nhất đã khai: mở sheet 160ms, mở rộng Strip 20
 - Workspace có dữ kiện, Strip mở rộng: **≤125 từ tĩnh** (mẫu chưa-QR) · **≤90** (mẫu đã có QR).
 
 Mọi lần đo lại sau này phải ghi rõ bề mặt, trạng thái Strip và phương pháp đếm kèm số đo — một con số ngân sách không kèm bề mặt/phương pháp là tuyên bố chưa kiểm chứng (Verified Claim Rule).
+
+## Hiệu đính ngân sách chữ dạng công thức (2026-10-24 — Panel #04, Finding F-R2-01)
+
+**Rút tuyên bố của đợt hiệu đính 2026-10-23.** Panel #04 (báo cáo `ui-panels/chiatien-panel-04.md` §6) đã đếm lại bằng `innerText` trên render thật và bác tuyên bố hoàn thành của đợt trước: câu «mọi bề mặt đo trong ngân sách mới» và việc đóng Finding I **vô điều kiện** là **sai trên render** và bị rút tường minh tại đây. Ngân sách điểm của đợt 2026-10-23 (workspace có dữ kiện: thu gọn ≤45 · mở rộng ≤90 đã-có-QR / ≤125 chưa-QR) được hiệu chuẩn bằng đếm-từ-nguồn trên mẫu đồ chơi (2 người/1 lệnh cho bề mặt mở rộng) **không có hệ số thang đo theo cỡ mẫu** — trên fixture chuẩn S2, cả ba bề mặt workspace đều vượt trần ở mọi biến thể đếm (thu gọn 54; mở rộng 143 có-QR / 178 chưa-QR theo bộ đếm ở mục này — Panel #04 công bố 143–144 / 178–180, lệch 1–2 chỉ vì token cặn «₫)»). Lỗi nằm ở hiệu chuẩn và ở tuyên bố, không nằm ở chữ trên render: mô hình chi phí template suy từ render tái lập chính xác kế toán của chính đợt hiệu đính trước.
+
+**Finding I đóng CÓ ĐIỀU KIỆN — và điều kiện đã thỏa ở đợt này.** Điều kiện đóng là cả hai việc sau, không việc nào được thiếu: (1) ngân sách của bề mặt workspace-có-dữ-kiện được viết lại **dạng công thức** có hệ số theo hàng khoản / hàng lệnh / hàng số dư / khối chưa-QR, suy từ số đo render trên fixture chuẩn S1/S2 (định nghĩa ở dưới) — chính là công thức ở mục này; (2) **cắt chữ khối chưa-QR** — câu giải thích 19 từ của khối (theo cách đếm của panel; 17 từ tĩnh theo bộ đếm ở mục này) lặp ~50% ý tiêu đề đã được cắt xuống còn 8 từ tĩnh, giữ trọn thông tin thật duy nhất của câu (số lệnh + tổng tiền đang chờ QR): «{count} lệnh chuyển (tổng {amount}) đang chờ mã QR này.» Bằng chứng thỏa điều kiện: hồ sơ đo render của wave Docs+Media (`WORD-LOG.md` — baseline + phân rã hệ số; `WORD2-LOG.md` — đối chứng kiểm soát và đo sau cắt trên build next 16.4.2) và Panel #04 §6 + §8 mục 1. Ngoài hai điều kiện này, Finding I không được tuyên bố là đã đóng.
+
+**Phương pháp đếm (chuẩn cho mọi đo lại về sau).** Đếm trên `innerText` của render thật (build local, mobile 390×844, trạng thái mặc định của bề mặt), tách từ theo khoảng trắng. **Chỉ tính chữ tĩnh của app** — loại dữ kiện người dùng: tiêu đề cuộc chia, tên thành viên, tiêu đề khoản (khớp nguyên cụm), chữ viết tắt avatar, mọi token số (số tiền / số đếm suy từ dữ kiện) và đơn vị đi ngay sau số («nghìn»/«triệu»/«tỷ»/«₫», gồm token cặn «₫)» của mẫu «(tổng {số} ₫)»). **Tính cả** nhãn nút, placeholder và token «·». **Không tính:** `aria-label`/`title`/`sr-only`, chữ trong sheet/dialog/banner chỉ hiện theo sự kiện. **Khoản đồng-render của Strip:** ở trạng thái mở rộng, dock thu gọn (dòng «Đã lưu trên máy này» 5 từ + Strip thu gọn 6 từ = 11 từ tĩnh) vẫn nằm trong `innerText` — công thức tính tường minh khoản này trong **cả hai** họ bề mặt, không trừ ra ở bề mặt mở rộng.
+
+**Fixture chuẩn.** Sinh bằng chính `lz-string` của repo theo `lib/share.ts`, nạp bằng link `#chia=…`; sổ bank per-device được seed sau import, khớp theo tên thành viên (đúng đường Panel #04 đã kiểm chứng).
+
+- **S1:** 5 thành viên (1 tên dài 45 ký tự + An/Bình/Chi/Dũng); 2 khoản chia đều (tên-dài trả 999.999.999.999.999 ₫ chia 5; An trả 800.000 ₫ chia 5); bank seed cho tên-dài + An → 4 lệnh đều về tên-dài, đều có VietQR.
+- **S2:** 4 thành viên (An/Bình/Chi/Dũng); 3 khoản chia đều 4 (An 800.000 · Bình 600.000 · Chi 100.000) → số dư An +425.000 · Bình +225.000 · Chi −275.000 · Dũng −375.000 → lệnh Dũng→An 375.000 (VietQR) · Chi→An 50.000 (VietQR) · Chi→Bình 225.000 (không VietQR); bank seed chỉ cho An → đúng 1 khối chưa-QR (Bình).
+- **S2-QR** (biến thể): S2 + seed thêm bank cho Bình → 0 khối chưa-QR, 3/3 lệnh có VietQR.
+- **S2-nobank** (biến thể): S2 không seed bank nào → 2 khối chưa-QR (An: 2 lệnh/425.000 · Bình: 1 lệnh/225.000), 0 VietQR.
+
+**Công thức ngân sách (thay ngân sách điểm cho workspace-có-dữ-kiện).** Biến: **M** = số thành viên · **E** = số khoản · **Q** = số thành viên đã có QR trên máy này · **V** = số lệnh mà người nhận có QR · **K** = số người nhận chưa có QR trên máy này.
+
+- **Thu gọn = 22 + 3M − Q + 7E**
+- **Mở rộng = Thu gọn + 31 + V + 5M + 27K**
+
+| Hệ số | Giá trị | Cách suy từ render (phân rã theo vùng trên dump `innerText`) |
+|---|---:|---|
+| Hằng số thu gọn | 22 | header app-shell 6 + nút «Thêm» 1 + hàng tổng «TỔNG CHI · n KHOẢN» 4 + dock đồng-render 11 (dòng lưu 5 + Strip thu gọn 6) |
+| Chip thành viên | 3/chưa-QR, 2/có-QR | cơ số 3M, trừ 1 cho mỗi thành viên có QR → `3M − Q` |
+| Hàng khoản | 7/hàng | mẫu meta «đã trả · {kiểu chia} cho … người» của hàng chia-đều (hệ số hiệu chuẩn trên hàng chia-đều — cả hai fixture đều chia đều) |
+| Khung panel mở rộng | 31 | đầu panel «Quyết toán/Thu gọn» 4 + «AI TRẢ AI» 3 + «SỐ DƯ TỪNG NGƯỜI» 4 + chú thích dấu 11 + «TỔNG CHUYỂN» 2 + CTA 7 |
+| Hàng lệnh | 1 nếu người nhận có QR («VietQR»), 0 nếu không | cộng dồn = V |
+| Hàng số dư | 5/người | «Đã trả · Phải chịu» + dấu → 5M |
+| Khối chưa-QR | **27/khối (sau cắt)** | tiêu đề 8 + câu giải thích **sau cắt 8** + «Nhắn xin QR của» 4 + «Nhập tài khoản của … trên máy này» 7. Trước cắt là 36 (câu cũ 17); hệ số 27 được **đo** trên hai bề mặt độc lập sau cắt (K=1: Δ −9; K=2: Δ −18) và đếm trực tiếp trên phân rã vùng — không phải số suy luận |
+
+Một bề mặt workspace-có-dữ-kiện «trong ngân sách» khi số từ tĩnh đo trên render **không vượt** giá trị công thức tại đúng (M, E, Q, V, K) của bề mặt đó.
+
+**Kiểm chứng dự báo-vs-đo** (render của build local next 16.4.2, sau cắt; sáu bề mặt không chứa khối chưa-QR khớp tuyệt đối baseline đo trên 16.3.6 — bản nâng next không đổi render chữ):
+
+| Bề mặt | (M, E, Q, V, K) | Dự báo | Đo | Lệch |
+|---|---|---:|---:|---:|
+| S1 thu gọn | (5, 2, 2, –, 0) | 49 | 49 | 0 |
+| S1 mở rộng | (5, 2, 2, 4, 0) | 109 | 109 | 0 |
+| S2 thu gọn | (4, 3, 1, –, 1) | 54 | 54 | 0 |
+| S2 mở rộng | (4, 3, 1, 2, 1) | 134 | 134 | 0 |
+| S2-QR thu gọn | (4, 3, 2, –, 0) | 53 | 53 | 0 |
+| S2-QR mở rộng | (4, 3, 2, 3, 0) | 107 | 107 | 0 |
+| S2-nobank thu gọn | (4, 3, 0, –, 2) | 55 | 55 | 0 |
+| S2-nobank mở rộng | (4, 3, 0, 0, 2) | 160 | 160 | 0 |
+
+**Phạm vi.** Công thức trên chỉ quản bề mặt **workspace-có-dữ-kiện**. Trần điểm của **trang chủ** (≤95 từ tĩnh mobile · ≤155 desktop gồm aside) và **workspace rỗng** (≤50 mobile, Strip thu gọn) ở mục hiệu đính 2026-10-23 **giữ nguyên không đổi** — Panel #04 đã kiểm đạt trên live (trang chủ 77 ≤ 95 mobile · 126 ≤ 155 desktop); đợt này không đo lại và không tuyên bố gì thêm về hai bề mặt đó.
+
+**Quy tắc Verified Claim cho tuyên bố ngân sách về sau.** Mọi tuyên bố «trong ngân sách» / «đã đóng Finding ngân sách» từ nay phải kèm đủ: bề mặt + fixture + bộ biến (M, E, Q, V, K) + phương pháp đếm ở mục này + số đo trên render của **chính build được tuyên bố**. Số suy từ mã nguồn, từ mẫu khác cỡ, hoặc từ build khác đều không được tuyên bố là số đo render. Finding ngân sách chỉ được đóng khi dự báo công thức khớp số đo render trong ±3 từ trên mọi bề mặt của fixture chuẩn (đợt này: khớp tuyệt đối 8/8).

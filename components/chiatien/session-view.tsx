@@ -1,72 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Link2,
-  List,
-  MoreHorizontal,
-  MoveRight,
-  Pencil,
-  Plus,
-  Trash2,
-  TriangleAlert,
-  Users,
-} from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { newId } from '@/lib/id';
 import { assignIdentityColors, normalizeMemberName } from '@/lib/identity';
-import { formatVND, formatVNDDisplay } from '@/lib/money';
-import { computeBalances, computeShares, sumBalances, totalSpent } from '@/lib/split';
+import { computeBalances, sumBalances, totalSpent } from '@/lib/split';
 import { buildSettlementText, simplifyDebts } from '@/lib/settle';
 import { buildShareUrl } from '@/lib/share';
-import { expenseDraftKey } from '@/lib/storage';
-import { hasBank } from '@/lib/vietqr';
 import type { Expense, Member, Session } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import {
-  Avatar,
-  GhostButton,
-  PrimaryButton,
-  StatusLine,
-  copyText,
-  useOnlineStatus,
-} from './ui-bits';
-import { ExpenseEditor, type ExpenseSave } from './expense-editor';
-import { MemberEditor, type MemberDraft } from './member-editor';
+import { GhostButton, PrimaryButton, StatusLine, copyText, useOnlineStatus } from './ui-bits';
+import type { ExpenseSave } from './expense-editor';
+import type { MemberDraft } from './member-editor';
 import { SettlementPanel } from './settlement';
-import { ConfirmDialog, Sheet } from './sheet';
-
-const MODE_LABELS: Record<Expense['mode'], string> = {
-  equal: 'Chia đều',
-  custom: 'Tuỳ chỉnh số tiền',
-  shares: 'Theo phần',
-};
-
-/** Gắn mốc thời gian sửa đổi — để ngoài component cho lint react-hooks/purity. */
-function touch(session: Session, partial: Partial<Session>): Session {
-  return { ...session, ...partial, updatedAt: Date.now() };
-}
-
-/** Tạo khoản chi mới từ draft của form — để ngoài component cho lint purity. */
-function expenseFromDraft(draft: ExpenseSave): Expense {
-  return {
-    id: newId(),
-    title: draft.title,
-    amount: draft.amount,
-    payerId: draft.payerId,
-    participantIds: draft.participantIds,
-    mode: draft.mode,
-    custom: draft.custom,
-    weights: draft.weights,
-    createdAt: Date.now(),
-  };
-}
-
-type MemberEditState =
-  { kind: 'new'; focusBank: boolean } | { kind: 'edit'; member: Member; focusBank: boolean } | null;
+import { SessionAppBar } from './session-app-bar';
+import { SessionLedger } from './session-ledger';
+import { SessionMemberStrip } from './session-member-strip';
+import { SessionSettlementStrip } from './session-settlement-strip';
+import { SessionSheets } from './session-sheets';
+import { expenseFromDraft, touch, type MemberEditState } from './session-view-helpers';
+import {
+  useSessionKeyboard,
+  useStripExpansion,
+  useStripHeightPublisher,
+} from './session-view-hooks';
 
 /**
  * Màn làm việc MỘT MÀN HÌNH (REDESIGN-V2, "Settlement in Sight"): bỏ
@@ -76,6 +32,11 @@ type MemberEditState =
  * = SettlementPanel toàn văn, tối đa 70dvh, đẩy 1 history state).
  * Desktop ≥1024: lưới 2 cột — trái Command Bar + Member Strip + Ledger,
  * phải SettlementPanel thường trực (biến thể stacked) + StatusLine cuối cột.
+ * Từ ARC-11, file này là composition root mỏng: giữ state của phiên,
+ * dữ liệu dẫn xuất và handler nghiệp vụ; trình bày + hạ tầng tách ra
+ * session-app-bar / session-member-strip / session-ledger /
+ * session-settlement-strip / session-sheets / session-view-hooks /
+ * session-view-helpers (xem docs/ARCHITECTURE.md).
  */
 export function SessionView({
   session,
@@ -92,7 +53,8 @@ export function SessionView({
   onDelete: () => void;
   onNotifyUndo: (label: string, undo: () => void) => void;
 }) {
-  const [expanded, setExpanded] = useState(startExpanded);
+  const expandedRef = useRef(startExpanded);
+  const { expanded, expandStrip, collapseStrip } = useStripExpansion(startExpanded, expandedRef);
   const [memberEditing, setMemberEditing] = useState<MemberEditState>(null);
   const [expenseEditing, setExpenseEditing] = useState<Expense | 'new' | null>(null);
   const [expenseAction, setExpenseAction] = useState<Expense | null>(null);
@@ -116,9 +78,6 @@ export function SessionView({
   const memberStripRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const pushedRef = useRef(false);
 
   const balances = useMemo(() => computeBalances(session), [session]);
   const transfers = useMemo(() => simplifyDebts(balances), [balances]);
@@ -126,165 +85,10 @@ export function SessionView({
   const discrepancy = sumBalances(balances);
   const colors = useMemo(() => assignIdentityColors(session.members), [session.members]);
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
-  const sortedExpenses = useMemo(
-    () => [...session.expenses].sort((a, b) => b.createdAt - a.createdAt),
-    [session.expenses],
-  );
   const allSettled = session.expenses.length > 0 && transfers.length === 0;
   const firstTransfer = transfers[0];
 
-  /* ---------------- Mở rộng dải + history + Esc theo lớp ---------------- */
-  function expandStrip(push = true) {
-    if (expandedRef.current) return;
-    setExpanded(true);
-    if (push && typeof window !== 'undefined') {
-      window.history.pushState({ ctStrip: true }, '', window.location.href);
-      pushedRef.current = true;
-    }
-  }
-  function collapseStrip(fromPopState = false) {
-    if (!expandedRef.current) return;
-    setExpanded(false);
-    if (!fromPopState && pushedRef.current) {
-      pushedRef.current = false;
-      window.history.back();
-    }
-  }
-
-  useEffect(() => {
-    if (startExpanded) {
-      // Mở sẵn do import: cũng đẩy 1 history state để Back thu gọn trước.
-      window.history.pushState({ ctStrip: true }, '', window.location.href);
-      pushedRef.current = true;
-    }
-    function onPopState() {
-      if (expandedRef.current) {
-        pushedRef.current = false;
-        setExpanded(false);
-      }
-    }
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-    // Chỉ chạy khi mount: startExpanded là điều kiện mở ban đầu.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi mount: startExpanded là điều kiện mở ban đầu của phiên vừa nhập
-  }, []);
-
-  // Finding E: xuất bản --strip-h trên div gốc để Sheet neo đáy ở đúng
-  // đỉnh DOCK của Strip và không che nó. Dock = StatusLine + nút tóm
-  // tắt + Action Deck (phần neo cố định ở đáy section Strip).
-  //
-  // GIÁ TRỊ xuất bản là KHOẢNG ĐÁY VIEWPORT phải chừa — tức khoảng cách
-  // từ ĐỈNH dock tới ĐÁY viewport — KHÔNG phải chiều cao của dock:
-  // gốc Màn B cao calc(100dvh-104px) nên đáy Strip không chạm đáy
-  // viewport (chừa ~40px cho khung app-shell). Bản đầu của đợt này
-  // xuất chiều cao dock (142,5px) trong khi Strip chiếm 183px tính từ
-  // đáy viewport -> sheet phủ đúng 41px trên cùng của Strip (harness
-  // scripts/geometry-stress.mjs đo wrapBottom=702 > stripTop=661 ở
-  // 390px). Đo theo đỉnh dock thì sheet dừng đúng đỉnh Strip ở mọi
-  // trạng thái: thu gọn (dock = cả phần Strip nhìn thấy) lẫn mở rộng
-  // (panel phía trên dock cũng thuộc Strip — luật «Strip không bao
-  // giờ bị sheet che» áp cho toàn section).
-  useEffect(() => {
-    const dock = dockRef.current;
-    const root = rootRef.current;
-    if (!dock || !root) return;
-    const section = dock.parentElement;
-    let lastPublished = '';
-    const publish = () => {
-      const rect = dock.getBoundingClientRect();
-      // Strip ẩn (desktop — rail thay thế): không chừa đáy.
-      const next = rect.height === 0 ? '0px' : `${Math.max(0, window.innerHeight - rect.top)}px`;
-      if (next === lastPublished) return;
-      lastPublished = next;
-      root.style.setProperty('--strip-h', next);
-    };
-    publish();
-    // Section đổi chiều cao khi: panel mở rộng/thu gọn, deckNotice
-    // xuất hiện, nội dung dock đổi — mọi đường đều làm đỉnh dock dịch.
-    // ResizeObserver trên section + resize viewport phủ cả ba.
-    //
-    // LÀM CỨNG (2026-10-23, Lane QA stress-frame): bộ ba trên vẫn lọt
-    // một ca chập chờn đo được — publish chạy khi Strip còn ở đáy
-    // viewport, sau đó layout dịch Strip lên ~40px THUẦN VỊ TRÍ (kích
-    // thước section và viewport đều không đổi -> không observer/resize
-    // nào bắn) -> --strip-h kẹt ở giá trị cũ (142,5px thay vì 182,5px)
-    // và sheet phủ 41px đỉnh Strip (harness lượt 1 FAIL, lượt 2 PASS
-    // trên cùng một build). Bổ sung ba lớp bắt dịch-vị-trí:
-    // (a) MutationObserver trên cây con của gốc — sheet mount vào DOM
-    // và mọi thay đổi nội dung (deckNotice, dòng trạng thái) đều là
-    // childList mutation -> publish lại đúng thời điểm quyết định là
-    // lúc sheet mở; (b) ResizeObserver trên cả gốc (100dvh đổi khi
-    // thanh địa chỉ mobile co/giãn); (c) các nhịp publish trễ sau
-    // mount (rAF + 250ms + 1000ms) để layout/font ổn định xong thì
-    // giá trị chốt là giá trị đúng. publish() chỉ set style khi giá
-    // trị thay đổi nên các lớp này không gây vòng lặp.
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
-    if (observer && section) observer.observe(section);
-    if (observer) observer.observe(root);
-    const mo =
-      typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => publish());
-    if (mo) mo.observe(root, { childList: true, subtree: true });
-    window.addEventListener('resize', publish);
-    window.visualViewport?.addEventListener('resize', publish);
-    const raf = requestAnimationFrame(publish);
-    const t1 = window.setTimeout(publish, 250);
-    const t2 = window.setTimeout(publish, 1000);
-    return () => {
-      observer?.disconnect();
-      mo?.disconnect();
-      window.removeEventListener('resize', publish);
-      window.visualViewport?.removeEventListener('resize', publish);
-      cancelAnimationFrame(raf);
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, []);
-
-  // Phím desktop (LAYOUT-SPEC §7) + Esc lùi lớp. Sheet tự xử lý Esc của nó
-  // bằng listener capture + stopPropagation, nên handler này (bubble) chỉ
-  // nhận Esc khi KHÔNG có sheet nào mở.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        if (expandedRef.current) collapseStrip();
-        else onBack();
-        return;
-      }
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const typing =
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        Boolean(target?.isContentEditable);
-      if (typing) return;
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        const id =
-          focusedExpenseId ??
-          (document.activeElement as HTMLElement | null)
-            ?.closest?.('[data-expense-row]')
-            ?.getAttribute('data-expense-row') ??
-          null;
-        const expense = session.expenses.find((e) => e.id === id);
-        if (expense) setExpenseAction(expense);
-        return;
-      }
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key === 'n' || event.key === 'N') {
-        if (session.members.length > 0) setExpenseEditing('new');
-      } else if (event.key === 'm' || event.key === 'M') {
-        setMemberEditing({ kind: 'new', focusBank: false });
-      } else if (event.key === 'c' || event.key === 'C') {
-        if (expandedRef.current) void handleCopySettlement();
-      }
-    }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-    // handleCopySettlement/onBack/collapseStrip đọc state qua ref/setter ổn
-    // định; deps theo các giá trị dữ liệu mà handler thật sự dùng.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handler đọc state qua ref/setter ổn định; deps giữ đúng các giá trị dữ liệu handler dùng thật (session, focusedExpenseId, onBack)
-  }, [session, focusedExpenseId, onBack]);
+  useStripHeightPublisher(rootRef, dockRef);
 
   function patch(partial: Partial<Session>) {
     onChange(touch(session, partial));
@@ -410,6 +214,31 @@ export function SessionView({
     else setTitleDraft(session.title);
   }
 
+  function addMember() {
+    setMemberEditing({ kind: 'new', focusBank: false });
+  }
+
+  function addExpense() {
+    setExpenseEditing('new');
+  }
+
+  function startTitleEdit() {
+    setTitleDraft(session.title);
+    setTitleEditing(true);
+  }
+
+  useSessionKeyboard({
+    session,
+    focusedExpenseId,
+    onBack,
+    expandedRef,
+    collapseStrip,
+    onOpenExpenseAction: (expense) => setExpenseAction(expense),
+    onNewExpense: addExpense,
+    onNewMember: addMember,
+    onCopySettlement: handleCopySettlement,
+  });
+
   /* ---------------- Các khối dùng chung ---------------- */
   const panelProps = {
     session,
@@ -423,218 +252,6 @@ export function SessionView({
       openMember(m, opts?.focusBank ?? false),
   };
 
-  const memberStrip = (
-    <div
-      ref={memberStripRef}
-      tabIndex={-1}
-      aria-label="Thành viên"
-      className={cn(
-        'flex h-14 shrink-0 items-center gap-2 outline-none',
-        stripFlash && 'rounded-xl outline-2 outline-brand-deep',
-      )}
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
-        {session.members.map((m, idx) => (
-          <button
-            key={m.id}
-            type="button"
-            aria-label={m.name}
-            title={m.name}
-            onClick={() => openMember(m)}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-card pr-3 pl-1 transition hover:border-line-strong"
-          >
-            <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={32} />
-            <span className="max-w-[96px] truncate text-sm font-semibold text-ink">{m.name}</span>
-            <span
-              aria-hidden
-              className={cn(
-                'h-2 w-2 shrink-0 rounded-full',
-                hasBank(m) ? 'bg-credit' : 'border border-line-strong bg-transparent',
-              )}
-            />
-            <span className="sr-only">{hasBank(m) ? 'Có QR' : 'Chưa có QR'}</span>
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}
-        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
-      >
-        <Plus size={16} aria-hidden /> Thêm
-      </button>
-    </div>
-  );
-
-  const emptyLedger =
-    session.members.length === 0 ? (
-      <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
-        <img
-          src="/products/brand/empty-state.webp"
-          alt=""
-          aria-hidden
-          className="mx-auto mb-3 max-h-[160px] w-auto"
-          loading="lazy"
-        />
-        <p className="text-sm text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
-        <button
-          type="button"
-          onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}
-          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep"
-        >
-          <Plus size={16} aria-hidden /> Thêm người
-        </button>
-      </div>
-    ) : session.expenses.length === 0 ? (
-      <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
-        <img
-          src="/products/brand/empty-state.webp"
-          alt=""
-          aria-hidden
-          className="mx-auto mb-3 max-h-[160px] w-auto"
-          loading="lazy"
-        />
-        <p className="text-sm text-ink">
-          Chưa có khoản chi nào. Ghi khoản đầu tiên: ai trả, bao nhiêu, chia cho ai.
-        </p>
-        <button
-          type="button"
-          onClick={() => setExpenseEditing('new')}
-          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition hover:border-brand-deep"
-        >
-          <Plus size={16} aria-hidden /> Thêm khoản chi
-        </button>
-      </div>
-    ) : null;
-
-  const ledger = (
-    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto lg:flex-none lg:overflow-visible">
-      {memberNotice && (
-        <p
-          role="alert"
-          className="mb-3 flex items-start gap-2 rounded-xl bg-debt/10 px-4 py-3 text-sm font-medium text-debt"
-        >
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
-          <span>{memberNotice}</span>
-        </p>
-      )}
-      {emptyLedger}
-      {session.expenses.length > 0 && (
-        <>
-          <ul className="divide-y divide-line border-t border-line">
-            {sortedExpenses.map((e) => {
-              const shares = computeShares(e);
-              const isExpanded = expandedExpenseId === e.id;
-              return (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    data-expense-row={e.id}
-                    onFocus={() => setFocusedExpenseId(e.id)}
-                    onClick={() => setExpenseAction(e)}
-                    className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-left lg:min-h-[56px]"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-medium text-ink">
-                        {e.title}
-                      </span>
-                      <span className="block text-[13px] break-words text-ink-2">
-                        {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
-                        {e.participantIds.length} người
-                      </span>
-                    </span>
-                    <span
-                      className="font-figure max-w-[136px] text-[15px] font-semibold whitespace-nowrap text-ink"
-                      title={formatVND(e.amount)}
-                    >
-                      {formatVNDDisplay(e.amount)}
-                    </span>
-                  </button>
-                  {isExpanded && (
-                    <ul className="grid gap-0.5 border-t border-line py-1.5">
-                      {e.participantIds.map((id) => (
-                        <li
-                          key={id}
-                          className="flex min-h-[32px] min-w-0 items-center justify-between gap-3 text-sm"
-                        >
-                          <span className="min-w-0 truncate text-ink-2">{nameOf(id)}</span>
-                          <span
-                            className="font-figure font-semibold whitespace-nowrap text-ink"
-                            title={formatVND(shares[id] ?? 0)}
-                          >
-                            {formatVNDDisplay(shares[id] ?? 0)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <div className="double-rule mt-1" aria-hidden />
-          <div className="flex min-h-[48px] items-center justify-between gap-3">
-            <span className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
-              Tổng chi · {session.expenses.length} khoản
-            </span>
-            <span className="font-figure text-[19px] font-bold whitespace-nowrap text-ink">
-              {formatVNDDisplay(total)}
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  const stripSummaryContent = (
-    <>
-      <span className="flex w-full items-center gap-x-2">
-        <span className="shrink-0 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
-          Tổng
-        </span>
-        <span className="font-figure shrink-0 text-[19px] font-bold whitespace-nowrap text-ink">
-          {formatVNDDisplay(total)}
-        </span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep">
-          Quyết toán
-          {discrepancy !== 0 && (
-            <span
-              aria-label="Có cảnh báo lệch số dư"
-              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-debt text-[12px] font-bold text-white"
-            >
-              !
-            </span>
-          )}
-          {expanded ? <ChevronDown size={15} aria-hidden /> : <ChevronUp size={15} aria-hidden />}
-        </span>
-      </span>
-      {session.members.length === 0 ? (
-        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có khoản chi nào</span>
-      ) : session.expenses.length === 0 ? (
-        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có gì để quyết toán</span>
-      ) : allSettled ? (
-        <span className="flex w-full min-w-0 items-center gap-1.5 text-sm font-medium text-ink">
-          <Check size={15} className="shrink-0 text-credit" aria-hidden />
-          <span className="truncate">Đã cân hết — không ai nợ ai</span>
-        </span>
-      ) : firstTransfer ? (
-        <span className="flex w-full min-w-0 items-center gap-1.5 text-sm text-ink">
-          <span className="min-w-0 flex-1 truncate">{nameOf(firstTransfer.fromId)}</span>
-          <MoveRight size={14} className="shrink-0 text-brand" aria-hidden />
-          <span className="min-w-0 flex-1 truncate">{nameOf(firstTransfer.toId)}</span>
-          <span className="font-figure shrink-0 font-semibold whitespace-nowrap">
-            {formatVNDDisplay(firstTransfer.amount)}
-          </span>
-          {transfers.length > 1 && (
-            <span className="shrink-0 text-ink-2">+{transfers.length - 1} lệnh</span>
-          )}
-        </span>
-      ) : null}
-    </>
-  );
-
   return (
     <div
       ref={rootRef}
@@ -643,46 +260,15 @@ export function SessionView({
       {/* Scrim paper 60% trên ledger khi dải mở rộng (mobile). */}
       {expanded && <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 lg:hidden" />}
 
-      {/* AppBar của Màn B: tên cuộc chia (H1 duy nhất của workspace) + nút ⋯
-          — logo ÷ KHÔNG lặp ở đây: app-shell header ngay phía trên đã
-          render logo rồi (Finding K, hai logo xếp chồng trong 150px đầu). */}
-      <div className="flex h-12 shrink-0 items-center gap-2">
-        {titleEditing ? (
-          <input
-            aria-label="Tên cuộc chia"
-            autoFocus
-            className="min-w-0 flex-1 rounded-xl border border-line-strong bg-card px-2 py-1.5 font-display text-[19px] font-bold text-ink outline-none focus:border-brand-deep"
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={commitTitle}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitTitle();
-            }}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setTitleDraft(session.title);
-              setTitleEditing(true);
-            }}
-            className="flex min-h-11 min-w-0 flex-1 items-center rounded-xl px-1 text-left"
-            title="Chạm để sửa tên cuộc chia"
-          >
-            <h1 className="truncate font-display text-[19px] leading-tight font-bold text-ink">
-              {session.title}
-            </h1>
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Hành động của cuộc chia"
-          onClick={() => setSessionActionOpen(true)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-card"
-        >
-          <MoreHorizontal size={20} aria-hidden />
-        </button>
-      </div>
+      <SessionAppBar
+        title={session.title}
+        editing={titleEditing}
+        draft={titleDraft}
+        onDraftChange={setTitleDraft}
+        onStartEdit={startTitleEdit}
+        onCommit={commitTitle}
+        onOpenActions={() => setSessionActionOpen(true)}
+      />
 
       <div className="grid min-h-0 min-w-0 flex-1 items-start lg:grid-cols-[minmax(0,640px)_320px] lg:gap-8 xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12">
         <div className="flex min-h-0 min-w-0 flex-col self-stretch lg:self-auto">
@@ -692,11 +278,11 @@ export function SessionView({
               disabledReason={
                 session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
               }
-              onClick={() => setExpenseEditing('new')}
+              onClick={addExpense}
             >
               <Plus size={16} aria-hidden /> Thêm khoản
             </PrimaryButton>
-            <GhostButton onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}>
+            <GhostButton onClick={addMember}>
               <Plus size={16} aria-hidden /> Thêm người
             </GhostButton>
             <span className="ml-auto flex items-center gap-4 text-xs text-ink-2">
@@ -720,8 +306,25 @@ export function SessionView({
               </span>
             </span>
           </div>
-          {memberStrip}
-          {ledger}
+          <SessionMemberStrip
+            members={session.members}
+            colors={colors}
+            stripRef={memberStripRef}
+            flash={stripFlash}
+            onOpenMember={openMember}
+            onAddMember={addMember}
+          />
+          <SessionLedger
+            session={session}
+            nameOf={nameOf}
+            total={total}
+            memberNotice={memberNotice}
+            expandedExpenseId={expandedExpenseId}
+            onFocusExpense={setFocusedExpenseId}
+            onOpenExpenseAction={setExpenseAction}
+            onAddMember={addMember}
+            onAddExpense={addExpense}
+          />
         </div>
 
         {/* Cột quyết toán desktop — cùng SettlementPanel, biến thể stacked. */}
@@ -740,316 +343,92 @@ export function SessionView({
         lớp
       </p>
 
-      {/* Settlement Strip mobile — layout thật dính đáy của cột flex. */}
-      <section
-        data-strip
-        aria-label="Quyết toán"
-        className="strip-shadow relative z-20 -mx-4 shrink-0 border-t border-line-strong bg-strip px-4 sm:-mx-6 sm:px-6 lg:hidden"
-      >
-        {expanded && (
-          <div className="animate-strip-in max-h-[70dvh] overflow-y-auto pt-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="font-display text-[19px] font-bold text-ink">Quyết toán</h2>
-              <button
-                type="button"
-                onClick={() => collapseStrip()}
-                className="inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-deep transition hover:text-ink"
-              >
-                Thu gọn <ChevronDown size={15} aria-hidden />
-              </button>
-            </div>
-            <SettlementPanel {...panelProps} variant="row" />
-            <div className="pb-3" />
-          </div>
-        )}
-        {/* DOCK — phần neo luôn nhìn thấy của Strip (Finding E): Sheet
-            neo đáy theo chiều cao khối này qua --strip-h. */}
-        <div ref={dockRef}>
-          <StatusLine status={online} className="min-h-[28px] items-center" />
-          <button
-            type="button"
-            data-strip-summary
-            aria-expanded={expanded}
-            onClick={() => (expanded ? collapseStrip() : expandStrip())}
-            className="flex min-h-11 w-full flex-col gap-y-0.5 py-1 text-left"
-          >
-            {stripSummaryContent}
-          </button>
-          {deckNotice && (
-            <p role="status" className="pb-1 text-[13px] text-ink-2">
-              {deckNotice}
-            </p>
-          )}
-          {/* Action Deck */}
-          <div className="flex min-h-[56px] items-start gap-2 pb-2">
-            <div className="min-w-0 flex-1 [&>*]:w-full">
-              <PrimaryButton
-                disabledReason={
-                  session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
-                }
-                onClick={() => setExpenseEditing('new')}
-                className="w-full text-[15px]"
-              >
-                <Plus size={16} aria-hidden /> Thêm khoản
-              </PrimaryButton>
-            </div>
-            <button
-              type="button"
-              aria-label="Chia sẻ link"
-              aria-disabled={session.expenses.length === 0 || undefined}
-              onClick={openShare}
-              className={cn(
-                'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep',
-                session.expenses.length === 0 && 'cursor-not-allowed text-ink-2',
-              )}
-            >
-              <Link2 size={18} aria-hidden />
-            </button>
-            <button
-              type="button"
-              aria-label="Thành viên"
-              onClick={focusMemberStrip}
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep"
-            >
-              <Users size={18} aria-hidden />
-            </button>
-          </div>
-        </div>
-      </section>
+      <SessionSettlementStrip
+        session={session}
+        expanded={expanded}
+        total={total}
+        discrepancy={discrepancy}
+        allSettled={allSettled}
+        firstTransfer={firstTransfer}
+        transfers={transfers}
+        nameOf={nameOf}
+        panelProps={panelProps}
+        online={online}
+        deckNotice={deckNotice}
+        dockRef={dockRef}
+        onCollapse={() => collapseStrip()}
+        onToggle={() => (expanded ? collapseStrip() : expandStrip())}
+        onAddExpense={addExpense}
+        onOpenShare={openShare}
+        onFocusMembers={focusMemberStrip}
+      />
 
-      {/* Member Sheet */}
-      <Sheet
-        open={memberEditing !== null}
-        onClose={() => setMemberEditing(null)}
-        title={memberEditing?.kind === 'edit' ? 'Sửa thành viên' : 'Thêm thành viên'}
-      >
-        {memberEditing !== null && (
-          <MemberEditor
-            key={memberEditing.kind === 'edit' ? memberEditing.member.id : 'new'}
-            initial={memberEditing.kind === 'edit' ? memberEditing.member : undefined}
-            members={session.members}
-            autoEnableBank={memberEditing.focusBank}
-            onSave={saveMember}
-            onSaveBulk={saveBulkMembers}
-            onOpenExisting={(m) => openMember(m)}
-            onDeleteRequest={
-              memberEditing.kind === 'edit'
-                ? () => requestDeleteMember(memberEditing.member)
-                : undefined
-            }
-            onCancel={() => setMemberEditing(null)}
-          />
-        )}
-      </Sheet>
-
-      {/* Expense Sheet */}
-      <Sheet
-        open={expenseEditing !== null}
-        onClose={() => setExpenseEditing(null)}
-        title={expenseEditing === 'new' ? 'Thêm khoản chi' : 'Sửa khoản chi'}
-        wide
-      >
-        {expenseEditing !== null && (
-          <ExpenseEditor
-            key={expenseEditing === 'new' ? 'new' : expenseEditing.id}
-            members={session.members}
-            initial={expenseEditing === 'new' ? undefined : expenseEditing}
-            draftKey={expenseDraftKey(
-              session.id,
-              expenseEditing === 'new' ? null : expenseEditing.id,
-            )}
-            onSave={saveExpense}
-            onSaveAndMore={applyExpenseDraft}
-            onCancel={() => setExpenseEditing(null)}
-          />
-        )}
-      </Sheet>
-
-      {/* Expense Action Sheet — bảng hành động của hàng ledger */}
-      <Sheet
-        open={expenseAction !== null}
-        onClose={() => setExpenseAction(null)}
-        title={expenseAction ? expenseAction.title : 'Khoản chi'}
-      >
-        {expenseAction && (
-          <div className="grid">
-            <button
-              type="button"
-              onClick={() => {
-                setExpenseEditing(expenseAction);
-                setExpenseAction(null);
-              }}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-            >
-              <Pencil size={16} aria-hidden /> Sửa khoản chi
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setExpandedExpenseId(expenseAction.id);
-                setExpenseAction(null);
-              }}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-            >
-              <List size={16} aria-hidden /> Xem phần chia từng người
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPendingDeleteExpense(expenseAction);
-                setExpenseAction(null);
-              }}
-              className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
-            >
-              <Trash2 size={16} aria-hidden /> Xoá khoản chi
-            </button>
-          </div>
-        )}
-      </Sheet>
-
-      {/* Session Action Sheet — nơi DUY NHẤT chứa Xoá cuộc chia */}
-      <Sheet
-        open={sessionActionOpen}
-        onClose={() => setSessionActionOpen(false)}
-        title="Cuộc chia này"
-      >
-        <div className="grid">
-          <button
-            type="button"
-            onClick={() => {
-              setSessionActionOpen(false);
-              onBack();
-            }}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-          >
-            <Users size={16} aria-hidden /> Tất cả cuộc chia
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSessionActionOpen(false);
-              openShare();
-            }}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-          >
-            <Link2 size={16} aria-hidden /> Chia sẻ link
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSessionActionOpen(false);
-              void handleCopySettlement();
-            }}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-          >
-            <Copy size={16} aria-hidden /> Copy bản quyết toán
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSessionActionOpen(false);
-              setTitleDraft(session.title);
-              setTitleEditing(true);
-            }}
-            className="flex min-h-[48px] items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold text-ink transition hover:bg-paper"
-          >
-            <Pencil size={16} aria-hidden /> Đổi tên cuộc chia
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSessionActionOpen(false);
-              setConfirmDeleteSession(true);
-            }}
-            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-xl px-2 text-left text-sm font-semibold text-debt transition hover:bg-debt/10"
-          >
-            <Trash2 size={16} aria-hidden /> Xoá cuộc chia
-          </button>
-        </div>
-      </Sheet>
-
-      {/* Share Sheet — cảnh báo 2 lớp (DATA-04(ii)): Lớp 1 headline +
-          nút xác nhận trong viewport đầu; Lớp 2 tối đa 3 gạch đầu dòng
-          ngay dưới headline. Link chỉ được tạo + copy SAU khi người dùng
-          bấm «Tôi hiểu, tạo link» (handleCopyShareLink). */}
-      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Chia sẻ cuộc chia này">
-        <p className="text-sm leading-relaxed font-medium text-ink">
-          Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia — và link không thu hồi được
-          sau khi gửi.
-        </p>
-        <ul className="mt-3 grid list-disc gap-2 pl-5 text-sm leading-relaxed text-ink-2">
-          <li>
-            Link chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
-            tổng {formatVND(total)} — không chứa thông tin ngân hàng; mã QR chỉ hiện trên máy đã lưu
-            tài khoản của người nhận.
-          </li>
-          <li>
-            Người nhận mở link sẽ có bản sao trên máy của họ và sửa tiếp được — đối chiếu lại trước
-            khi thanh toán theo.
-          </li>
-          <li>Chỉ gửi link cho người trong nhóm.</li>
-        </ul>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PrimaryButton onClick={handleCopyShareLink}>
-            {shareState === 'copied' ? <Check size={16} /> : <Link2 size={16} />}
-            {shareState === 'copied' ? 'Đã copy link!' : 'Tôi hiểu, tạo link'}
-          </PrimaryButton>
-          <GhostButton onClick={() => setShareOpen(false)}>Quay lại</GhostButton>
-        </div>
-        <span className="sr-only" role="status">
-          {shareState === 'copied' ? 'Đã sao chép link chia sẻ vào bộ nhớ tạm.' : ''}
-        </span>
-        {shareState === 'failed' && shareUrl && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-sm text-muted">
-              Trình duyệt không cho copy tự động — hãy copy thủ công link này:
-            </p>
-            <textarea
-              readOnly
-              aria-label="Link chia sẻ cuộc chia"
-              value={shareUrl}
-              onFocus={(e) => e.target.select()}
-              className="w-full rounded-xl border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
-              rows={3}
-            />
-          </div>
-        )}
-      </Sheet>
-
-      <ConfirmDialog
-        open={confirmDeleteSession}
-        title="Xoá cuộc chia này?"
-        message={`Cuộc chia "${session.title}" cùng mọi khoản chi trong đó sẽ bị xoá khỏi máy này. Bạn vẫn hoàn tác được ngay sau khi xoá.`}
-        confirmLabel="Xoá cuộc chia"
-        onCancel={() => setConfirmDeleteSession(false)}
-        onConfirm={() => {
+      <SessionSheets
+        session={session}
+        total={total}
+        memberEditing={memberEditing}
+        expenseEditing={expenseEditing}
+        expenseAction={expenseAction}
+        sessionActionOpen={sessionActionOpen}
+        shareOpen={shareOpen}
+        shareState={shareState}
+        shareUrl={shareUrl}
+        confirmDeleteSession={confirmDeleteSession}
+        pendingDeleteMember={pendingDeleteMember}
+        pendingDeleteExpense={pendingDeleteExpense}
+        saveMember={saveMember}
+        saveBulkMembers={saveBulkMembers}
+        openMember={openMember}
+        requestDeleteMember={requestDeleteMember}
+        saveExpense={saveExpense}
+        applyExpenseDraft={applyExpenseDraft}
+        confirmDeleteMember={confirmDeleteMember}
+        confirmDeleteExpense={confirmDeleteExpense}
+        handleCopyShareLink={handleCopyShareLink}
+        onCloseMemberEditor={() => setMemberEditing(null)}
+        onCloseExpenseEditor={() => setExpenseEditing(null)}
+        onCloseExpenseAction={() => setExpenseAction(null)}
+        onEditExpenseAction={(expense) => {
+          setExpenseEditing(expense);
+          setExpenseAction(null);
+        }}
+        onExpandExpenseAction={(id) => {
+          setExpandedExpenseId(id);
+          setExpenseAction(null);
+        }}
+        onDeleteExpenseAction={(expense) => {
+          setPendingDeleteExpense(expense);
+          setExpenseAction(null);
+        }}
+        onCloseSessionActions={() => setSessionActionOpen(false)}
+        onSessionBack={() => {
+          setSessionActionOpen(false);
+          onBack();
+        }}
+        onSessionShare={() => {
+          setSessionActionOpen(false);
+          openShare();
+        }}
+        onSessionCopy={() => {
+          setSessionActionOpen(false);
+          void handleCopySettlement();
+        }}
+        onSessionRename={() => {
+          setSessionActionOpen(false);
+          startTitleEdit();
+        }}
+        onSessionDeleteRequest={() => {
+          setSessionActionOpen(false);
+          setConfirmDeleteSession(true);
+        }}
+        onCloseShare={() => setShareOpen(false)}
+        onCancelDeleteSession={() => setConfirmDeleteSession(false)}
+        onConfirmDeleteSession={() => {
           setConfirmDeleteSession(false);
           onDelete();
         }}
-      />
-      <ConfirmDialog
-        open={pendingDeleteMember !== null}
-        title="Xoá thành viên này?"
-        message={
-          pendingDeleteMember
-            ? `Thành viên ${pendingDeleteMember.name} sẽ bị xoá khỏi cuộc chia. Bạn vẫn hoàn tác được ngay sau khi xoá.`
-            : ''
-        }
-        confirmLabel="Xoá thành viên"
-        onCancel={() => setPendingDeleteMember(null)}
-        onConfirm={confirmDeleteMember}
-      />
-      <ConfirmDialog
-        open={pendingDeleteExpense !== null}
-        title="Xoá khoản chi này?"
-        message={
-          pendingDeleteExpense
-            ? `Khoản chi "${pendingDeleteExpense.title}" sẽ bị xoá và số dư quyết toán tính lại ngay. Bạn vẫn hoàn tác được ngay sau khi xoá.`
-            : ''
-        }
-        confirmLabel="Xoá khoản chi"
-        onCancel={() => setPendingDeleteExpense(null)}
-        onConfirm={confirmDeleteExpense}
+        onCancelDeleteMember={() => setPendingDeleteMember(null)}
+        onCancelDeleteExpense={() => setPendingDeleteExpense(null)}
       />
     </div>
   );

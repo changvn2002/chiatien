@@ -1,22 +1,23 @@
 # SHOT-LIST — screenshot pack chiatien (studio-catalog/chiatien/)
 
-> **Trạng thái (2026-10-23): HOÃN theo lệnh redesign toàn bộ mini app.**
-> Thiết kế v2 sẽ thay đổi hoàn toàn lớp giao diện nên parent sẽ chụp lại
-> pack SAU khi redesign-v2 deploy lên production. File này ghi lại hợp
-> đồng chụp (tên file giữ nguyên như pack cũ để catalog không gãy) và các
-> TRẠNG THÁI nội dung phải đúng sự thật v2 khi chụp — đặc biệt: pack cũ
-> (HEAD 044b960) đã bị grader bắt lỗi DOC-03/DATA-03 vì gallery-01 in số
-> tài khoản đầy đủ + banner cảnh báo ngân hàng của thiết kế v1, trong khi
-> app v2 không còn cả hai. Không được tái sử dụng ảnh cũ.
+> **Trạng thái (2026-10-23): ĐANG CHỤP LẠI trên bản live v1.4.0 (cc07c0f).**
+> Pack trước chụp ở v1.3.0 (069972e); hình học Settlement Strip/sheet đã đổi
+> ở v1.4.0 (đợt sửa Panel #03 §9) nên grader vòng 4 chỉ cho DOC-03 PASS-TẠM
+> và yêu cầu chụp lại trên v1.4.0. File này ghi lại hợp đồng chụp (tên file
+> giữ nguyên như pack cũ để catalog không gãy) và các TRẠNG THÁI nội dung
+> phải đúng sự thật khi chụp — đặc biệt: pack v1 (HEAD 044b960) từng bị
+> grader bắt lỗi DOC-03/DATA-03 vì gallery-01 in số tài khoản đầy đủ +
+> banner cảnh báo ngân hàng của thiết kế v1, trong khi app hiện tại không
+> còn cả hai. Không được tái sử dụng ảnh cũ.
 
 ## Hợp đồng file (giữ nguyên tên — R2 studio-catalog/chiatien/)
 
 | File | Kích thước | Trạng thái phải chụp |
 |---|---|---|
-| chiatien-desktop.png | 1440×900 | Bước Thanh toán của cuộc chia mẫu (4 người, 3 khoản), vùng quyết toán + hàng VietQR của lần chuyển có bank trên máy chụp |
+| chiatien-desktop.png | 1440×900 | Không gian làm việc của cuộc chia mẫu (4 người, 3 khoản) ở trạng thái đã quyết toán xong: sổ trực tiếp + cột quyết toán bên phải + hàng VietQR của lần chuyển có bank trên máy chụp |
 | chiatien-mobile.png | 390×844 | Cùng cuộc chia trên mobile, thấy khoản chi + quyết toán |
 | chiatien-social.png | 1280×640 | Khung social có cả khoản chi + quyết toán (không chứa số TK) |
-| gallery-01-thanh-vien.png | 1440×900 | Bước Thành viên: danh sách thành viên CHỈ có trạng thái "đã lưu ngân hàng trên máy này" — **tuyệt đối không số tài khoản, không banner cảnh báo kiểu v1** |
+| gallery-01-thanh-vien.png | 1440×900 | Danh sách thành viên: CHỈ có trạng thái "đã lưu ngân hàng trên máy này" — **tuyệt đối không số tài khoản, không banner cảnh báo kiểu v1** |
 | gallery-02-chia-tuy-chinh.png | 1440×900 | Form khoản chi tuỳ chỉnh đã khớp tổng ("đã phân bổ … đã khớp") |
 | gallery-03-vietqr.png | 1440×900 | Sheet VietQR mở: QR thật + ngân hàng/số TK/tên chủ TK của ĐÚNG giao dịch (đây là nơi duy nhất số TK được phép xuất hiện — trong sheet thanh toán) |
 

@@ -268,8 +268,7 @@ export function SettlementPanel({
               Chưa có mã QR trên máy này — {member.name}
             </p>
             <p className="mt-1 text-sm leading-relaxed text-ink-2">
-              Chưa lưu tài khoản trên máy này, nên {count} lệnh chuyển (tổng{' '}
-              {formatVNDDisplay(total)}) chưa có mã QR tại đây.
+              {count} lệnh chuyển (tổng {formatVNDDisplay(total)}) đang chờ mã QR này.
             </p>
             <div className="mt-2 grid gap-2">
               <button

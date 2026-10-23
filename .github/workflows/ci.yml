@@ -39,11 +39,11 @@ jobs:
       - name: Test + coverage (ngưỡng CQ-06 trong vitest.config.ts)
         run: pnpm test:coverage
 
-      - name: Dependency audit (SEC-10 — bằng chứng quét, không chặn merge)
-        # Audit chạy để có bằng chứng + lộ lỗ hổng sớm; việc chặn merge vì
-        # lỗ hổng đi qua quy trình triage riêng nên bước này không fail job.
+      - name: Dependency audit (SEC-10 — chặn khi có lỗ hổng)
+        # Audit là cổng chặn thật (SEC-10/CQ-04, sửa theo chấm vòng 4):
+        # pnpm audit --prod trả exit code khác 0 khi có advisory ở mức
+        # mặc định → job fail, không còn cờ bỏ-qua-lỗi cho bước này.
         run: pnpm audit --prod
-        continue-on-error: true
 
       - name: Build
         run: pnpm build

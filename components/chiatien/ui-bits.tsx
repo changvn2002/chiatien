@@ -56,7 +56,13 @@ function avatarSvg(name: string, colorIndex: number): string {
   // chứa avatar (nút thành viên, hàng quyết toán…). Lọc bỏ CHỈ khối
   // <metadata>…</metadata> trước khi cache/inject — hình, glyph chữ viết
   // tắt và màu nền nằm NGOÀI khối đó nên giữ nguyên từng byte.
-  const svg = rawSvg.replace(/<metadata[\s\S]*?<\/metadata>/, '');
+  // Panel #04 (F-R2-02, MINOR): gắn aria-hidden="true" vào thẻ <svg> GỐC
+  // (chỉ lần xuất hiện đầu tiên — mọi byte hình/glyph/màu còn lại giữ
+  // nguyên): span bọc ngoài đã aria-hidden nhưng screen reader vẫn có
+  // thể chạm tới cây SVG con; icon trang trí phải ẩn ở cả hai tầng.
+  const svg = rawSvg
+    .replace(/<metadata[\s\S]*?<\/metadata>/, '')
+    .replace(/<svg/, '<svg aria-hidden="true"');
   avatarSvgCache.set(key, svg);
   return svg;
 }

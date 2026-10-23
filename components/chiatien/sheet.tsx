@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GhostButton } from './ui-bits';
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Selector khớp MỌI panel của Sheet — Panel #04 (MINOR alertdialog):
+ * ConfirmDialog nay render role="alertdialog" thay vì "dialog", nên mọi
+ * phép kiểm «đang ở trong dialog» của máy ghi opener/focus (Finding G,
+ * §9.6) phải khớp cả hai role, nếu không Esc/focus của dialog xác nhận
+ * phá huỷ sẽ mù như trước đợt sửa Finding G.
+ */
+const DIALOG_SELECTOR = '[role="dialog"], [role="alertdialog"]';
 
 /**
  * Cửa sổ "còn tươi" của bản ghi kích hoạt pointerdown/click: một dialog
@@ -95,7 +104,7 @@ function findFallbackOpener(record: OpenerRecord): HTMLElement | null {
 function restoreOpenerFocus(record: OpenerRecord) {
   const attempt = () => {
     const ae = document.activeElement as HTMLElement | null;
-    if (ae && ae !== document.body && ae.closest?.('[role="dialog"]')) return;
+    if (ae && ae !== document.body && ae.closest?.(DIALOG_SELECTOR)) return;
     if (record.el?.isConnected) {
       record.el.focus();
       return;
@@ -170,6 +179,8 @@ export function Sheet({
   children,
   wide,
   tinted,
+  role,
+  ariaDescribedBy,
 }: {
   open: boolean;
   onClose: () => void;
@@ -179,6 +190,15 @@ export function Sheet({
   wide?: boolean;
   /** Nền editor tint — đánh dấu "đang sửa ở đây". */
   tinted?: boolean;
+  /**
+   * Override role của panel root — mặc định "dialog" như mọi Sheet
+   * thường. ConfirmDialog truyền "alertdialog" (Panel #04 MINOR):
+   * hộp thoại xác nhận phá huỷ phải mang ngữ nghĩa alert dialog để
+   * screen reader tự đọc tên + đoạn hệ quả khi mở.
+   */
+  role?: 'dialog' | 'alertdialog';
+  /** id của phần tử mô tả — truyền xuống aria-describedby của root. */
+  ariaDescribedBy?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<OpenerRecord>({ el: null, target: null, label: null, text: null });
@@ -195,7 +215,7 @@ export function Sheet({
     function onFocusIn(event: FocusEvent) {
       const target = event.target as HTMLElement | null;
       if (!target || typeof target.getAttribute !== 'function') return;
-      if (target.closest('[role="dialog"]')) return;
+      if (target.closest(DIALOG_SELECTOR)) return;
       lastFocusRef.current = describeOpener(target);
     }
     document.addEventListener('focusin', onFocusIn, true);
@@ -230,7 +250,7 @@ export function Sheet({
     function onActivation(event: Event) {
       const raw = event.target as Element | null;
       if (!raw || typeof raw.closest !== 'function') return;
-      if (raw.closest('[role="dialog"]')) return;
+      if (raw.closest(DIALOG_SELECTOR)) return;
       const cand = (raw.closest(
         'button, [role="button"], [href], input, select, textarea, [tabindex]',
       ) ?? raw) as HTMLElement;
@@ -240,7 +260,7 @@ export function Sheet({
       // ghi nó vào sẽ làm bẩn bản ghi của kích hoạt thật ngay trước.
       if (
         cand.getAttribute('aria-label') === 'Đóng' &&
-        cand.parentElement?.querySelector('[role="dialog"]')
+        cand.parentElement?.querySelector(DIALOG_SELECTOR)
       ) {
         return;
       }
@@ -296,7 +316,7 @@ export function Sheet({
       wasOpenRef.current = true;
       const active = document.activeElement as HTMLElement | null;
       const opener =
-        active && active !== document.body && !active.closest('[role="dialog"]') ? active : null;
+        active && active !== document.body && !active.closest(DIALOG_SELECTOR) ? active : null;
       const act = lastActivationRef.current;
       const freshActivation =
         act.record.el && Date.now() - act.ts <= ACTIVATION_FRESH_MS ? act.record : null;
@@ -376,9 +396,10 @@ export function Sheet({
       />
       <div
         ref={panelRef}
-        role="dialog"
+        role={role ?? 'dialog'}
         aria-modal="true"
         aria-label={title}
+        aria-describedby={ariaDescribedBy}
         tabIndex={-1}
         className={cn(
           'animate-sheet-in relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl shadow-[var(--shadow-lift)] outline-none sm:rounded-2xl',
@@ -407,6 +428,12 @@ export function Sheet({
  * Hộp thoại xác nhận phá huỷ trong hệ thống thiết kế của app — thay cho
  * window.confirm() native (panel §7.10). Nút xác nhận là hành động nguy hiểm
  * nên mang màu Brick Red; việc xoá thật kèm toast Hoàn tác ở tầng app.
+ *
+ * Panel #04 (MINOR): vì MỌI call-site của component này đều là xác nhận
+ * phá huỷ (xoá phiên / xoá thành viên / xoá khoản — kiểm kê ở A11Y-LOG),
+ * nó render qua Sheet với role="alertdialog" và nối aria-describedby
+ * tới đoạn message hệ quả, để screen reader tự đọc hệ quả khi dialog
+ * mở (mẫu Alert Dialog của APG) thay vì chỉ đọc câu hỏi ở aria-label.
  */
 export function ConfirmDialog({
   open,
@@ -423,9 +450,19 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const reactId = useId();
+  const messageId = `confirm-message-${reactId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
-    <Sheet open={open} onClose={onCancel} title={title}>
-      <p className="text-sm leading-relaxed text-ink">{message}</p>
+    <Sheet
+      open={open}
+      onClose={onCancel}
+      title={title}
+      role="alertdialog"
+      ariaDescribedBy={messageId}
+    >
+      <p id={messageId} className="text-sm leading-relaxed text-ink">
+        {message}
+      </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
