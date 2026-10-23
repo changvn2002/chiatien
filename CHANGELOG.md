@@ -3,6 +3,44 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.5.1] — 2026-10-24 — hotfix audit CI
+
+### Security
+
+- @dicebear/collection 9.4.2 → 9.4.3 (kéo theo @dicebear/initials
+  9.4.3): vá GHSA-gcr2-9v8m-gq45 (moderate — SVG injection qua tuỳ
+  chọn rotate/fontSize chưa escape trong DiceBear). Step audit CI
+  của v1.5.0 đã chặn đúng advisory này — cổng SEC-10 hoạt động.
+
+## [1.5.0] — 2026-10-24 — Docs+media wave (Panel #04 + re-grade r4) + hotfix SEC-10
+
+### Added
+
+- Ngân sách chữ dạng CÔNG THỨC theo hàng/khối suy từ render fixture
+  S1/S2 (DESIGN.md hiệu đính lần 2): Thu gọn = 22 + 3M − Q + 7E ·
+  Mở rộng = Thu gọn + 31 + V + 5M + 27K — dự báo khớp đo 8/8 bề mặt.
+  Tuyên bố đóng Finding I nay có điều kiện và đã thỏa kèm bằng chứng.
+
+### Changed
+
+- Tách session-view.tsx 1.056 → 435 dòng + 7 module (ARC-11), hành
+  vi không đổi; ARCHITECTURE.md ghi giải trình ranh giới module.
+- Bộ ảnh chụp lại toàn bộ trên v1.4.0 (DOC-03); hero README viết lại
+  theo thực tế Action Deck/Ledger/Strip (DOC-04).
+- Câu khối chưa-QR rút từ ~19 từ xuống 8 từ tĩnh (ý + hành vi F
+  nguyên vẹn; chuỗi bảo vệ DATA-04(ii) không đổi từng ký tự).
+
+### Fixed
+
+- Avatar SVG gắn aria-hidden; 2 dialog xác nhận xoá dùng
+  role="alertdialog" + aria-describedby tới đoạn hệ quả (Panel #04).
+
+### Security
+
+- next 16.3.6 → 16.4.2: vá 2 CRITICAL RCE (GHSA-2464-fhr4-w9xw,
+  GHSA-673q-mjm6-r5xr) + HIGH SSRF/DoS; step audit CI gỡ
+  continue-on-error, chặn thật (SEC-10/CQ-04).
+
 ## [1.4.0] — 2026-10-23 — Fix wave theo UI Panel #03 (điều kiện chấm lại §9)
 
 ### Fixed
