@@ -24,9 +24,14 @@
 
 - Cuộc chia: "Nhậu cuối tuần" — thành viên An (có ngân hàng Vietcombank
   **lưu trên máy chụp**), Bình, Chi, Dũng.
-- Khoản chi: Lẩu + bia 700.000 ₫ (An trả, chia đều 4 người); Khô mực + đậu
-  phộng 260.000 ₫ (Chi trả, chia đều); Tiền rượu 300.000 ₫ (Bình trả, tuỳ
-  chỉnh 3 người × 100.000 ₫, Chi không tham gia).
+- Khoản chi: Ăn tối 800.000 ₫ (An trả, chia đều 4 người); Tiền rượu
+  300.000 ₫ (Bình trả, tuỳ chỉnh 3 người × 100.000 ₫ — An, Bình, Dũng; Chi
+  không tham gia); Taxi 160.000 ₫ (Dũng trả, chia đều 4 người).
+  (Sửa 2026-10-23: bản cũ ghi Lẩu 700k / Khô mực 260k / Rượu 300k — bộ số đó
+  cho quyết toán Dũng → An 320k + Dũng → Chi 20k + Bình → An 40k, KHÔNG khớp
+  "Quyết toán kỳ vọng" ngay dưới đây. Dataset đúng là dataset trong
+  README.md, cho số dư An +460.000 / Bình −40.000 / Chi −240.000 /
+  Dũng −180.000.)
 - Quyết toán kỳ vọng: Chi → An 240.000 ₫ · Dũng → An 180.000 ₫ · Bình → An
   40.000 ₫ (3 lần chuyển); VietQR mở trên lần Chi → An 240.000 ₫.
 - Caption chuẩn cho từng ảnh đã được viết sẵn trong README.md (mục

@@ -101,7 +101,7 @@ app hay ảnh dựng sẵn.
 
 ![Desktop 1440×900 — quyết toán hoàn chỉnh: số dư từng người và ai trả ai](docs/screenshots/chiatien-desktop.png)
 
-_Trên desktop, bước Thanh toán: danh sách "Ai trả ai" đã rút gọn lên trước — cả
+_Trên desktop, cột Quyết toán bên phải: danh sách "Ai trả ai" đã rút gọn — cả
 nhóm chỉ cần 3 lần chuyển là xong nợ; các lần chuyển tới An có nút VietQR vì tài
 khoản Vietcombank của An đã lưu trên máy này. Dưới là số dư từng người sau 3
 khoản chi (An đã trả 800.000 ₫ nên được nhận lại +460.000 ₫; Bình −40.000 ₫,
@@ -110,31 +110,31 @@ Chi −240.000 ₫, Dũng −180.000 ₫)._
 | Mobile (390×844) | Social / link-preview (1280×640) |
 | --- | --- |
 | ![Mobile — 3 khoản chi và quyết toán xếp dọc trên điện thoại](docs/screenshots/chiatien-mobile.png) | ![Social — bản xem trước khi chia sẻ liên kết](docs/screenshots/chiatien-social.png) |
-| _Trên điện thoại, khoản chi và quyết toán xếp dọc theo wizard 3 bước: cuộn một mạch là thấy đủ ai nợ ai, mỗi lần chuyển đủ điều kiện vẫn có nút VietQR riêng._ | _Khung 1280×640 dùng cho ảnh xem trước khi gửi link app qua Zalo/Facebook — vẫn thấy trọn 3 khoản chi và bản quyết toán._ |
+| _Trên điện thoại, các khoản chi xếp dọc trong một màn hình làm việc; dải quyết toán ghim ở đáy luôn hiện tổng chi và lệnh chuyển đầu tiên — mở Quyết toán là thấy đủ ai nợ ai và quét VietQR cho từng lệnh._ | _Khung 1280×640 dùng cho ảnh xem trước khi gửi link app qua Zalo/Facebook — vẫn thấy 3 khoản chi và đủ 3 lệnh chuyển quyết toán._ |
 
 ### Theo từng bước sử dụng
 
-**Bước 1 — Tạo cuộc chia và thêm cả nhóm.** Ai sẽ nhận tiền qua VietQR thì lưu
-tài khoản ngân hàng của người đó ngay trên máy của mình. Danh sách thành viên
-chỉ hiện trạng thái "đã lưu ngân hàng trên máy này" — **không hiện số tài
-khoản**; số tài khoản đầy đủ chỉ xuất hiện trong sheet thanh toán của đúng
-lần chuyển liên quan.
+**Thêm cả nhóm ngay trên màn hình cuộc chia.** Ai sẽ nhận tiền qua VietQR thì
+lưu tài khoản ngân hàng của người đó ngay trên máy của mình: chip của người đó
+có chấm xanh nghĩa là đã lưu ngân hàng trên máy này, vòng rỗng là chưa lưu —
+**không hiện số tài khoản**; số tài khoản đầy đủ chỉ xuất hiện trong sheet
+thanh toán của đúng lần chuyển liên quan.
 
-![Bước 1 — cuộc chia “Nhậu cuối tuần” với 4 thành viên ở bước Thành viên](docs/screenshots/gallery-01-thanh-vien.png)
+![Cuộc chia “Nhậu cuối tuần” vừa thêm đủ 4 thành viên — chip của An có chấm xanh: đã lưu ngân hàng trên máy này](docs/screenshots/gallery-01-thanh-vien.png)
 
-**Bước 2 — Ghi từng khoản chi, chọn đúng người cùng chia.** Khoản "Tiền rượu"
+**Ghi từng khoản chi, chọn đúng người cùng chia.** Khoản "Tiền rượu"
 300.000 ₫ do Bình trả, chia *tuỳ chỉnh số tiền*: chỉ 3 người uống (An, Bình, Dũng)
 mỗi người 100.000 ₫, Chi không uống nên không phải chịu. App cộng tổng ngay trên
 form và chỉ cho lưu khi "đã phân bổ 300.000 ₫ / 300.000 ₫ — đã khớp".
 
-![Bước 2 — form khoản chi tuỳ chỉnh số tiền đã điền khớp tổng](docs/screenshots/gallery-02-chia-tuy-chinh.png)
+![Form khoản chi tuỳ chỉnh số tiền đã điền khớp tổng](docs/screenshots/gallery-02-chia-tuy-chinh.png)
 
-**Bước 3 — Chốt quyết toán và quét VietQR trả ngay.** Bấm nút VietQR ở lần chuyển
+**Chốt quyết toán và quét VietQR trả ngay.** Bấm nút VietQR ở lần chuyển
 Chi → An 240.000 ₫: mã QR hiện ra với đúng số tiền và nội dung chuyển khoản đã
 điền sẵn, kèm ngân hàng/số tài khoản/tên chủ tài khoản để đối chiếu — app nhắc
 kiểm tra tên chủ tài khoản khớp đúng người nhận trước khi quét.
 
-![Bước 3 — VietQR của lần chuyển Chi → An 240.000 ₫ đang mở](docs/screenshots/gallery-03-vietqr.png)
+![VietQR của lần chuyển Chi → An 240.000 ₫ đang mở](docs/screenshots/gallery-03-vietqr.png)
 
 ## 🧭 Cách hoạt động
 
