@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Landmark, X } from 'lucide-react';
-import { BANKS } from '@/lib/vietqr';
+import { BANKS, accountNumberError, normalizeAccountNumber } from '@/lib/vietqr';
 import type { BankInfo, Member } from '@/lib/types';
 import { GhostButton, PrimaryButton, inputClass, labelClass } from './ui-bits';
 
@@ -48,6 +48,14 @@ export function MemberEditor({
         setError('Đã bật lưu tài khoản thì cần nhập số tài khoản.');
         return;
       }
+      // M-3 (Panel #02): validate ĐỊNH DẠNG số tài khoản ngay tại điểm
+      // lưu — số rác ("abc", "12") bị chặn kèm lý do cụ thể, không lưu,
+      // thay vì lưu xong rồi UI vẫn khẳng định "có VietQR".
+      const acctError = accountNumberError(accountNumber);
+      if (acctError) {
+        setError(acctError);
+        return;
+      }
       if (!accountName.trim()) {
         setError('Đã bật lưu tài khoản thì cần nhập tên chủ tài khoản.');
         return;
@@ -57,7 +65,7 @@ export function MemberEditor({
         bank: {
           bin: bank.bin,
           bankName: bank.shortName,
-          accountNumber: accountNumber.replace(/\s/g, ''),
+          accountNumber: normalizeAccountNumber(accountNumber),
           accountName: accountName.trim().toUpperCase(),
         },
       });
@@ -99,6 +107,12 @@ export function MemberEditor({
         <p className="mt-1 text-xs leading-relaxed text-muted">
           Tài khoản chỉ lưu trên máy này để tạo mã QR khi quyết toán — không nằm trong link chia sẻ,
           không gửi đi đâu.
+        </p>
+        {/* DATA-09b: hướng dẫn trách nhiệm tại đúng điểm nhập — số tài
+            khoản là dữ liệu của người khác khi nhập hộ. */}
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          Chỉ nhập tài khoản của chính người này, khi họ đồng ý cho lưu trên máy này để nhận tiền
+          qua VietQR.
         </p>
       </div>
 

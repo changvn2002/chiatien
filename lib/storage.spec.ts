@@ -8,6 +8,7 @@ import {
   saveBankBook,
   saveSessions,
   serializeSessions,
+  STORAGE_SCHEMA_VERSION,
   stripSessionBanks,
 } from './storage';
 import { computeBalances, sumBalances } from './split';
@@ -261,5 +262,73 @@ describe('sổ ngân hàng per-device (DATA-04)', () => {
     expect(Object.prototype.hasOwnProperty.call(book, '__proto__')).toBe(true);
     expect(book['__proto__']?.a.accountNumber).toBe(ACCOUNT);
     expect(({} as Record<string, unknown>).a).toBeUndefined();
+  });
+});
+
+describe('schemaVersion của blob sessions (ARC-10 khoản 1)', () => {
+  const ACCOUNT = '999888777666';
+  const sessionWithBank: Session = {
+    id: 's-bank',
+    title: 'Chuyến đi',
+    members: [
+      {
+        id: 'a',
+        name: 'An',
+        bank: {
+          bin: '970436',
+          bankName: 'Vietcombank',
+          accountNumber: ACCOUNT,
+          accountName: 'NGUYEN VAN AN',
+        },
+      },
+      { id: 'b', name: 'Bình' },
+    ],
+    expenses: [],
+    createdAt: 1,
+    updatedAt: 2,
+  };
+
+  it('serializeSessions ghi schemaVersion hiện tại vào blob', () => {
+    const parsed = JSON.parse(serializeSessions([])) as { schemaVersion?: unknown };
+    expect(parsed.schemaVersion).toBe(STORAGE_SCHEMA_VERSION);
+  });
+
+  it('migration: blob KHÔNG có schemaVersion (legacy) nạp nguyên vẹn, không mất cuộc chia nào', () => {
+    // storedSession dựng đúng định dạng blob cũ: chỉ { sessions } — không version.
+    const store = stubStorage(storedSession([], twoMembers));
+    expect(store.get(STORAGE_KEY)).not.toContain('schemaVersion');
+    const loaded = loadSessions();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].members.map((m) => m.name)).toEqual(['An', 'Bình']);
+  });
+
+  it('migration: blob legacy có bank -> bank vào sổ, blob ghi lại mang schemaVersion', () => {
+    stubStorage(JSON.stringify({ sessions: [sessionWithBank] }));
+    const loaded = loadSessions();
+    expect(loaded[0].members[0].bank?.accountNumber).toBe(ACCOUNT);
+    const rewritten = JSON.parse(window.localStorage.getItem(STORAGE_KEY)!) as {
+      schemaVersion?: unknown;
+    };
+    expect(rewritten.schemaVersion).toBe(STORAGE_SCHEMA_VERSION);
+  });
+
+  it('blob có schemaVersion lạ/lớn hơn vẫn đọc qua sanitize, không văng, không mất dữ liệu', () => {
+    const blob = JSON.stringify({
+      schemaVersion: 99,
+      sessions: [
+        {
+          id: 's-future',
+          title: 'Bản tương lai',
+          members: twoMembers,
+          expenses: [],
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      ],
+    });
+    stubStorage(blob);
+    const loaded = loadSessions();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].title).toBe('Bản tương lai');
   });
 });

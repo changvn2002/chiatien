@@ -1,54 +1,44 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Check, ChevronDown, ChevronLeft, TriangleAlert, Undo2, X } from 'lucide-react';
-import { newId } from '@/lib/id';
 import { FAQ_ITEMS } from '@/lib/site';
-import { cloneForImport, readShareFromHashWithReport } from '@/lib/share';
-import {
-  BANK_BOOK_KEY,
-  loadBankBook,
-  loadSessions,
-  serializeSessions,
-  STORAGE_KEY,
-  trySaveSessions,
-} from '@/lib/storage';
-import type { Session } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SessionList } from './session-list';
 import { SessionView } from './session-view';
+import { useSessions } from './use-sessions';
+import { WebVitalsReporter } from './web-vitals';
 
 /**
- * Gốc của app Chia Tiền — AppBar rút gọn, danh sách cuộc chia, lưu bền bằng
- * localStorage, và nhận cuộc chia từ share link (#chia=...) khi mở trang.
- *
- * Mở nhiều tab (W5-02): mỗi tab giữ state riêng trong bộ nhớ, nên trước
- * đây tab mở sau với state cũ sẽ ghi đè im lặng dữ liệu tab kia vừa thêm.
- * Nay tab nào cũng nghe sự kiện `storage` trên cả STORAGE_KEY lẫn
- * BANK_BOOK_KEY (sổ ngân hàng per-device): thấy dữ liệu trên máy khác với
- * lần ghi gần nhất của CHÍNH mình thì nạp lại bản mới nhất ngay + hiện
- * thông báo — lần ghi tiếp theo của tab này xuất phát từ dữ liệu mới
- * nhất, không còn ghi đè mất dữ liệu của tab khác trong im lặng.
+ * Gốc của app Chia Tiền — thuần trình bày (ARC-11 khoản 2): AppBar rút
+ * gọn, danh sách cuộc chia / chi tiết cuộc chia, các banner trạng thái và
+ * nội dung giới thiệu/FAQ dạng accordion. Toàn bộ wiring storage (nạp,
+ * lưu bền, đồng bộ xuyên tab, import share link, hoàn tác) nằm ở
+ * use-sessions.ts; component này chỉ nhận state + handler từ hook đó.
  */
 export function ChiaTienApp() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
-  const [importedTitle, setImportedTitle] = useState('');
-  const [importedDropped, setImportedDropped] = useState(0);
-  const [importedStrippedBank, setImportedStrippedBank] = useState(false);
-  const [importedStep, setImportedStep] = useState<1 | 3 | undefined>(undefined);
-  const [externalChange, setExternalChange] = useState(false);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [undoToast, setUndoToast] = useState<{ label: string; undo: () => void } | null>(null);
-  // Chuỗi JSON lần gần nhất tab này ghi (hoặc nạp) — mốc đối chiếu để phân
-  // biệt "storage đổi do chính mình" với "tab khác vừa ghi" trong sự kiện
-  // storage (sự kiện không bắn ở tab đã ghi, nhưng đối chiếu cho chắc).
-  const lastWrittenRef = useRef<string | null>(null);
-  const lastBankRef = useRef<string | null>(null);
-  const savedTimerRef = useRef<number | undefined>(undefined);
-  const undoTimerRef = useRef<number | undefined>(undefined);
+  const {
+    sessions,
+    active,
+    setActiveId,
+    loaded,
+    saveFailed,
+    importedTitle,
+    importedDropped,
+    importedStrippedBank,
+    importedStep,
+    dismissImport,
+    externalChange,
+    dismissExternalChange,
+    savedFlash,
+    undoToast,
+    dismissUndo,
+    createSession,
+    updateSession,
+    deleteSession,
+    showUndo,
+    goBackToList,
+  } = useSessions();
 
   // Đăng ký service worker (W5-01): app shell được cache để mở lại offline.
   useEffect(() => {
@@ -60,145 +50,14 @@ export function ChiaTienApp() {
     });
   }, []);
 
-  // Bootstrap một lần từ hệ thống ngoài (localStorage + URL hash): effect là
-  // nơi đúng cho việc này theo React docs; setState ở đây không gây vòng lặp
-  // render vì effect chỉ chạy một lần sau mount.
-  useEffect(() => {
-    let initial = loadSessions();
-    let shared: Session | null = null;
-    let dropped = 0;
-    let strippedBank = false;
-    try {
-      const report = readShareFromHashWithReport();
-      shared = report.session;
-      dropped = report.droppedExpenses;
-      strippedBank = report.strippedBank;
-    } catch {
-      shared = null;
-    }
-    let imported: Session | null = null;
-    if (shared) {
-      imported = cloneForImport(shared);
-      initial = [imported, ...initial];
-      // Xoá hash khỏi thanh địa chỉ để reload không import trùng.
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setSessions(initial);
-    lastWrittenRef.current = serializeSessions(initial);
-    lastBankRef.current = JSON.stringify(loadBankBook());
-    if (imported) {
-      setImportedTitle(imported.title);
-      setImportedDropped(dropped);
-      setImportedStrippedBank(strippedBank);
-      // Người nhận link thường đến để xem kết quả: có khoản chi -> bước 3.
-      setImportedStep(imported.expenses.length > 0 ? 3 : 1);
-      setActiveId(imported.id);
-    }
-    setLoaded(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
-    if (imported) setSaveFailed(!trySaveSessions(initial));
-  }, []);
-
-  // Đồng bộ xuyên tab (W5-02 + DATA-04): tab khác ghi sessions HOẶC sổ
-  // ngân hàng -> nạp lại bản mới nhất và báo rõ, thay vì giữ state cũ rồi
-  // ghi đè mất dữ liệu của họ.
-  useEffect(() => {
-    function onStorage(event: StorageEvent) {
-      if (event.key !== STORAGE_KEY && event.key !== BANK_BOOK_KEY) return;
-      const fresh = loadSessions();
-      const freshSerialized = serializeSessions(fresh);
-      const freshBank = JSON.stringify(loadBankBook());
-      const sessionsChanged = freshSerialized !== lastWrittenRef.current;
-      const bankChanged = freshBank !== lastBankRef.current;
-      if (!sessionsChanged && !bankChanged) return;
-      lastWrittenRef.current = freshSerialized;
-      lastBankRef.current = freshBank;
-      setSessions(fresh);
-      // Cuộc chia đang mở đã bị tab khác xoá -> quay về danh sách.
-      setActiveId((current) => (current && fresh.some((s) => s.id === current) ? current : null));
-      setExternalChange(true);
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  function flashSaved() {
-    window.clearTimeout(savedTimerRef.current);
-    setSavedFlash(true);
-    savedTimerRef.current = window.setTimeout(() => setSavedFlash(false), 2000);
-  }
-
-  /** Mọi thay đổi dữ liệu đều qua đây: cập nhật state + ghi bền ngay lập tức. */
-  function commit(next: Session[]) {
-    lastWrittenRef.current = serializeSessions(next);
-    setSessions(next);
-    const ok = trySaveSessions(next);
-    lastBankRef.current = JSON.stringify(loadBankBook());
-    setSaveFailed(!ok);
-    if (ok) flashSaved();
-  }
-
-  /** Toast Hoàn tác dùng chung cho mọi thao tác xoá trong app (panel §7.10). */
-  function showUndo(label: string, undo: () => void) {
-    window.clearTimeout(undoTimerRef.current);
-    setUndoToast({ label, undo });
-    undoTimerRef.current = window.setTimeout(() => setUndoToast(null), 6000);
-  }
-
-  const active = useMemo(
-    () => sessions.find((s) => s.id === activeId) ?? null,
-    [sessions, activeId],
-  );
-
-  function createSession(title: string) {
-    const now = Date.now();
-    const session: Session = {
-      id: newId(),
-      title,
-      members: [],
-      expenses: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    commit([session, ...sessions]);
-    setActiveId(session.id);
-  }
-
-  function updateSession(next: Session) {
-    commit(sessions.map((s) => (s.id === next.id ? next : s)));
-  }
-
-  function deleteSession(id: string) {
-    const index = sessions.findIndex((s) => s.id === id);
-    const target = sessions[index];
-    commit(sessions.filter((s) => s.id !== id));
-    if (activeId === id) setActiveId(null);
-    if (target) {
-      showUndo(`Đã xoá cuộc chia "${target.title}"`, () => {
-        setSessions((current) => {
-          if (current.some((s) => s.id === id)) return current;
-          const restored = [...current];
-          restored.splice(Math.min(index, restored.length), 0, target);
-          lastWrittenRef.current = serializeSessions(restored);
-          setSaveFailed(!trySaveSessions(restored));
-          lastBankRef.current = JSON.stringify(loadBankBook());
-          return restored;
-        });
-      });
-    }
-  }
-
-  function goBackToList() {
-    setActiveId(null);
-    setImportedStep(undefined);
-    // Dọn ?buoc= của phiên vừa đóng khỏi thanh địa chỉ.
-    window.history.replaceState(null, '', window.location.pathname);
-  }
-
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[1120px] flex-col px-4 sm:px-6">
+      <WebVitalsReporter />
       <header className="flex h-14 items-center gap-3">
+        {/* Logo là SVG tĩnh của chính app trong /public — next/image không
+            thêm lợi ích (không cần tối ưu/không đổi kích thước theo thiết
+            bị) nên dùng <img> thường; lý do cho eslint-disable ở dòng dưới
+            (CQ-02). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/products/brand/chiatien-logo.svg" alt="" aria-hidden width={32} height={32} />
         <h1 className="font-display text-xl leading-tight font-bold text-ink">Chia Tiền</h1>
@@ -243,6 +102,12 @@ export function ChiaTienApp() {
               {importedDropped > 0 &&
                 ` Có ${importedDropped} khoản chi trong link không hợp lệ nên đã bị loại bỏ để tránh lệch tiền — hãy kiểm tra lại danh sách khoản chi.`}
             </p>
+            {/* Nhãn chuẩn của DATA-04(iii)/SEC-12.6: nội dung link là do
+                người gửi cung cấp, app không xác thực được danh tính. */}
+            <p className="mt-1 font-semibold">
+              Lưu ý: đây là dữ liệu do người gửi cung cấp, chưa xác thực — hãy đối chiếu danh sách
+              thành viên và khoản chi trước khi thanh toán theo.
+            </p>
             {importedStrippedBank && (
               <p className="mt-1">
                 Link này thuộc bản cũ — thông tin ngân hàng trong link (nếu có) đã bị bỏ qua và
@@ -253,7 +118,7 @@ export function ChiaTienApp() {
           <button
             type="button"
             aria-label="Đóng thông báo"
-            onClick={() => setImportedTitle('')}
+            onClick={dismissImport}
             className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
           >
             <X size={16} />
@@ -274,7 +139,7 @@ export function ChiaTienApp() {
           <button
             type="button"
             aria-label="Đóng thông báo"
-            onClick={() => setExternalChange(false)}
+            onClick={dismissExternalChange}
             className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
           >
             <X size={16} />
@@ -404,6 +269,8 @@ export function ChiaTienApp() {
             </details>
           </div>
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted">
+            {/* Logo mono ở footer cũng là SVG tĩnh của chính app — cùng lý
+                do <img> thường như logo header (CQ-02). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/products/brand/chiatien-logo-mono.svg"
@@ -428,8 +295,7 @@ export function ChiaTienApp() {
             type="button"
             onClick={() => {
               undoToast.undo();
-              window.clearTimeout(undoTimerRef.current);
-              setUndoToast(null);
+              dismissUndo();
             }}
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 font-display font-bold text-brand-soft transition hover:text-white"
           >

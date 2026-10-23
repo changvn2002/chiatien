@@ -238,3 +238,35 @@ describe('sumBalances — chốt chặn toàn vẹn quyết toán (QA F1)', () =
     expect(sumBalances(computeBalances(corrupt))).toBe(40_000);
   });
 });
+
+describe('trần nhập liệu UI cho số tiền (M-4, Panel #02)', () => {
+  const members = ['a', 'b'];
+  const ok = {
+    title: 'Ăn trưa',
+    amount: 100_000,
+    payerId: 'a',
+    participantIds: ['a', 'b'],
+    mode: 'equal' as const,
+    custom: {},
+    weights: {},
+  };
+
+  it('ca Panel: 999.999.999.999.999 ₫ bị chặn ở validate với thông điệp nêu trần', () => {
+    const errors = validateExpenseDraft({ ...ok, amount: 999_999_999_999_999 }, members);
+    expect(errors.some((e) => e.includes('vượt quá giới hạn'))).toBe(true);
+  });
+
+  it('biên: đúng trần 999.999.999.999 ₫ qua; trần + 1 bị chặn', () => {
+    expect(validateExpenseDraft({ ...ok, amount: 999_999_999_999 }, members)).toEqual([]);
+    const errors = validateExpenseDraft({ ...ok, amount: 1_000_000_000_000 }, members);
+    expect(errors.some((e) => e.includes('vượt quá giới hạn'))).toBe(true);
+  });
+
+  it('custom: một phần tuỳ chỉnh vượt trần cũng bị chặn', () => {
+    const errors = validateExpenseDraft(
+      { ...ok, mode: 'custom', amount: 100_000, custom: { a: 1_000_000_000_000, b: 0 } },
+      members,
+    );
+    expect(errors.some((e) => e.includes('không vượt quá'))).toBe(true);
+  });
+});

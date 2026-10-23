@@ -81,9 +81,65 @@ export function hasBank(member: Member): member is Member & { bank: BankInfo } {
   return Boolean(
     member.bank &&
     member.bank.bin.trim() &&
-    member.bank.accountNumber.trim() &&
-    member.bank.accountName.trim(),
+    member.bank.accountName.trim() &&
+    // M-3 (Panel #02): "có VietQR" chỉ được khẳng định khi số tài khoản
+    // qua được validation định dạng — số rác từng lưu ở bản cũ (trước khi
+    // có validation) không còn làm UI nói dối nữa.
+    isValidAccountNumber(member.bank.accountNumber),
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Validation số tài khoản (M-3, Panel chiatien #02)                   */
+/*                                                                     */
+/* Bằng chứng định dạng đã kiểm chứng từ chính các ngân hàng trong     */
+/* danh sách BANKS ở trên (đọc 2026-10-23):                            */
+/* - ACB: số tài khoản là dãy số dài 9–14 ký tự số tuỳ ngân hàng.       */
+/* - VPBank: số tài khoản 9–15 ký tự; ví dụ theo ngân hàng: VPBank     */
+/*   8–9 chữ số, Vietcombank 13, Agribank 13, Techcombank 14, BIDV     */
+/*   14, VietinBank 12 KÝ TỰ CHỮ VÀ SỐ (chứng minh không thể bắt       */
+/*   digits-only tuyệt đối).                                           */
+/* Suy ra rule dùng chung an toàn cho cả 35 ngân hàng trong danh sách: */
+/* bỏ khoảng trắng/chấm/gạch nối -> 8–19 ký tự chữ-số, chứa ít nhất    */
+/* một chữ số. "abc" (3 ký tự) và "12" (2 ký tự) — hai ca Panel bắt     */
+/* được — đều bị loại; tài khoản thật ngắn nhất đã có tài liệu (8 ký   */
+/* tự của VPBank) vẫn qua.                                             */
+/* ------------------------------------------------------------------ */
+
+export const ACCOUNT_NUMBER_MIN_LENGTH = 8;
+export const ACCOUNT_NUMBER_MAX_LENGTH = 19;
+
+/** Chuẩn hoá số tài khoản để kiểm tra/lưu: bỏ khoảng trắng, chấm, gạch nối. */
+export function normalizeAccountNumber(value: string): string {
+  return value.replace(/[\s.\-]/g, '');
+}
+
+/**
+ * Lỗi định dạng số tài khoản, dạng câu tiếng Việt hiển thị thẳng cho
+ * người dùng; null = hợp lệ. Một nguồn sự thật duy nhất cho cả form
+ * (member-editor), lớp sanitize và hasBank.
+ */
+export function accountNumberError(value: string): string | null {
+  const normalized = normalizeAccountNumber(value.trim());
+  if (!normalized) return 'Chưa nhập số tài khoản.';
+  if (!/^[0-9A-Za-z]+$/.test(normalized)) {
+    return 'Số tài khoản chỉ gồm chữ số và chữ cái — không chứa ký tự đặc biệt.';
+  }
+  if (normalized.length < ACCOUNT_NUMBER_MIN_LENGTH) {
+    return `Số tài khoản quá ngắn (${normalized.length} ký tự) — tài khoản ngân hàng tại Việt Nam có từ ${ACCOUNT_NUMBER_MIN_LENGTH} đến ${ACCOUNT_NUMBER_MAX_LENGTH} ký tự. Hãy kiểm tra lại số tài khoản.`;
+  }
+  if (normalized.length > ACCOUNT_NUMBER_MAX_LENGTH) {
+    return `Số tài khoản quá dài (${normalized.length} ký tự) — tài khoản ngân hàng tại Việt Nam có từ ${ACCOUNT_NUMBER_MIN_LENGTH} đến ${ACCOUNT_NUMBER_MAX_LENGTH} ký tự. Hãy kiểm tra lại số tài khoản.`;
+  }
+  if (!/[0-9]/.test(normalized)) {
+    return 'Số tài khoản phải chứa ít nhất một chữ số.';
+  }
+  return null;
+}
+
+/** Số tài khoản có đúng định dạng để dựng VietQR hay không (M-3). */
+export function isValidAccountNumber(value: string): boolean {
+  return accountNumberError(value) === null;
 }
 
 /**

@@ -20,9 +20,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
-.env*.local
-.env
+# env files — mọi biến thể .env đều bị chặn, trừ mẫu .env.example (ARC-02)
+.env*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -30,3 +30,4 @@ next-env.d.ts
 
 # impeccable runtime
 /.impeccable/
+/coverage

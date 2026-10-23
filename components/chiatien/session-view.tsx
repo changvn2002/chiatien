@@ -629,6 +629,16 @@ export function SessionView({
           Link gồm thành viên, khoản chi và kết quả ai nợ ai. Thông tin ngân hàng không nằm trong
           link — mã QR chỉ hiện trên máy đã lưu tài khoản của người nhận.
         </p>
+        {/* Preview số liệu cụ thể của chính cuộc chia sắp gửi (UI-11 /
+            DATA-04(ii)): người gửi đối chiếu được trước khi link rời máy. */}
+        <p className="mt-3 rounded-xl bg-paper px-3 py-2.5 text-sm font-medium text-ink">
+          Link sẽ chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
+          tổng {formatVND(total)}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          Ai có link đều mở xem và sửa tiếp được bản sao của riêng họ — và link không thu hồi được
+          sau khi đã gửi, nên chỉ gửi cho người trong nhóm.
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <PrimaryButton onClick={handleCopyShareLink}>
             {shareState === 'copied' ? <Check size={16} /> : <Link2 size={16} />}

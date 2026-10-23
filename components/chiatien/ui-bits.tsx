@@ -59,6 +59,9 @@ function avatarDataUri(id: string, name: string): string {
 export function Avatar({ id, name, size = 36 }: { id: string; name: string; size?: number }) {
   const uri = useMemo(() => avatarDataUri(id, name), [id, name]);
   return (
+    // Lý do (CQ-02): src là data URI SVG do DiceBear sinh tại client —
+    // next/image không tối ưu được data URI và sẽ phá tính offline của
+    // avatar, nên dùng <img> thường là lựa chọn đúng ở đây.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={uri}
@@ -201,6 +204,10 @@ export function useOnlineStatus(): OnlineStatus {
   const [status, setStatus] = useState<OnlineStatus>('online');
 
   useEffect(() => {
+    // Lý do (CQ-02): đồng bộ trạng thái mạng THẬT lúc mount — SSR/mặc định
+    // lạc quan là 'online', nếu máy đang offline phải hạ xuống ngay trong
+    // effect này; đây là đồng bộ với hệ thống ngoài (navigator), đúng mẫu
+    // React docs cho external system, không phải vòng lặp render.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (!navigator.onLine) setStatus('offline');
     /* eslint-enable react-hooks/set-state-in-effect */

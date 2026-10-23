@@ -9,13 +9,16 @@ import type { NextConfig } from 'next';
  * - default-src 'self': mặc định khoá mọi nguồn ngoài; mọi loại tài
  *   nguyên không khai riêng đều chỉ được tải từ chính origin này.
  * - script-src 'self' 'unsafe-inline': script chỉ từ origin này, cộng
- *   'unsafe-inline' — ĐÁNH ĐỔI CÓ GHI NHẬN: Next static prerender nhúng
- *   inline bootstrap script (flight data / hydration) vào HTML; bỏ
- *   'unsafe-inline' mà không có nonce sẽ phá hydration. Nonce cần
- *   middleware + dynamic rendering, mâu thuẫn với bản chất app tĩnh
- *   prerender — nên giữ 'unsafe-inline' cho script và bù bằng việc
- *   không có nguồn script ngoài nào khác + object-src 'none'.
- *   (Inline JSON-LD trong layout cũng cần directive này.)
+ *   'unsafe-inline' — NGOẠI LỆ P-02 ĐƯỜNG C ĐÃ ĐĂNG KÝ (SEC-02):
+ *   Next static prerender nhúng inline bootstrap script (flight data /
+ *   hydration) chứa BUILD_ID ngẫu nhiên của từng lần build — đường A
+ *   (hash sha256) đã thử bằng 2 lần build liên tiếp và KHÔNG khả thi
+ *   (hash flight-data đổi theo build), đường B (nonce) đòi dynamic
+ *   rendering trái bản chất app tĩnh. Hồ sơ đầy đủ + bằng chứng + biện
+ *   pháp bù trừ: docs/security/CSP-EXCEPTION-P02.md; sổ đăng ký:
+ *   docs/security/EXCEPTION-REGISTRY.md (EXC-CSP-01, hết hạn
+ *   2027-01-21 hoặc release kế tiếp). Test lib/csp.spec.ts đối chiếu
+ *   header này với sổ đăng ký trong CI — lệch là fail.
  * - style-src 'self' 'unsafe-inline': Tailwind/Next chèn <style> và
  *   style attribute inline khi prerender; CSS ngoài chỉ từ 'self'.
  * - img-src 'self' data: blob: — ảnh tĩnh từ origin này; data: cho mã

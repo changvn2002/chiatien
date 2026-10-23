@@ -1,5 +1,6 @@
 import { newId } from './id';
 import type { BankInfo, Expense, Member, Session, SplitMode } from './types';
+import { isValidAccountNumber, normalizeAccountNumber } from './vietqr';
 
 /**
  * Lớp làm sạch DUY NHẤT cho mọi dữ liệu cuộc chia đến từ bên ngoài app:
@@ -111,11 +112,19 @@ export function sanitizeBankInfo(raw: unknown): BankInfo | null {
   }
   const accountNumber = truncateText(b.accountNumber.trim(), MAX_BANK_ACCOUNT_NUMBER_LENGTH);
   if (!accountNumber) return null;
+  // M-3 (Panel #02): số tài khoản phải đúng ĐỊNH DẠNG (lib/vietqr.ts —
+  // 8–19 ký tự chữ-số sau chuẩn hoá, có ít nhất một chữ số). Số rác từng
+  // được lưu bởi bản cũ chưa có validation ("abc", "12") bị loại tại đây
+  // nên không đường nạp nào (sổ local, dữ liệu legacy) còn giữ được bank
+  // không dùng thật — và hasBank/UI không bao giờ khẳng định "có VietQR"
+  // cho một tài khoản như vậy. Dạng lưu trữ là dạng đã chuẩn hoá.
+  const normalizedAccount = normalizeAccountNumber(accountNumber);
+  if (!isValidAccountNumber(normalizedAccount)) return null;
   return {
     bin: truncateText(b.bin.trim(), MAX_BANK_BIN_LENGTH),
     bankName:
       typeof b.bankName === 'string' ? truncateText(b.bankName.trim(), MAX_BANK_NAME_LENGTH) : '',
-    accountNumber,
+    accountNumber: normalizedAccount,
     accountName: truncateText(b.accountName.trim(), MAX_BANK_ACCOUNT_NAME_LENGTH),
   };
 }

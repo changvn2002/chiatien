@@ -78,6 +78,10 @@ export function Settlement({
   useEffect(() => {
     if (!openTransfer || !openRecipient || !hasBank(openRecipient)) return;
     let cancelled = false;
+    // Lý do (CQ-02): reset trạng thái QR về 'loading' đồng bộ ngay khi mở
+    // một lệnh chuyển mới — nếu để render cũ hiển thị trong lúc chờ sinh
+    // QR mới, người dùng có thể quét nhầm mã của lệnh trước. Đây là đồng
+    // bộ với thao tác mở sheet (hệ thống ngoài), không phải derived state.
     /* eslint-disable react-hooks/set-state-in-effect */
     setQrState({ status: 'loading' });
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -96,7 +100,10 @@ export function Settlement({
     return () => {
       cancelled = true;
     };
-    // nameOf/session.title ổn định theo session — chỉ chạy lại khi đổi lệnh mở.
+    // Lý do (CQ-02): nameOf/session.title là hàm/giá trị suy từ session —
+    // đưa vào deps sẽ sinh lại QR mỗi lần session đổi identity dù lệnh mở
+    // không đổi; effect chỉ được chạy khi ĐỔI LỆNH MỞ (openQr) hoặc đúng
+    // lệnh/người nhận đó thay đổi, nên deps dừng ở ba giá trị này.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openQr, openTransfer, openRecipient]);
 
@@ -296,6 +303,9 @@ export function Settlement({
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-[220px] w-[220px] shrink-0 items-center justify-center rounded-xl border border-line bg-white p-2">
               {qrState.status === 'ready' ? (
+                // Lý do (CQ-02): src là data URL do thư viện qrcode sinh
+                // tại máy — next/image không xử lý data URL và QR phải
+                // hiển thị offline, nên <img> thường là đúng ở đây.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={qrState.dataUrl}
@@ -349,6 +359,12 @@ export function Settlement({
             <p className="text-center text-xs leading-relaxed text-muted">
               QR từ tài khoản đã lưu trên máy này. Quét bằng app ngân hàng — số tiền và nội dung đã
               điền sẵn.
+            </p>
+            {/* SEC-12.6: xác nhận khớp danh tính trước khi quét — QR đúng
+                định dạng vẫn có thể trỏ tới tài khoản nhập sai từ đầu. */}
+            <p className="text-center text-xs leading-relaxed font-semibold text-brand-deep">
+              Trước khi quét, hãy kiểm tra tên chủ tài khoản ở trên khớp đúng người bạn định chuyển
+              — nếu sai tên, đừng quét, hãy sửa lại tài khoản đã lưu.
             </p>
           </div>
         )}

@@ -1,0 +1,62 @@
+name: CI
+
+# Cổng chất lượng tự động cho mọi thay đổi (CQ-04 / OPS-01): cùng một
+# dãy lệnh phải xanh ở máy dev (xem README mục "Chạy local") và trên CI.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: typecheck / lint / format / test+coverage / build / budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Test + coverage (ngưỡng CQ-06 trong vitest.config.ts)
+        run: pnpm test:coverage
+
+      - name: Dependency audit (SEC-10 — bằng chứng quét, không chặn merge)
+        # Audit chạy để có bằng chứng + lộ lỗ hổng sớm; việc chặn merge vì
+        # lỗ hổng đi qua quy trình triage riêng nên bước này không fail job.
+        run: pnpm audit --prod
+        continue-on-error: true
+
+      - name: Build
+        run: pnpm build
+
+      - name: Kiểm ngân sách JS (PERF-08)
+        run: node scripts/check-bundle-budget.mjs
+
+  secret-scan:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2

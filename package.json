@@ -10,18 +10,23 @@
     "next": "16.3.6",
     "qrcode": "^1.5.4",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "web-vitals": "^5.3.0"
   },
   "description": "Chia Tiền — chia tiền nhóm kiểu Việt Nam: ghi khoản chi, chia đều/tuỳ chỉnh/theo phần, quyết toán ít giao dịch nhất kèm VietQR. Không cần đăng nhập, dữ liệu lưu ngay trên máy bạn.",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/lz-string": "^1.5.0",
     "@types/node": "^24.5.2",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.39.0",
     "eslint-config-next": "16.3.6",
+    "jsdom": "^30.1.3",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.3",
@@ -39,7 +44,12 @@
     "lint": "eslint .",
     "start": "next start --port 3100",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "vitest run --coverage"
   },
-  "version": "1.0.0"
+  "version": "1.2.0",
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.32.1"
+  }
 }

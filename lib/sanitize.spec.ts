@@ -51,20 +51,27 @@ describe('sanitize bank — trim + trần độ dài (brief mục 7)', () => {
     expect(r.strippedBank).toBe(false);
   });
 
-  it('bank vượt trần từng trường -> bị cắt đúng trần', () => {
+  it('bank vượt trần từng trường -> bị cắt đúng trần (riêng số TK: vượt trần ĐỊNH DẠNG thì bank bị loại — M-3)', () => {
     const r = sanitizeSessionDetailed(
       sessionWithBank({
         bin: '9'.repeat(24),
         bankName: 'B'.repeat(150),
-        accountNumber: '1'.repeat(40),
+        accountNumber: '0123456789',
         accountName: 'A'.repeat(150),
       }),
     );
     const bank = r.session?.members[0].bank;
     expect(bank?.bin).toBe('9'.repeat(MAX_BANK_BIN_LENGTH));
-    expect(bank?.accountNumber).toBe('1'.repeat(MAX_BANK_ACCOUNT_NUMBER_LENGTH));
+    expect(bank?.accountNumber).toBe('0123456789');
     expect(bank?.accountName).toBe('A'.repeat(MAX_BANK_ACCOUNT_NAME_LENGTH));
     expect(bank?.bankName).toBe('B'.repeat(MAX_BANK_NAME_LENGTH));
+    // Trước M-3, số TK 40 ký tự bị cắt còn 32 rồi GIỮ — cắt một số tài
+    // khoản là bịa ra một tài khoản khác. Nay: quá dài = không hợp lệ =
+    // bank bị loại khỏi thành viên (thành viên vẫn được giữ).
+    const tooLong = sanitizeSessionDetailed(
+      sessionWithBank({ ...validBank, accountNumber: '1'.repeat(40) }),
+    );
+    expect(tooLong.session?.members[0].bank).toBeUndefined();
   });
 
   it('accountNumber chỉ gồm khoảng trắng -> sau trim rỗng -> bank không hợp lệ, thành viên vẫn được giữ', () => {
@@ -79,15 +86,27 @@ describe('sanitize bank — trim + trần độ dài (brief mục 7)', () => {
     expect(sanitizeBankInfo({ bin: '970436', accountNumber: '0123' })).toBeNull();
     const noName = sanitizeBankInfo({
       bin: '970436',
-      accountNumber: '0123',
+      accountNumber: '0123456789',
       accountName: 'AN',
     });
     expect(noName).toEqual({
       bin: '970436',
       bankName: '',
-      accountNumber: '0123',
+      accountNumber: '0123456789',
       accountName: 'AN',
     });
+  });
+
+  it('M-3: số tài khoản sai định dạng -> null (ca Panel: "abc", "12"); dạng có khoảng trắng được chuẩn hoá rồi mới kiểm', () => {
+    const base = { bin: '970436', accountName: 'AN' };
+    expect(sanitizeBankInfo({ ...base, accountNumber: 'abc' })).toBeNull();
+    expect(sanitizeBankInfo({ ...base, accountNumber: '12' })).toBeNull();
+    expect(sanitizeBankInfo({ ...base, accountNumber: '1234567' })).toBeNull(); // 7 ký tự — dưới sàn 8
+    expect(sanitizeBankInfo({ ...base, accountNumber: '1'.repeat(20) })).toBeNull(); // trên trần 19
+    expect(sanitizeBankInfo({ ...base, accountNumber: 'abcdefgh' })).toBeNull(); // không chữ số nào
+    expect(sanitizeBankInfo({ ...base, accountNumber: '0123 456 789' })?.accountNumber).toBe(
+      '0123456789',
+    );
   });
 });
 

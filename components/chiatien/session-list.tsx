@@ -74,6 +74,9 @@ export function SessionList({
 
         {sessions.length === 0 ? (
           <div className="rounded-2xl border border-line bg-card px-5 py-6 text-center shadow-[var(--shadow-card)]">
+            {/* Lý do (CQ-02): ảnh minh hoạ empty-state là WebP tĩnh đã nén
+                sẵn của chính app trong /public, kích thước hiển thị cố
+                định — next/image không thêm lợi ích ở đây. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/products/brand/empty-state.webp"

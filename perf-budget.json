@@ -1,0 +1,22 @@
+{
+  "item": "PERF-08 — ngân sách JavaScript trên critical path (Enterprise Checklist v1.0)",
+  "route": "/ (route đầu tiên, cũng là route nội dung duy nhất)",
+  "tier": "B (app công cụ tương tác — ngân sách tự khai, trần cứng tuyệt đối 300 KB theo quy ước panel)",
+  "firstRouteJsGzipBudgetBytes": 243000,
+  "hardCapBytes": 307200,
+  "measuredAtDeclare": {
+    "date": "2026-10-23",
+    "commit": "044b960 + fix wave 2 (chưa commit)",
+    "method": "scripts/check-bundle-budget.mjs — gzip (zlib level 9) mọi <script src> trong HTML prerender của route '/'; phép đo chuẩn của mục là Lighthouse trên live, job này là hàng rào CI chống phình",
+    "firstRouteJsGzipBytes": 221205,
+    "firstPartyJsGzipBytes": 221205,
+    "thirdPartyJsGzipBytes": 0
+  },
+  "codeSplitEvidence": [
+    "web-vitals (RUM, PERF-12) nạp bằng dynamic import trong components/chiatien/web-vitals.tsx — không xuất hiện trong tập script của HTML đầu, không tính vào critical path.",
+    "Mã VietQR (lib/vietqr.ts + thư viện qrcode) chỉ chạy khi người dùng mở sheet thanh toán; avatar DiceBear sinh tại client theo nhu cầu render danh sách.",
+    "JS bên thứ ba trên critical path = 0 byte (khớp kê khai docs/THIRD-PARTIES.md)."
+  ],
+  "growthLock": "Tăng firstRouteJsGzipBudgetBytes quá 10%/release mà không có ADR = FAIL (PERF-08). Mọi thay đổi file này phải ghi lý do vào CHANGELOG.md.",
+  "enforcedBy": "scripts/check-bundle-budget.mjs — chạy trong CI (.github/workflows/ci.yml) sau bước build"
+}

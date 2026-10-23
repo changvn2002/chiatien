@@ -1,0 +1,17 @@
+NOTICE — Brand assets exclusion
+================================
+
+The MIT License in the LICENSE file covers the source code and documentation
+of this project. It does NOT cover the brand assets of the Chia Tiền product:
+
+- the logo, wordmark and icon artwork (including everything under
+  public/products/brand/ and the PWA icons in public/icons/),
+- the Open Graph image (public/og.png),
+- and the brand files described in BRAND.md.
+
+Those assets are © chang2tech, all rights reserved. If you fork this project,
+replace them with your own brand assets before publishing.
+
+This notice lives in its own file (instead of inside LICENSE) so that
+GitHub's license detection recognizes the LICENSE file as the standard,
+unmodified MIT text.

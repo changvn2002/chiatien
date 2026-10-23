@@ -145,6 +145,23 @@ export interface ExpenseDraft {
 }
 
 /**
+ * Trần NHẬP LIỆU cho một khoản chi ở tầng UI (M-4, Panel chiatien #02):
+ * 999.999.999.999 ₫ — ngay dưới 10^12. Quyết định + lý do:
+ * - Panel bắt được khoản 999.999.999.999.999 ₫ (~10^15) lọt qua UI và
+ *   sinh QR cho lệnh ~5×10^14 ₫: một khoản chi NHÓM thật không bao giờ
+ *   tới cỡ đó (khoản nhóm lớn bất thường — thuê nguyên nhà hàng, mua xe
+ *   chung — vẫn dưới 10^11 ₫), nên trần này chặn mọi ca rác Panel nêu
+ *   trong khi không chạm tới bất kỳ nhu cầu thật nào có thể hình dung.
+ * - Trần này THẤP HƠN trần toàn vẹn dữ liệu MAX_AMOUNT_VND = 10^16 ở
+ *   lib/sanitize.ts có chủ đích và không mâu thuẫn: sanitize là lớp
+ *   TOÀN VẸN (dữ liệu đã tồn tại/link được tạo ở nơi khác vẫn được tính
+ *   chính xác tuyệt đối tới 10^16 — bằng chứng DATA-10), còn đây là lớp
+ *   NHẬP LIỆU (con số con người gõ vào form trên máy này). Hai lớp,
+ *   hai nhiệm vụ — xem thêm docs/ARCHITECTURE.md mục 5.
+ */
+export const MAX_UI_AMOUNT_VND = 999_999_999_999;
+
+/**
  * Kiểm tra một khoản chi trước khi lưu. Trả về danh sách lỗi tiếng Việt
  * (rỗng = hợp lệ). UI hiển thị nguyên văn các lỗi này cho người dùng.
  */
@@ -155,6 +172,12 @@ export function validateExpenseDraft(draft: ExpenseDraft, memberIds: string[]): 
   if (!draft.title.trim()) errors.push('Chưa nhập tên khoản chi.');
   if (!Number.isFinite(draft.amount) || draft.amount <= 0) errors.push('Số tiền phải lớn hơn 0.');
   else if (!Number.isInteger(draft.amount)) errors.push('Số tiền phải là số nguyên đồng.');
+  // M-4 (Panel #02): trần NHẬP LIỆU ở tầng UI — chặn ngay tại form kèm
+  // thông điệp, không đợi sanitize. Xem MAX_UI_AMOUNT_VND ở dưới.
+  else if (draft.amount > MAX_UI_AMOUNT_VND)
+    errors.push(
+      `Số tiền vượt quá giới hạn cho một khoản chi — tối đa ${MAX_UI_AMOUNT_VND.toLocaleString('vi-VN')} ₫. Nếu đây là khoản lớn thật, hãy tách thành nhiều khoản chi.`,
+    );
   if (!memberSet.has(draft.payerId)) errors.push('Chưa chọn người trả tiền.');
   if (draft.participantIds.length === 0) errors.push('Chọn ít nhất 1 người cùng chia khoản này.');
   for (const id of draft.participantIds) {
@@ -167,6 +190,13 @@ export function validateExpenseDraft(draft: ExpenseDraft, memberIds: string[]): 
       const v = draft.custom[id];
       if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
         errors.push('Mỗi người tham gia cần một số tiền từ 0 trở lên.');
+        break;
+      }
+      // Trần nhập liệu áp cho cả từng phần tuỳ chỉnh (M-4).
+      if (v > MAX_UI_AMOUNT_VND) {
+        errors.push(
+          `Số tiền của mỗi người không vượt quá ${MAX_UI_AMOUNT_VND.toLocaleString('vi-VN')} ₫.`,
+        );
         break;
       }
       sum += v;

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BANKS, buildVietQrPayload, crc16Ccitt, findBank } from './vietqr';
-import type { BankInfo } from './types';
+import {
+  BANKS,
+  accountNumberError,
+  buildVietQrPayload,
+  crc16Ccitt,
+  findBank,
+  hasBank,
+  isValidAccountNumber,
+} from './vietqr';
+import type { BankInfo, Member } from './types';
 
 const bank: BankInfo = {
   bin: '970436',
@@ -91,5 +99,61 @@ describe('BANKS', () => {
     expect(findBank('970436')?.shortName).toBe('Vietcombank');
     expect(findBank('970422')?.shortName).toBe('MB Bank');
     expect(findBank('970407')?.shortName).toBe('Techcombank');
+  });
+});
+
+describe('validation số tài khoản (M-3, Panel #02)', () => {
+  it('hai ca Panel bắt được đều bị loại: "abc" và "12"', () => {
+    expect(isValidAccountNumber('abc')).toBe(false);
+    expect(isValidAccountNumber('12')).toBe(false);
+    expect(accountNumberError('abc')).toContain('quá ngắn');
+    expect(accountNumberError('12')).toContain('quá ngắn');
+  });
+
+  it('biên độ dài: 7 ký tự loại, 8 ký tự qua, 19 ký tự qua, 20 ký tự loại', () => {
+    expect(isValidAccountNumber('1234567')).toBe(false);
+    expect(isValidAccountNumber('12345678')).toBe(true); // VPBank có TK 8 chữ số
+    expect(isValidAccountNumber('1'.repeat(19))).toBe(true);
+    expect(isValidAccountNumber('1'.repeat(20))).toBe(false);
+    expect(accountNumberError('1'.repeat(20))).toContain('quá dài');
+  });
+
+  it('định dạng thật theo ngân hàng trong BANKS đều qua: VCB 13 số, TCB 14 số, VietinBank 12 ký tự chữ-số', () => {
+    expect(isValidAccountNumber('0123456789012')).toBe(true);
+    expect(isValidAccountNumber('01234567890123')).toBe(true);
+    expect(isValidAccountNumber('1023456789AB')).toBe(true);
+    expect(isValidAccountNumber('0123456789')).toBe(true);
+  });
+
+  it('chuẩn hoá trước khi kiểm: khoảng trắng/chấm/gạch nối được bỏ; ký tự đặc biệt và chuỗi không chữ số bị loại', () => {
+    expect(isValidAccountNumber('0123 456 789')).toBe(true);
+    expect(isValidAccountNumber('0123-456-789')).toBe(true);
+    expect(isValidAccountNumber('0123.456.789')).toBe(true);
+    expect(isValidAccountNumber('0123@456789')).toBe(false);
+    expect(accountNumberError('0123@456789')).toContain('ký tự đặc biệt');
+    expect(isValidAccountNumber('abcdefgh')).toBe(false);
+    expect(accountNumberError('abcdefgh')).toContain('ít nhất một chữ số');
+    expect(accountNumberError('')).toContain('Chưa nhập');
+    expect(accountNumberError('   ')).toContain('Chưa nhập');
+  });
+
+  it('hasBank: bank có số TK rác -> false (UI không được khẳng định "có VietQR"); số hợp lệ -> true', () => {
+    const garbage: Member = {
+      id: 'm1',
+      name: 'An',
+      bank: { bin: '970436', bankName: 'Vietcombank', accountNumber: 'abc', accountName: 'AN' },
+    };
+    expect(hasBank(garbage)).toBe(false);
+    const valid: Member = {
+      id: 'm1',
+      name: 'An',
+      bank: {
+        bin: '970436',
+        bankName: 'Vietcombank',
+        accountNumber: '0123456789',
+        accountName: 'AN',
+      },
+    };
+    expect(hasBank(valid)).toBe(true);
   });
 });

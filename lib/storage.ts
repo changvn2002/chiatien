@@ -34,6 +34,18 @@ import type { BankInfo, Session } from './types';
  */
 export const STORAGE_KEY = 'chiatien:sessions:v1';
 
+/**
+ * Phiên bản schema của blob sessions (ARC-10 khoản 1): ghi vào MỌI blob
+ * từ nay. Blob cũ không có trường này = schema 0 (legacy) — loadSessions
+ * đọc cả hai dạng như nhau qua cùng lớp sanitize, nên dữ liệu hiện hữu
+ * của người dùng không bao giờ bị mất vì thiếu version; khi blob được
+ * ghi lại (lưu mới hoặc migration bank), nó tự mang schemaVersion hiện
+ * tại. Blob mang schemaVersion LỚN hơn bản app hiểu vẫn được đọc qua
+ * sanitize như thường (sanitize là whitelist nghiêm ngặt — trường lạ bị
+ * loại, không có đường nào để version lạ làm hỏng dữ liệu).
+ */
+export const STORAGE_SCHEMA_VERSION = 1;
+
 /** Khoá localStorage của sổ ngân hàng per-device — xem ghi chú DATA-04 ở trên. */
 export const BANK_BOOK_KEY = 'chiatien:bank-book:v1';
 
@@ -141,6 +153,8 @@ export function loadSessions(): Session[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return [];
+    // schemaVersion vắng mặt = blob legacy (schema 0): đọc như thường —
+    // đây chính là đường migration tương thích ngược của ARC-10 khoản 1.
     const sessionsRaw = (parsed as { sessions?: unknown }).sessions;
     if (!Array.isArray(sessionsRaw)) return [];
     const seenIds = new Set<string>();
@@ -180,7 +194,10 @@ export function loadSessions(): Session[] {
  * trong sổ ngân hàng (BANK_BOOK_KEY), không bao giờ nằm trong blob này.
  */
 export function serializeSessions(sessions: Session[]): string {
-  return JSON.stringify({ sessions: sessions.map(stripSessionBanks) });
+  return JSON.stringify({
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    sessions: sessions.map(stripSessionBanks),
+  });
 }
 
 /**
