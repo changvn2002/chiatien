@@ -46,8 +46,64 @@ function ConfirmHarness() {
   );
 }
 
+function SwapOpenerHarness() {
+  const [open, setOpen] = useState(false);
+  const [gen, setGen] = useState(1);
+  return (
+    <div>
+      <button
+        key={gen}
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          setGen(2);
+        }}
+      >
+        Mở sheet thay node
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Sheet thay node">
+        <p>Nội dung sheet</p>
+      </Sheet>
+    </div>
+  );
+}
+
 afterEach(() => {
   cleanup();
+});
+
+describe('Sheet — neo đáy theo --strip-h (Panel #03 Finding E)', () => {
+  it('lớp phủ dừng ở var(--strip-h, 0px) thay vì inset-0 phủ kín', () => {
+    render(<SheetHarness />);
+    const opener = screen.getByRole('button', { name: 'Mở sheet kiểm focus' });
+    fireEvent.click(opener);
+    const dialog = screen.getByRole('dialog');
+    const wrap = dialog.parentElement as HTMLElement;
+    expect(wrap.style.bottom).toBe('var(--strip-h, 0px)');
+    expect(wrap.className).toContain('inset-x-0');
+    expect(wrap.className).not.toContain('inset-0');
+  });
+});
+
+describe('Sheet — trả focus khi opener bị thay node (Panel #03 Finding G)', () => {
+  it('opener bị React thay node giữa phiên mở: Esc trả focus về NODE THAY THẾ cùng chữ', async () => {
+    render(<SwapOpenerHarness />);
+    const gen1 = screen.getByRole('button', { name: 'Mở sheet thay node' });
+    gen1.focus();
+    fireEvent.focusIn(gen1);
+    fireEvent.click(gen1);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    // Node thế hệ 1 đã rời document sau commit mở (key đổi).
+    expect(gen1.isConnected).toBe(false);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => {
+      const ae = document.activeElement as HTMLElement;
+      expect(ae).not.toBe(document.body);
+      expect(ae.textContent).toContain('Mở sheet thay node');
+      expect(ae.isConnected).toBe(true);
+    });
+  });
 });
 
 describe('Sheet / ConfirmDialog — trả focus sau Esc (D-7)', () => {

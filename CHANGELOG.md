@@ -3,6 +3,112 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.4.0] — 2026-10-23 — Fix wave theo UI Panel #03 (điều kiện chấm lại §9)
+
+### Fixed
+- Settlement Strip thu gọn viết lại 2 hàng: hàng tổng + «Quyết toán»
+  tách khỏi hàng lệnh đầu — tên người trả/người nhận có slot flex đọc
+  được, không còn bị ép 0–2px hay chồng glyph khi phiên có ≥2 lệnh
+  chuyển (Panel #03 Finding A — SERIOUS).
+- Hàng lệnh chuyển: nhóm người nhận wrap nguyên vẹn xuống hàng riêng
+  khi chật thay vì bị cắt trước người gửi; rail desktop không còn xén
+  avatar/tên người nhận (Finding C). Subtitle người trả ở ledger wrap
+  toàn văn tại chỗ thay vì elide không đường xem đầy đủ (Finding D).
+- Sheet khoản chi: chốt cột `minmax(0,1fr)` ở editor + chip tên dài
+  `min-w-0` co/truncate — dialog không còn tràn trong với chip 45 ký
+  tự (Finding B); MemberEditor nhận cùng chốt cột.
+- Modal sheet không còn che Settlement Strip: lớp phủ dừng ở đỉnh
+  phần neo của Strip (biến `--strip-h` do session-view xuất bản theo
+  khoảng cách từ đỉnh dock tới đáy viewport, Sheet tiêu thụ ở đáy;
+  publish được làm cứng nhiều lớp — ResizeObserver trên section +
+  gốc, MutationObserver trên cây con, nhịp trễ sau mount — sau khi
+  QA stress-frame bắt được một ca chập chờn do layout dịch vị trí
+  thuần) — tổng quyết toán vẫn nhìn thấy khi sheet mở (Finding E,
+  điều kiện §9.7).
+- «Nhắn xin QR của {Tên}» copy đúng lời nhắn xin QR (chào tên người
+  nhận, nêu số lệnh + tổng tiền đang chờ, link quyết toán là bước
+  khép vòng); copy thất bại hiện textarea copy thủ công + cảnh báo,
+  không còn xác nhận «đã copy» giả (Finding F).
+- Esc/khôi phục focus (Finding G): Sheet trả focus về phần tử mở
+  theo 3 nhịp (đồng bộ + rAF + 150ms), chuỗi khoá tìm node thay thế
+  thêm accessible-name dạng text cho nút chữ thường, và không giật
+  focus khi một dialog khác đang mở (sheet chuỗi).
+- Form thành viên: nút Lưu ở trạng thái disabled kèm dòng lý do ngay
+  từ lúc mở khi chưa nhập tên («Nhập tên thành viên để lưu») — cùng
+  mẫu các form khác (Panel #03 MINOR R3-F4). Hệ quả: test flows cho
+  MemberEditor được cập nhật sang hợp đồng mới này.
+- Nút «Tạo cuộc chia» khi tên trống: disabled kèm dòng lý do hiện
+  sẵn «Đặt tên cho cuộc chia để tạo» thay vì im lặng (Finding H,
+  điều kiện §9.8).
+- Share Sheet: cảnh báo 2 lớp trước khi tạo link — Lớp 1 headline +
+  «Tôi hiểu, tạo link» / «Quay lại» trong viewport đầu; Lớp 2 đúng 3
+  gạch đầu dòng hệ quả; link chỉ sinh sau khi xác nhận (DATA-04(ii)).
+- Workspace chỉ còn một H1 (tiêu đề cuộc chia): logo ÷ không lặp ở
+  AppBar workspace, header app-shell hạ «Chia Tiền» xuống thẻ <p>
+  khi phiên đang mở (Finding K); hai control dưới 44px (nút tiêu đề
+  phiên, nút tóm tắt Strip) nâng lên tối thiểu 44px; bốn chỗ cỡ chữ
+  11px ngoài thang (badge cảnh báo + gợi ý phím desktop) về bậc sàn
+  12px của thang đã hiệu đính.
+- Empty state của workspace căn giữa, minh hoạ lớn hơn, cùng mức
+  hoàn thiện với trang chủ (Finding J).
+- SVG avatar lọc bỏ khối `<metadata>`/attribution của thư viện
+  trước khi chèn — accessible name của nút avatar hết nhiễm chuỗi
+  lạ (Panel #03 MINOR).
+- `format:check` đỏ ở `session-view.tsx` đã xử lý (prettier).
+
+### Added
+- Test cấu trúc Panel #03 (`panel03.spec.tsx`): Strip 2 ca (tên dài/
+  tên ngắn × ≥2 lệnh), cổng Share Sheet 2 lớp + payload 0 field ngân
+  hàng trên phiên có bank, nội dung clipboard của «Nhắn xin QR» cả
+  đường thành công lẫn thất bại, chip sheet khoản chi.
+- Harness đo hình học thật `scripts/geometry-stress.mjs` (CDP, bản
+  build local): ca stress hợp nhất ở 320/360/375/390/412 + 1150/1440
+  + ma trận Esc-focus.
+- Giao thức + mẫu biên bản test hiểu cảnh báo chia sẻ với người ngoài
+  cuộc: `docs/share-warning-comprehension-test.md` (DATA-04(ii) —
+  phần chạy với người thật thuộc parent).
+
+### Changed
+- DESIGN.md: hiệu đính thang chữ theo census đo thật trên render
+  (thang công bố 12→15→19→24→30 không tồn tại trên render — bậc kề
+  đo được 1,06–1,19; phân cấp gánh bằng trọng lượng/màu), cùng cách
+  đã xử lý Finding I; tiêu đề sheet về đúng bậc 19px. Cùng đợt:
+  hiệu đính ngân sách từ thường trực theo số đo render thật
+  (Finding I — tuyên bố «≤30 từ» ở hồ sơ redesign-v2 bị thay bằng
+  ngân sách theo bề mặt có phương pháp đếm) và ghi hiệu đính thi
+  hành The Strip Rule qua cơ chế neo DOCK (Finding E).
+- CQ-02: mọi `eslint-disable` trong components/ + lib nay mang lý
+  do ngay trên dòng theo dạng `-- <lý do>` (lint 0 errors).
+
+## [1.3.0] — 2026-10-23 (commit 069972e) — REDESIGN-V2 «Settlement in Sight»
+
+### Added
+- Bố cục một màn hình mới: Action Deck + Live Ledger + Settlement Strip
+  ghim đáy trên mobile (thu gọn/mở rộng tại chỗ) và cột quyết toán
+  thường trực trên desktop — cùng một component SettlementPanel.
+- Danh tính avatar ổn định xuyên máy: màu suy từ tên đã chuẩn hoá +
+  thứ tự thành viên (FNV-1a-32, palette 12 màu không màu ngữ nghĩa),
+  không phụ thuộc member id.
+- Thêm thành viên hàng loạt (phân tách dấu phẩy + xem trước + cờ
+  trùng) và «Lưu & thêm nữa» cho khoản chi.
+- Trạng thái chẩn đoán link hỏng (`#chia=` không giải mã được) trên
+  trang chủ; khối chưa-có-QR gom theo người nhận kèm hành động nhắn
+  xin QR; StatusLine thường trực (trạng thái lưu + offline) ở tầng
+  app-shell.
+- Định dạng tiền rút gọn cho số ≥13 chữ số theo quy tắc half-up +
+  nâng đơn vị («1 triệu tỷ ₫»), số đầy đủ luôn tới được trong 1 chạm.
+
+### Changed
+- Tiền hiển thị bằng Inter 600/700 + `tnum` thật (Be Vietnam Pro
+  không có bảng GSUB `tnum`); thang chữ theo tỉ lệ ≥1.25:1.
+- Mẫu Validation Thống Nhất cho cả 3 editor; nút vô hiệu luôn kèm
+  dòng lý do.
+- `app.tsx` rút còn 356 dòng thuần trình bày; nhận diện thương hiệu
+  theo pack v2 (logo, OG, minh hoạ empty-state).
+
+### Removed
+- Wizard/stepper 3 bước và Settlement Rail của v1.
+
 ## [1.2.0] — 2026-10-23 — Fix wave 2 (theo hồ sơ chấm lại checklist vòng 2)
 
 ### Added

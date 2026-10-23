@@ -157,7 +157,7 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
     );
   });
 
-  it('(ii) hàng lệnh: grid minmax(0,1fr) auto, tên min-w-0 + line-clamp-2, nút VietQR shrink-0 và tồn tại trong DOM', () => {
+  it('(ii) hàng lệnh: grid minmax(0,1fr) auto, tên min-w-0 + truncate trong container flex-wrap (Panel #03 Finding C — thay line-clamp-2: nhóm người nhận wrap xuống hàng riêng thay vì bị ép), nút VietQR shrink-0 và tồn tại trong DOM', () => {
     renderView(stressSession);
     const rows = document.querySelectorAll('[data-transfer-row]');
     expect(rows.length).toBeGreaterThan(0);
@@ -167,8 +167,11 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
       if (!grid) continue; // biến thể stacked của cột desktop không dùng grid này
       checkedRowVariant = true;
       expect(grid.className).toContain('minmax(0,1fr)');
-      const clampedNames = grid.querySelectorAll('.line-clamp-2.min-w-0');
+      const clampedNames = grid.querySelectorAll('.truncate.min-w-0');
       expect(clampedNames.length).toBeGreaterThan(0);
+      // Finding C: container tên phải flex-wrap để nhóm người nhận xuống
+      // hàng riêng nguyên vẹn khi chật, thay vì bị ép còn vài px.
+      expect(grid.querySelector('.flex-wrap')).toBeTruthy();
       const qrButton = [...row.querySelectorAll('button')].find((b) =>
         b.textContent?.includes('VietQR'),
       );
@@ -176,6 +179,161 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
       expect(qrButton?.className).toContain('shrink-0');
     }
     expect(checkedRowVariant).toBe(true);
+  });
+});
+
+describe('Panel #03 — Strip tóm tắt 2 hàng (Finding A, cấu trúc)', () => {
+  const twoTransferSession: Session = {
+    id: 's-two',
+    title: 'Ăn trưa nhóm',
+    members: [
+      { id: 'a', name: 'An' },
+      { id: 'b', name: 'Chi' },
+      { id: 'c', name: 'Dũng' },
+    ],
+    expenses: [
+      {
+        id: 'e1',
+        title: 'Phở',
+        amount: 900000,
+        payerId: 'a',
+        participantIds: ['a', 'b', 'c'],
+        mode: 'equal',
+        custom: {},
+        weights: {},
+        createdAt: 1,
+      },
+    ],
+    createdAt: 1,
+    updatedAt: 2,
+  };
+
+  it('(iv) «Quyết toán» + Tổng ở hàng đầu; tên lệnh + tiền + «+N lệnh» ở hàng riêng bên dưới', () => {
+    renderView(twoTransferSession);
+    const summary = document.querySelector('[data-strip-summary]');
+    expect(summary).toBeTruthy();
+    const rows = [...(summary?.children ?? [])];
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    const headerRow = rows.find((r) => r.textContent?.includes('Quyết toán'));
+    expect(headerRow).toBeTruthy();
+    expect(headerRow?.textContent).toContain('Tổng');
+    // Cụm «+N lệnh» KHÔNG còn chung hàng với nhãn Quyết toán (gốc chồng glyph).
+    expect(headerRow?.textContent).not.toContain('lệnh');
+    const transferRow = rows.find(
+      (r) => r !== headerRow && r.querySelector('.truncate') && r.textContent?.includes('lệnh'),
+    );
+    expect(transferRow).toBeTruthy();
+    // Tên người gửi/nhận là flex-1 + min-w-0 + truncate: co đều, không ép 0px.
+    const nameSpans = [...(transferRow?.querySelectorAll('.truncate') ?? [])];
+    expect(nameSpans.length).toBeGreaterThanOrEqual(2);
+    for (const s of nameSpans) {
+      expect(s.className).toContain('flex-1');
+      expect(s.className).toContain('min-w-0');
+    }
+  });
+});
+
+describe('Panel #03 — Share Sheet 2 lớp (DATA-04(ii), cấu trúc + hành vi)', () => {
+  it('(v) đúng chữ «Tôi hiểu, tạo link»/«Quay lại»; link CHỈ sinh sau xác nhận và 0 dữ kiện ngân hàng', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    renderView(stressSession);
+    const shareButtons = screen.getAllByRole('button', { name: 'Chia sẻ link' });
+    fireEvent.click(shareButtons[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain(
+      'Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia',
+    );
+    const confirmBtn = [...dialog.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Tôi hiểu, tạo link'),
+    );
+    const backBtn = [...dialog.querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === 'Quay lại',
+    );
+    expect(confirmBtn).toBeTruthy();
+    expect(backBtn).toBeTruthy();
+    // Trước xác nhận: chưa copy gì cả.
+    expect(writeText).not.toHaveBeenCalled();
+    fireEvent.click(confirmBtn!);
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const url = writeText.mock.calls[0][0] as string;
+    expect(url).toContain('#chia=');
+    // DATA-04: payload không mang số tài khoản / trường ngân hàng.
+    expect(url).not.toContain('0123456789');
+    expect(url).not.toContain('accountNumber');
+  });
+});
+
+describe('Panel #03 — khối thiếu-QR (Finding F, hành vi clipboard)', () => {
+  const noBankSession: Session = {
+    id: 's-nobank',
+    title: 'Nhậu cuối tuần',
+    members: [
+      { id: 'a', name: 'An' },
+      { id: 'b', name: 'Bình' },
+    ],
+    expenses: [
+      {
+        id: 'e1',
+        title: 'Bia',
+        amount: 200000,
+        payerId: 'b',
+        participantIds: ['a', 'b'],
+        mode: 'equal',
+        custom: {},
+        weights: {},
+        createdAt: 1,
+      },
+    ],
+    createdAt: 1,
+    updatedAt: 2,
+  };
+
+  it('(vi) «Nhắn xin QR của Bình» copy LỜI NHẮN XIN QR thật (tên người nhận + số lệnh/tiền), không phải text link chung', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    renderView(noBankSession);
+    const askButtons = screen.getAllByRole('button', { name: 'Nhắn xin QR của Bình' });
+    expect(askButtons.length).toBeGreaterThan(0);
+    fireEvent.click(askButtons[0]);
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const text = writeText.mock.calls[0][0] as string;
+    expect(text).toContain('Bình');
+    expect(text).toContain('mã QR');
+    expect(text).toContain('100.000');
+    expect(text.startsWith('Đây là link chốt tiền của nhóm mình')).toBe(false);
+    // Xác nhận sau copy phải nói đúng việc đã làm (không còn xác nhận giả).
+    await waitFor(() =>
+      expect(document.body.textContent).toContain('Đã copy lời nhắn — dán vào Zalo/Messenger'),
+    );
+  });
+});
+
+describe('Panel #03 — Sheet khoản chi (Finding B, cấu trúc)', () => {
+  it('(vii) form chốt cột minmax(0,1fr); chip tên dài có min-w-0 + truncate; «Bỏ chọn tất cả» có mặt', async () => {
+    renderView(stressSession);
+    const addButtons = screen.getAllByRole('button', { name: /Thêm khoản/ });
+    fireEvent.click(addButtons[0]);
+    const dialog = await screen.findByRole('dialog');
+    const formRoot = dialog.querySelector('.grid');
+    expect(formRoot?.className).toContain('grid-cols-[minmax(0,1fr)]');
+    const payerChips = [...dialog.querySelectorAll('[role="radio"]')];
+    expect(payerChips.length).toBeGreaterThan(0);
+    const longChip = payerChips.find((c) => c.textContent?.includes('Nguyễn Văn Đức Anh'));
+    expect(longChip).toBeTruthy();
+    expect(longChip?.className).toContain('min-w-0');
+    const nameSpan = longChip?.querySelector('.truncate');
+    expect(nameSpan).toBeTruthy();
+    expect(nameSpan?.className).toContain('min-w-0');
+    const participantChips = [...dialog.querySelectorAll('button[aria-pressed="true"]')];
+    expect(participantChips.length).toBeGreaterThan(0);
+    expect(dialog.textContent).toContain('Bỏ chọn tất cả');
   });
 });
 

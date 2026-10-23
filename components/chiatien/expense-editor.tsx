@@ -159,10 +159,14 @@ export function ExpenseEditor({
     if (onSaveAndMore) onSaveAndMore({ ...draft, id: initial?.id });
     else onSave({ ...draft, id: initial?.id });
     // Reset tên khoản + số tiền; GIỮ người trả / kiểu chia / người cùng chia.
+    // Cả cờ touched: form mới phải mở SẠCH — nếu giữ touched, tóm tắt lỗi
+    // của form vừa lưu (tên trống + số tiền 0) hiện ngay khi chưa chạm ô
+    // nào (Panel #03, MINOR R3-F3: mở ra đã sẵn 2 lỗi chưa chạm).
     setTitle('');
     setAmount(0);
     setCustom({});
     setWeights({});
+    setTouched(false);
     setCapError(false);
     setSavedMoreNotice(`Đã lưu khoản ${savedTitle} — ghi tiếp khoản mới`);
     requestAnimationFrame(() => titleInputRef.current?.focus());
@@ -185,7 +189,14 @@ export function ExpenseEditor({
     mode === 'equal' && participantIds.length > 0 && amount % participantIds.length !== 0;
 
   return (
-    <div className="grid gap-4" onChange={() => setTouched(true)}>
+    // Cột grid PHẢI chốt minmax(0,1fr) (Finding B, Panel #03): cột ngầm
+    // của `grid` được định cỡ theo min-content của các section con — mà
+    // min-content của chip tên dài (span truncate = nowrap) bằng NGUYÊN
+    // bề rộng chuỗi 45 ký tự, nên cột phình tới 416px và dialog tràn
+    // ngang ở mọi bề rộng máy (đo thật: dialog scrollWidth 440 ở cả 320
+    // lẫn 390). minmax(0,1fr) biến cột thành bề rộng xác định theo
+    // container, chip mới co lại bằng flex + truncate như thiết kế.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4" onChange={() => setTouched(true)}>
       {restoredDraft && (
         <p role="status" className="text-sm font-medium text-brand-deep">
           Đã khôi phục nội dung bạn nhập dở từ lần trước — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ để
@@ -197,7 +208,7 @@ export function ExpenseEditor({
           {savedMoreNotice}
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>
           <label className={labelClass} htmlFor="expense-title">
             Khoản chi
@@ -244,14 +255,14 @@ export function ExpenseEditor({
               aria-checked={payerId === m.id}
               onClick={() => setPayerId(m.id)}
               className={cn(
-                'inline-flex min-h-11 max-w-full items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
+                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
                 payerId === m.id
                   ? 'border-brand bg-brand text-white'
                   : 'border-line-strong bg-card text-ink hover:border-brand-deep',
               )}
             >
               <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
-              <span className="truncate">{m.name}</span>
+              <span className="min-w-0 truncate">{m.name}</span>
             </button>
           ))}
         </div>
@@ -278,14 +289,14 @@ export function ExpenseEditor({
                 aria-pressed={active}
                 onClick={() => toggleParticipant(m.id)}
                 className={cn(
-                  'inline-flex min-h-11 max-w-full items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
+                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition',
                   active
                     ? 'border-brand bg-brand-soft text-brand-deep'
                     : 'border-line-strong bg-card text-ink hover:border-brand-deep',
                 )}
               >
                 <Avatar name={m.name} colorIndex={colorOf(m.id)} size={22} />
-                <span className="truncate">{m.name}</span>
+                <span className="min-w-0 truncate">{m.name}</span>
                 {active && <Check size={14} aria-hidden className="shrink-0" />}
               </button>
             );

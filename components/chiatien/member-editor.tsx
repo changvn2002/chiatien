@@ -186,7 +186,10 @@ export function MemberEditor({
       : 'Lưu thành viên';
 
   return (
-    <div className="grid gap-4">
+    // Cột minmax(0,1fr): cùng chốt chống phình min-content như
+    // ExpenseEditor (Finding B — cột grid ngầm định cỡ theo min-content
+    // của section con có thể tràn dialog).
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div>
         <label className={labelClass} htmlFor="member-name">
           Tên thành viên
@@ -280,7 +283,7 @@ export function MemberEditor({
               ))}
             </select>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div>
               <label className={labelClass} htmlFor="member-account">
                 Số tài khoản
@@ -332,7 +335,13 @@ export function MemberEditor({
           disabledReason={
             isBulk && bulkAnalysis.valid.length === 0
               ? 'Tất cả tên đều đã có trong cuộc chia'
-              : bankSaveReason
+              : !isBulk && !name.trim()
+                ? // Cùng mẫu ExpenseEditor: điều còn thiếu GẦN NHẤT hiện
+                  // ngay từ lúc mở form, không đợi tới điểm Lưu (Panel
+                  // #03, MINOR R3-F4: form thành viên thiếu dòng lý do
+                  // khi mở mà các form khác đã có).
+                  'Nhập tên thành viên để lưu'
+                : bankSaveReason
           }
           onClick={handleSave}
         >

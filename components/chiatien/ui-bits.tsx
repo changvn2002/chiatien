@@ -40,7 +40,7 @@ function avatarSvg(name: string, colorIndex: number): string {
   const key = `${name}|${idx}`;
   const cached = avatarSvgCache.get(key);
   if (cached) return cached;
-  const svg = createAvatar(initials, {
+  const rawSvg = createAvatar(initials, {
     seed: initialsOf(name),
     // IDENTITY_PALETTE giữ dạng '#RRGGBB'; schema DiceBear cần hex không '#'.
     backgroundColor: [IDENTITY_PALETTE[idx].replace('#', '')],
@@ -49,6 +49,14 @@ function avatarSvg(name: string, colorIndex: number): string {
     fontWeight: 700,
     fontSize: 46,
   }).toString();
+  // Panel #03 (MINOR): DiceBear nhúng một khối <metadata> RDF dài 688 ký
+  // tự (dc:title/dc:creator/dc:rights — chứa chuỗi "DiceBear" nhiều lần)
+  // vào đầu mọi SVG. SVG được inject INLINE nên khối đó lọt vào
+  // textContent của span avatar và nhiễm accessible name của mọi nút
+  // chứa avatar (nút thành viên, hàng quyết toán…). Lọc bỏ CHỈ khối
+  // <metadata>…</metadata> trước khi cache/inject — hình, glyph chữ viết
+  // tắt và màu nền nằm NGOÀI khối đó nên giữ nguyên từng byte.
+  const svg = rawSvg.replace(/<metadata[\s\S]*?<\/metadata>/, '');
   avatarSvgCache.set(key, svg);
   return svg;
 }
@@ -242,7 +250,7 @@ export function useOnlineStatus(): OnlineStatus {
     // lạc quan là 'online', nếu máy đang offline phải hạ xuống ngay trong
     // effect này; đây là đồng bộ với hệ thống ngoài (navigator), đúng mẫu
     // React docs cho external system, không phải vòng lặp render.
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* eslint-disable react-hooks/set-state-in-effect -- đồng bộ trạng thái mạng thật (navigator.onLine) một lần lúc mount, không phải vòng lặp render */
     if (!navigator.onLine) setStatus('offline');
     /* eslint-enable react-hooks/set-state-in-effect */
     let timer: number | undefined;

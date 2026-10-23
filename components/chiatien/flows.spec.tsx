@@ -85,11 +85,16 @@ describe('flow lõi ở tầng component', () => {
     expect(onOpen).toHaveBeenCalledWith('s1');
   });
 
-  it('MemberEditor: chưa nhập tên -> báo lỗi; nhập đủ tên + tài khoản -> onSave nhận bank đã chuẩn hoá', () => {
+  it('MemberEditor: chưa nhập tên -> nút Lưu disabled kèm dòng lý do ngay từ lúc mở (mẫu D-5/§9.8 — Panel #03 MINOR R3-F4; trước đây lỗi chỉ hiện khi bấm Lưu); nhập đủ tên + tài khoản -> onSave nhận bank đã chuẩn hoá', () => {
     const onSave = vi.fn();
     render(<MemberEditor onSave={onSave} onCancel={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: /Lưu thành viên/ }));
-    expect(screen.getByRole('alert').textContent).toContain('Chưa nhập tên');
+    // Chưa nhập tên: lý do hiện sẵn cạnh nút + nút ở trạng thái
+    // aria-disabled; bấm không lưu được gì (onClick bị gỡ ở PrimaryButton).
+    expect(screen.getByText('Nhập tên thành viên để lưu')).toBeTruthy();
+    const saveButton = screen.getByRole('button', { name: /Lưu thành viên/ });
+    expect(saveButton.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(saveButton);
+    expect(onSave).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('Tên thành viên'), { target: { value: 'Chi' } });
     fireEvent.click(screen.getByLabelText(/Lưu tài khoản trên máy này/));
     fireEvent.change(screen.getByLabelText('Số tài khoản'), {

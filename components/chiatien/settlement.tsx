@@ -68,6 +68,7 @@ export function SettlementPanel({
   const [openQr, setOpenQr] = useState<number | null>(null);
   const [qrState, setQrState] = useState<QrState>({ status: 'loading' });
   const [askedId, setAskedId] = useState<string | null>(null);
+  const [askFailed, setAskFailed] = useState<{ memberId: string; text: string } | null>(null);
   const paid = paidByMember(session);
   const owed = owedByMember(session);
   // Chốt chặn toàn vẹn: dữ liệu hợp lệ luôn cho tổng số dư = 0. Nếu khác 0
@@ -110,7 +111,7 @@ export function SettlementPanel({
     let cancelled = false;
     // Reset về 'loading' đồng bộ khi mở lệnh mới để người dùng không quét
     // nhầm mã của lệnh trước trong lúc chờ sinh QR mới.
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* eslint-disable react-hooks/set-state-in-effect -- reset trạng thái QR về loading đồng bộ khi mở lệnh mới để không quét nhầm mã của lệnh trước */
     setQrState({ status: 'loading' });
     /* eslint-enable react-hooks/set-state-in-effect */
     const payload = buildVietQrPayload(
@@ -130,16 +131,20 @@ export function SettlementPanel({
     };
     // nameOf/session.title suy từ session — đưa vào deps sẽ sinh lại QR mỗi
     // lần session đổi identity dù lệnh mở không đổi; chỉ chạy theo lệnh mở.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy theo lệnh đang mở; nameOf/session.title suy từ session, thêm vào deps sẽ sinh lại QR mỗi lần session đổi identity dù lệnh mở không đổi
   }, [openQr, openTransfer, openRecipient]);
 
-  async function handleAsk(recipient: Member) {
+  async function handleAsk(recipient: Member, count: number, total: number) {
     const link = buildShareUrl(session);
-    const text = `Đây là link chốt tiền của nhóm mình: ${link} — mở trên máy của bạn để xem ai nợ ai và mã QR của bạn.`;
+    const text = `Chào ${recipient.name}, trong cuộc chia “${session.title}” bạn đang có ${count} lệnh chuyển tiền chờ (tổng ${formatVND(total)}). Máy này chưa có mã QR ngân hàng của bạn — bạn gửi mình mã QR (hoặc ảnh QR ngân hàng) của bạn nhé, để mọi người quét và chuyển đúng cho bạn. Xem quyết toán của nhóm tại: ${link}`;
     const ok = await copyText(text);
     if (ok) {
+      setAskFailed(null);
       setAskedId(recipient.id);
       window.setTimeout(() => setAskedId(null), 3000);
+    } else {
+      setAskedId(null);
+      setAskFailed({ memberId: recipient.id, text });
     }
   }
 
@@ -195,16 +200,16 @@ export function SettlementPanel({
               const canQr = recipient !== undefined && hasBank(recipient);
               const names = (
                 <>
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
                     <Avatar name={nameOf(t.fromId)} colorIndex={colorOf(t.fromId)} size={24} />
-                    <span className="line-clamp-2 min-w-0 font-semibold text-ink">
+                    <span className="min-w-0 truncate font-semibold text-ink">
                       {nameOf(t.fromId)}
                     </span>
                   </span>
                   <MoveRight size={15} className="shrink-0 text-brand" aria-hidden />
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
                     <Avatar name={nameOf(t.toId)} colorIndex={colorOf(t.toId)} size={24} />
-                    <span className="line-clamp-2 min-w-0 font-semibold text-ink">
+                    <span className="min-w-0 truncate font-semibold text-ink">
                       {nameOf(t.toId)}
                     </span>
                   </span>
@@ -212,7 +217,10 @@ export function SettlementPanel({
               );
               const amountAndQr = (
                 <>
-                  <span className="font-figure text-base font-bold whitespace-nowrap text-ink">
+                  <span
+                    className="font-figure text-base font-bold whitespace-nowrap text-ink"
+                    title={formatVND(t.amount)}
+                  >
                     {formatVNDDisplay(t.amount)}
                   </span>
                   {canQr && (
@@ -231,14 +239,18 @@ export function SettlementPanel({
                 <li key={`${t.fromId}-${t.toId}-${i}`} data-transfer-row={`${t.fromId}-${t.toId}`}>
                   {variant === 'stacked' ? (
                     <div className="min-h-[52px] py-2">
-                      <div className="flex min-w-0 items-center gap-1.5">{names}</div>
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        {names}
+                      </div>
                       <div className="mt-1 flex shrink-0 items-center justify-end gap-2">
                         {amountAndQr}
                       </div>
                     </div>
                   ) : (
                     <div className="grid min-h-[56px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5">
-                      <div className="flex min-w-0 items-center gap-1.5">{names}</div>
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        {names}
+                      </div>
                       <div className="flex shrink-0 items-center gap-2">{amountAndQr}</div>
                     </div>
                   )}
@@ -251,18 +263,18 @@ export function SettlementPanel({
         {/* Khối thiếu-QR gom theo NGƯỜI NHẬN (D-1): hàng phẳng cùng bảng —
             hairline trên/dưới, không nền, không bo góc, không hộp lồng. */}
         {missingRecipients.map(({ member, count, total }) => (
-          <div key={member.id} className="border-y border-line py-3">
+          <div key={member.id} className="border-y border-line py-4">
             <p className="text-sm font-semibold text-ink">
               Chưa có mã QR trên máy này — {member.name}
             </p>
-            <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
-              {member.name} chưa lưu tài khoản trên máy này, nên {count} lệnh chuyển tới{' '}
-              {member.name} (tổng {formatVNDDisplay(total)}) chưa có mã QR tại đây.
+            <p className="mt-1 text-sm leading-relaxed text-ink-2">
+              Chưa lưu tài khoản trên máy này, nên {count} lệnh chuyển (tổng{' '}
+              {formatVNDDisplay(total)}) chưa có mã QR tại đây.
             </p>
             <div className="mt-2 grid gap-2">
               <button
                 type="button"
-                onClick={() => handleAsk(member)}
+                onClick={() => handleAsk(member, count, total)}
                 className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 font-display text-sm font-bold text-white transition hover:bg-brand-deep active:bg-brand-deep"
               >
                 {askedId === member.id ? <Check size={15} /> : <Link2 size={15} />}
@@ -277,6 +289,21 @@ export function SettlementPanel({
               <p role="status" className="mt-2 text-sm font-medium text-brand-deep">
                 Đã copy lời nhắn — dán vào Zalo/Messenger để gửi {member.name}.
               </p>
+            )}
+            {askFailed?.memberId === member.id && (
+              <div className="mt-2">
+                <p role="alert" className="mb-1.5 text-sm font-medium text-debt">
+                  Trình duyệt không cho copy tự động — hãy copy thủ công lời nhắn này:
+                </p>
+                <textarea
+                  readOnly
+                  rows={5}
+                  aria-label="Lời nhắn xin mã QR để copy thủ công"
+                  value={askFailed.text}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full rounded-xl border border-line-strong bg-card p-3 text-base text-ink outline-none focus:border-brand-deep"
+                />
+              </div>
             )}
           </div>
         ))}
@@ -370,7 +397,7 @@ export function SettlementPanel({
                 // src là data URL do thư viện qrcode sinh tại máy —
                 // next/image không xử lý data URL và QR phải hiển thị
                 // offline, nên <img> thường là đúng ở đây.
-                // eslint-disable-next-line @next/next/no-img-element
+                // eslint-disable-next-line @next/next/no-img-element -- QR là data URL sinh tại máy, next/image không xử lý data URL và QR phải hiện được offline
                 <img
                   src={qrState.dataUrl}
                   alt={`Mã VietQR: ${nameOf(openTransfer.fromId)} chuyển ${formatVND(openTransfer.amount)} cho ${openRecipient.name}`}

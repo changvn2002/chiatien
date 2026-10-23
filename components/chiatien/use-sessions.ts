@@ -73,7 +73,7 @@ export function useSessions() {
       // Xoá hash khỏi thanh địa chỉ để reload không import trùng.
       window.history.replaceState(null, '', window.location.pathname);
     }
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* eslint-disable react-hooks/set-state-in-effect -- bootstrap một lần từ localStorage + URL hash (hệ thống ngoài) sau mount, mẫu React docs cho external store */
     setSessions(initial);
     lastWrittenRef.current = serializeSessions(initial);
     lastBankRef.current = JSON.stringify(loadBankBook());

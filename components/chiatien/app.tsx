@@ -85,12 +85,19 @@ export function ChiaTienApp() {
             thêm lợi ích (không cần tối ưu/không đổi kích thước theo thiết
             bị) nên dùng <img> thường; lý do cho eslint-disable ở dòng dưới
             (CQ-02). */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- logo là SVG tĩnh của chính app, kích thước cố định; next/image không thêm lợi ích */}
         <img src="/products/brand/chiatien-logo.svg" alt="" aria-hidden width={28} height={28} />
-        {/* H1 duy nhất của Màn A. Chỉ báo lưu thường trực KHÔNG còn là
-            span "Đã lưu" opacity thoáng qua ở đây — nó sống ở StatusLine
-            tại các bề mặt theo LAYOUT-SPEC §6.3. */}
-        <h1 className="font-display text-[19px] leading-tight font-bold text-ink">Chia Tiền</h1>
+        {/* Màn A: H1 duy nhất là "Chia Tiền" ở đây. Khi một cuộc chia
+            đang mở, H1 duy nhất của workspace là tiêu đề cuộc chia trong
+            SessionView, nên chữ này hạ xuống <p> với y hệt class — chỉ
+            đổi thẻ, không đổi chữ/kích thước. Chỉ báo lưu thường trực
+            KHÔNG còn là span "Đã lưu" opacity thoáng qua ở đây — nó
+            sống ở StatusLine tại các bề mặt theo LAYOUT-SPEC §6.3. */}
+        {active ? (
+          <p className="font-display text-[19px] leading-tight font-bold text-ink">Chia Tiền</p>
+        ) : (
+          <h1 className="font-display text-[19px] leading-tight font-bold text-ink">Chia Tiền</h1>
+        )}
         {active && (
           <button
             type="button"
@@ -319,7 +326,7 @@ export function ChiaTienApp() {
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted">
             {/* Logo mono ở footer cũng là SVG tĩnh của chính app — cùng lý
                 do <img> thường như logo header (CQ-02). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo là SVG tĩnh của chính app, kích thước cố định; next/image không thêm lợi ích */}
             <img
               src="/products/brand/chiatien-logo-mono.svg"
               alt=""

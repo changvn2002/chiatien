@@ -197,6 +197,8 @@ Palette **riêng cho avatar**, 12 màu tông đất/ấm (`identity-01…12` ở
 
 **The Strip Rule.** Settlement Strip không bao giờ vắng mặt trên màn làm việc và không bao giờ bị sheet che. Thu gọn nó vẫn là quyết toán (tổng + lệnh đầu); mở rộng nó là toàn văn. Không tồn tại bề mặt quyết toán thứ hai nào khác ngoài cột desktop — và cột đó là cùng một component ở dạng thường trực.
 
+> **Hiệu đính thi hành (2026-10-23 — Panel #03, Finding E).** «Không bao giờ bị sheet che» được thi hành qua cơ chế neo DOCK: phần neo thường trực của Strip (StatusLine + nút tóm tắt chứa TỔNG quyết toán + Action Deck) được đo chiều cao thật và xuất bản qua biến `--strip-h`; mọi Sheet trên mobile neo đáy tại đúng chiều cao đó (đáy lớp phủ = `--strip-h`), nên dock — gồm tổng quyết toán — luôn lộ diện và bấm được kể cả khi sheet đang mở. Panel quyết toán MỞ RỘNG phía trên dock là nội dung cuộn, được phép nằm dưới sheet trong lúc sheet mở (đóng sheet là trở lại nguyên trạng). Đo kiểm chứng độc lập trên bản build local (Panel #03 §9.7): lớp phủ dừng ở y=702/844, hit-test tại tâm nút tóm tắt trúng nội dung «Tổng … Quyết toán», không trúng dialog.
+
 ## Typography
 
 **Display:** Be Vietnam Pro 700/800 — tên cuộc chia, tiêu đề sheet/trạng thái, nhãn nút chính. **Chỉ chữ**: chuỗi chứa ≥2 chữ số hoặc `₫` không thuộc vai này.
@@ -208,17 +210,36 @@ Palette **riêng cho avatar**, 12 màu tông đất/ấm (`identity-01…12` ở
 
 **Character:** display nén nhẹ (`letter-spacing: -0.02em` ở ≥20px) cho giọng fintech gọn; figure thẳng cột tuyệt đối — một con số đổi bề rộng là phá niềm tin; body lặng, không tranh với số.
 
-### Hierarchy (thang đóng — bước ≥1.25:1, Panel-02 MINOR)
+### Hierarchy (thang chữ — HIỆU ĐÍNH theo census đo thật, 2026-10-23)
 
-> Bản live bị detector advisory `flat-type-hierarchy` ở tỉ lệ **1.13:1** (body 16 / h2 18 / h1 20) và advisory đó còn đứng sau Panel #02. Thang v2 hiệu đính: mọi bước kề nhau **≥1.25:1** (chuẩn Stripe/Linear/Geist mà panel đối chiếu): **12 → 15 → 19 → 24 → 30** (×1.25 · ×1.267 · ×1.263 · ×1.25).
+> **Hiệu đính (wave v1.4.0, xử lý MINOR thang chữ của Panel #03 theo
+> cùng cách đã xử lý Finding I):** tuyên bố cũ của mục này — thang
+> đóng **12 → 15 → 19 → 24 → 30** với mọi bước kề **≥1.25:1** — **bị
+> rút lại vì không tồn tại trên render**. Panel #03 đo bậc kề thực tế
+> 1,06–1,19 và không thấy bậc 24/30 nào. Census của wave (CDP
+> `getComputedStyle` trên bản build local v1.4.0, bề mặt trang chủ +
+> workspace + sheet khoản chi ở 390px, chỉ tính chữ HTML nhìn thấy)
+> khớp số của panel: cỡ chữ render thật = **{12, 13, 14, 15, 16, 19}px**,
+> bậc kề 1,07–1,19; 24px và 30px **vắng mặt hoàn toàn**. (Phần tử
+> `<text>` 46 đơn vị bên trong SVG avatar là hệ toạ độ nội bộ của
+> SVG, không thuộc thang chữ giao diện — loại khỏi census.)
+>
+> Phân cấp thị giác của app trên thực tế được gánh bằng **trọng lượng**
+> (400/500/600/700), **màu** (ink / ink-2 / muted), **tracking + hoa**
+> ở nhãn, và **vị trí/bề mặt** — đúng như Panel #03 ghi nhận («phân
+> cấp cảm nhận được nhờ trọng lượng/màu»). Tài liệu này từ nay mô tả
+> thang ĐO THẬT dưới đây; nếu một đợt thiết kế sau muốn thang ≥1.25:1
+> thật, phải đổi cỡ chữ thật và census lại — không tuyên bố trước.
 
-- **Display** (Be Vietnam Pro 800, 24px; 30px chỉ cho tiêu đề empty state lớn): tên cuộc chia ở trạng thái sửa / tiêu đề rỗng lớn. (Chữ, không số.)
-- **Title** (Be Vietnam Pro 700, 19px): tên cuộc chia ở AppBar, tiêu đề sheet. (Bản spec gốc ghi 17px — đã nâng theo thang mới; LAYOUT-SPEC đã đồng bộ 19px.)
-- **Figure-L** (Inter 700 tnum, 19px): tổng ở Strip thu gọn, tổng ở hàng tổng ledger.
-- **Figure** (Inter 600 tnum, 15px): số tiền hàng ledger, hàng quyết toán (700 ở 16px trong bảng mở rộng — 16px ở đây là biến thể đậm của cùng bậc Body, không phải một bậc thang riêng).
-- **Body** (Inter 400/500, 15–16px): nội dung hàng, form (ô nhập luôn 16px).
-- **Meta** (Inter 500, 13px, ink-2): dòng phụ của hàng, chú thích, trạng thái. (13px là cỡ chức năng của dòng phụ 2-dòng, không tham gia thang cấp bậc tiêu đề — bậc thang áp cho Display/Title/Body/Labelling; ghi rõ để detector/người chấm không đọc 15→13 thành một "bước thang".)
-- **Label** (Inter 600, 12px, tracking 0.06em, uppercase cho chữ Latin — nhãn tiếng Việt giữ nguyên dấu, không ép hoa ký tự có dấu xếp chồng): nhãn cột bảng (`TỔNG CHI`, `QUYẾT TOÁN`).
+Thang đo thật (census 2026-10-23):
+
+- **Title** (Be Vietnam Pro 700, **19px**): tên cuộc chia ở AppBar (H1 duy nhất của workspace), tiêu đề sheet (đợt này đưa từ 18px về đúng 19px), H1 trang chủ.
+- **Section** (700, **16px**): tiêu đề mục ở trang chủ (H2), tổng tiền ở hàng danh sách phiên.
+- **Figure-L** (Inter 700 tnum, **19px**): tổng ở Strip thu gọn.
+- **Figure** (Inter 600 tnum, **15px**): số tiền hàng ledger, hàng quyết toán; biến thể **16px/700** cho con số tổng ở danh sách và bảng mở rộng.
+- **Body** (Inter 400/500/600, **14–16px**): nội dung hàng, nhãn nút, form (ô nhập luôn 16px).
+- **Meta** (Inter 400/500, **13px**, ink-2): dòng phụ của hàng, chú thích, trạng thái.
+- **Label** (Inter 600, **12px**, tracking 0.06em, uppercase cho chữ Latin — nhãn tiếng Việt giữ nguyên dấu, không ép hoa ký tự có dấu xếp chồng): nhãn cột bảng (`TỔNG CHI`, `QUYẾT TOÁN`), nhãn «Tổng» ở Strip.
 
 ## Layout
 
@@ -332,3 +353,27 @@ Ba chuyển động duy nhất đã khai: mở sheet 160ms, mở rộng Strip 20
 **ADR-3 — CSP tĩnh cho app prerender (SEC-02).** Giữ nguyên bản hiện hành.
 
 **ADR-4 — Service worker app-shell hai lớp cache (W5-01).** Precache URL ổn định (versioned) + runtime cache cho `/_next/static/`; navigation network-first, offline lùi về shell.
+
+## Hiệu đính ngân sách từ thường trực (2026-10-23 — Panel #03, Finding I)
+
+**Tuyên bố cũ bị thay thế.** Ngân sách «Màn làm việc (Màn B) ≤ 30 từ thường trực» sống ở hồ sơ redesign-v2 `COPY-DIET.md` §1 («| Màn làm việc (Màn B) | **≤ 30 từ** |…») và được lặp ở §6 của cùng file («Chữ thường trực Màn B: từ ~55–65 (v1) → **≤30** (v2)»). Trong repo này, `DESIGN.md` và `PRODUCT.md` không chứa tuyên bố ≤30 đó (đã grep kiểm chứng 2026-10-23) — nhưng tuyên bố đã được dẫn như sự thật thiết kế hiện hành, nên hiệu đính tại đây. Theo đúng tiền lệ hiệu đính §3.3 (văn bản/số đo đúng thắng văn bản in sai): **số đo render thắng tuyên bố cũ** — Panel #03 đo bằng `innerText` trên bản live được **98–121 từ** theo mọi biến thể đếm, và ≈63 từ tĩnh sau khi panel tự trừ dữ kiện người dùng. Tuyên bố ≤30 là **sai trên render** và bị thay thế bởi bảng ngân sách dưới đây; file redesign-v2 là hồ sơ lịch sử, không sửa.
+
+**Phương pháp đo lại (đếm tĩnh từ nguồn, 2026-10-23).** Liệt kê thủ công mọi chuỗi tĩnh render ở trạng thái mặc định của từng bề mặt trong `app.tsx` / `session-list.tsx` / `session-view.tsx` / `settlement.tsx` / `ui-bits.tsx`; đếm từ = tách theo khoảng trắng. **Chỉ tính chữ của app** — trừ dữ kiện người dùng (tên cuộc chia, tên người, tên khoản, số tiền/số đếm suy từ dữ kiện; ở chuỗi mẫu có dữ kiện lồng vào, chỉ tính phần chữ tĩnh của mẫu). Tính cả nhãn nút và placeholder (khác định nghĩa ngân sách ở COPY-DIET §1, vốn loại nhãn nút ≤3 từ — vì vậy hai bộ số không so trực tiếp từng từ, nhưng mọi phương pháp đều cho kết quả vượt xa 30). Không tính: `aria-label`/`title`/`sr-only`, chữ trong sheet/dialog/banner chỉ hiện theo sự kiện, thân accordion đang đóng. Bề mặt chuẩn là mobile; desktop ghi cộng thêm riêng. Lane QA đối chiếu lại bằng `innerText` render sau.
+
+**Số đo tĩnh theo bề mặt:**
+
+| Bề mặt | Số từ tĩnh đo được | Ghi chú |
+|---|---:|---|
+| Trang chủ, danh sách rỗng (mobile) | **84** | Gồm dòng lý do disabled mới «Đặt tên cho cuộc chia để tạo» (7 từ, thêm ở đợt sửa Finding H — trước đợt này là 77); cộng aside desktop (+49) = **133** |
+| Workspace rỗng — 0 người, 0 khoản (mobile, Strip thu gọn) | **43** | Biến thể đã có người nhưng chưa khoản: **42** |
+| Workspace có dữ kiện (mobile, Strip thu gọn; mẫu 2 khoản, 1 lệnh) | **35** | Mỗi hàng khoản cộng 7 từ tĩnh của mẫu meta («đã trả · {kiểu chia} cho … người») |
+| Workspace có dữ kiện (mobile, Strip **mở rộng**; mẫu 2 người, 1 lệnh, người nhận chưa có QR trên máy này) | **113** | = 35 thu gọn + 78 chữ tĩnh của SettlementPanel (gồm khối thiếu-QR 37 từ tĩnh); biến thể người nhận đã có QR: **77** (113 − 37 khối thiếu-QR + 1 nhãn «VietQR») |
+
+**Ngân sách mới (thay thế ≤30).** Ngân sách đặt theo số đo thật của thiết kế hiện tại + biên ~10–15% cho diễn đạt tương đương, làm tròn lên:
+
+- Trang chủ, danh sách rỗng: **≤95 từ tĩnh (mobile)** · **≤155 (desktop, gồm aside)**.
+- Workspace rỗng: **≤50 từ tĩnh (mobile, Strip thu gọn)**.
+- Workspace có dữ kiện, Strip thu gọn: **≤45 từ tĩnh** với mẫu 2 khoản/1 lệnh; mỗi hàng khoản thêm được cộng 7 từ mẫu meta.
+- Workspace có dữ kiện, Strip mở rộng: **≤125 từ tĩnh** (mẫu chưa-QR) · **≤90** (mẫu đã có QR).
+
+Mọi lần đo lại sau này phải ghi rõ bề mặt, trạng thái Strip và phương pháp đếm kèm số đo — một con số ngân sách không kèm bề mặt/phương pháp là tuyên bố chưa kiểm chứng (Verified Claim Rule).

@@ -114,6 +114,8 @@ export function SessionView({
   const [focusedExpenseId, setFocusedExpenseId] = useState<string | null>(null);
   const online = useOnlineStatus();
   const memberStripRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
   const pushedRef = useRef(false);
@@ -164,7 +166,78 @@ export function SessionView({
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
     // Chỉ chạy khi mount: startExpanded là điều kiện mở ban đầu.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi mount: startExpanded là điều kiện mở ban đầu của phiên vừa nhập
+  }, []);
+
+  // Finding E: xuất bản --strip-h trên div gốc để Sheet neo đáy ở đúng
+  // đỉnh DOCK của Strip và không che nó. Dock = StatusLine + nút tóm
+  // tắt + Action Deck (phần neo cố định ở đáy section Strip).
+  //
+  // GIÁ TRỊ xuất bản là KHOẢNG ĐÁY VIEWPORT phải chừa — tức khoảng cách
+  // từ ĐỈNH dock tới ĐÁY viewport — KHÔNG phải chiều cao của dock:
+  // gốc Màn B cao calc(100dvh-104px) nên đáy Strip không chạm đáy
+  // viewport (chừa ~40px cho khung app-shell). Bản đầu của đợt này
+  // xuất chiều cao dock (142,5px) trong khi Strip chiếm 183px tính từ
+  // đáy viewport -> sheet phủ đúng 41px trên cùng của Strip (harness
+  // scripts/geometry-stress.mjs đo wrapBottom=702 > stripTop=661 ở
+  // 390px). Đo theo đỉnh dock thì sheet dừng đúng đỉnh Strip ở mọi
+  // trạng thái: thu gọn (dock = cả phần Strip nhìn thấy) lẫn mở rộng
+  // (panel phía trên dock cũng thuộc Strip — luật «Strip không bao
+  // giờ bị sheet che» áp cho toàn section).
+  useEffect(() => {
+    const dock = dockRef.current;
+    const root = rootRef.current;
+    if (!dock || !root) return;
+    const section = dock.parentElement;
+    let lastPublished = '';
+    const publish = () => {
+      const rect = dock.getBoundingClientRect();
+      // Strip ẩn (desktop — rail thay thế): không chừa đáy.
+      const next = rect.height === 0 ? '0px' : `${Math.max(0, window.innerHeight - rect.top)}px`;
+      if (next === lastPublished) return;
+      lastPublished = next;
+      root.style.setProperty('--strip-h', next);
+    };
+    publish();
+    // Section đổi chiều cao khi: panel mở rộng/thu gọn, deckNotice
+    // xuất hiện, nội dung dock đổi — mọi đường đều làm đỉnh dock dịch.
+    // ResizeObserver trên section + resize viewport phủ cả ba.
+    //
+    // LÀM CỨNG (2026-10-23, Lane QA stress-frame): bộ ba trên vẫn lọt
+    // một ca chập chờn đo được — publish chạy khi Strip còn ở đáy
+    // viewport, sau đó layout dịch Strip lên ~40px THUẦN VỊ TRÍ (kích
+    // thước section và viewport đều không đổi -> không observer/resize
+    // nào bắn) -> --strip-h kẹt ở giá trị cũ (142,5px thay vì 182,5px)
+    // và sheet phủ 41px đỉnh Strip (harness lượt 1 FAIL, lượt 2 PASS
+    // trên cùng một build). Bổ sung ba lớp bắt dịch-vị-trí:
+    // (a) MutationObserver trên cây con của gốc — sheet mount vào DOM
+    // và mọi thay đổi nội dung (deckNotice, dòng trạng thái) đều là
+    // childList mutation -> publish lại đúng thời điểm quyết định là
+    // lúc sheet mở; (b) ResizeObserver trên cả gốc (100dvh đổi khi
+    // thanh địa chỉ mobile co/giãn); (c) các nhịp publish trễ sau
+    // mount (rAF + 250ms + 1000ms) để layout/font ổn định xong thì
+    // giá trị chốt là giá trị đúng. publish() chỉ set style khi giá
+    // trị thay đổi nên các lớp này không gây vòng lặp.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    if (observer && section) observer.observe(section);
+    if (observer) observer.observe(root);
+    const mo =
+      typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => publish());
+    if (mo) mo.observe(root, { childList: true, subtree: true });
+    window.addEventListener('resize', publish);
+    window.visualViewport?.addEventListener('resize', publish);
+    const raf = requestAnimationFrame(publish);
+    const t1 = window.setTimeout(publish, 250);
+    const t2 = window.setTimeout(publish, 1000);
+    return () => {
+      observer?.disconnect();
+      mo?.disconnect();
+      window.removeEventListener('resize', publish);
+      window.visualViewport?.removeEventListener('resize', publish);
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, []);
 
   // Phím desktop (LAYOUT-SPEC §7) + Esc lùi lớp. Sheet tự xử lý Esc của nó
@@ -210,7 +283,7 @@ export function SessionView({
     return () => document.removeEventListener('keydown', onKeyDown);
     // handleCopySettlement/onBack/collapseStrip đọc state qua ref/setter ổn
     // định; deps theo các giá trị dữ liệu mà handler thật sự dùng.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handler đọc state qua ref/setter ổn định; deps giữ đúng các giá trị dữ liệu handler dùng thật (session, focusedExpenseId, onBack)
   }, [session, focusedExpenseId, onBack]);
 
   function patch(partial: Partial<Session>) {
@@ -319,6 +392,7 @@ export function SessionView({
     }
     setDeckNotice('');
     setShareState('idle');
+    setShareUrl('');
     setShareOpen(true);
   }
 
@@ -394,13 +468,13 @@ export function SessionView({
 
   const emptyLedger =
     session.members.length === 0 ? (
-      <div className="max-h-[240px] py-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className="mx-auto max-w-md py-6 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
         <img
           src="/products/brand/empty-state.webp"
           alt=""
           aria-hidden
-          className="mb-2 max-h-[120px] w-auto"
+          className="mx-auto mb-3 max-h-[160px] w-auto"
           loading="lazy"
         />
         <p className="text-sm text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
@@ -413,13 +487,13 @@ export function SessionView({
         </button>
       </div>
     ) : session.expenses.length === 0 ? (
-      <div className="max-h-[240px] py-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className="mx-auto max-w-md py-6 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
         <img
           src="/products/brand/empty-state.webp"
           alt=""
           aria-hidden
-          className="mb-2 max-h-[120px] w-auto"
+          className="mx-auto mb-3 max-h-[160px] w-auto"
           loading="lazy"
         />
         <p className="text-sm text-ink">
@@ -466,12 +540,15 @@ export function SessionView({
                       <span className="block truncate text-[15px] font-medium text-ink">
                         {e.title}
                       </span>
-                      <span className="block truncate text-[13px] text-ink-2">
+                      <span className="block text-[13px] break-words text-ink-2">
                         {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
                         {e.participantIds.length} người
                       </span>
                     </span>
-                    <span className="font-figure max-w-[136px] text-[15px] font-semibold whitespace-nowrap text-ink">
+                    <span
+                      className="font-figure max-w-[136px] text-[15px] font-semibold whitespace-nowrap text-ink"
+                      title={formatVND(e.amount)}
+                    >
                       {formatVNDDisplay(e.amount)}
                     </span>
                   </button>
@@ -483,7 +560,10 @@ export function SessionView({
                           className="flex min-h-[32px] min-w-0 items-center justify-between gap-3 text-sm"
                         >
                           <span className="min-w-0 truncate text-ink-2">{nameOf(id)}</span>
-                          <span className="font-figure font-semibold whitespace-nowrap text-ink">
+                          <span
+                            className="font-figure font-semibold whitespace-nowrap text-ink"
+                            title={formatVND(shares[id] ?? 0)}
+                          >
                             {formatVNDDisplay(shares[id] ?? 0)}
                           </span>
                         </li>
@@ -510,26 +590,40 @@ export function SessionView({
 
   const stripSummaryContent = (
     <>
-      <span className="shrink-0 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
-        Tổng
-      </span>
-      <span className="font-figure shrink-0 text-[19px] font-bold whitespace-nowrap text-ink">
-        {formatVNDDisplay(total)}
+      <span className="flex w-full items-center gap-x-2">
+        <span className="shrink-0 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+          Tổng
+        </span>
+        <span className="font-figure shrink-0 text-[19px] font-bold whitespace-nowrap text-ink">
+          {formatVNDDisplay(total)}
+        </span>
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep">
+          Quyết toán
+          {discrepancy !== 0 && (
+            <span
+              aria-label="Có cảnh báo lệch số dư"
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-debt text-[12px] font-bold text-white"
+            >
+              !
+            </span>
+          )}
+          {expanded ? <ChevronDown size={15} aria-hidden /> : <ChevronUp size={15} aria-hidden />}
+        </span>
       </span>
       {session.members.length === 0 ? (
-        <span className="min-w-0 flex-1 truncate text-sm text-ink-2">Chưa có khoản chi nào</span>
+        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có khoản chi nào</span>
       ) : session.expenses.length === 0 ? (
-        <span className="min-w-0 flex-1 truncate text-sm text-ink-2">Chưa có gì để quyết toán</span>
+        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có gì để quyết toán</span>
       ) : allSettled ? (
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium text-ink">
+        <span className="flex w-full min-w-0 items-center gap-1.5 text-sm font-medium text-ink">
           <Check size={15} className="shrink-0 text-credit" aria-hidden />
           <span className="truncate">Đã cân hết — không ai nợ ai</span>
         </span>
       ) : firstTransfer ? (
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-ink">
-          <span className="min-w-0 truncate">{nameOf(firstTransfer.fromId)}</span>
+        <span className="flex w-full min-w-0 items-center gap-1.5 text-sm text-ink">
+          <span className="min-w-0 flex-1 truncate">{nameOf(firstTransfer.fromId)}</span>
           <MoveRight size={14} className="shrink-0 text-brand" aria-hidden />
-          <span className="min-w-0 truncate">{nameOf(firstTransfer.toId)}</span>
+          <span className="min-w-0 flex-1 truncate">{nameOf(firstTransfer.toId)}</span>
           <span className="font-figure shrink-0 font-semibold whitespace-nowrap">
             {formatVNDDisplay(firstTransfer.amount)}
           </span>
@@ -542,14 +636,17 @@ export function SessionView({
   );
 
   return (
-    <div className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col lg:h-auto lg:min-h-0">
+    <div
+      ref={rootRef}
+      className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col overflow-x-clip lg:h-auto lg:min-h-0"
+    >
       {/* Scrim paper 60% trên ledger khi dải mở rộng (mobile). */}
       {expanded && <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 lg:hidden" />}
 
-      {/* AppBar của Màn B: mark + tên cuộc chia (H1) + nút ⋯ */}
+      {/* AppBar của Màn B: tên cuộc chia (H1 duy nhất của workspace) + nút ⋯
+          — logo ÷ KHÔNG lặp ở đây: app-shell header ngay phía trên đã
+          render logo rồi (Finding K, hai logo xếp chồng trong 150px đầu). */}
       <div className="flex h-12 shrink-0 items-center gap-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/products/brand/chiatien-logo.svg" alt="" aria-hidden width={28} height={28} />
         {titleEditing ? (
           <input
             aria-label="Tên cuộc chia"
@@ -569,7 +666,7 @@ export function SessionView({
               setTitleDraft(session.title);
               setTitleEditing(true);
             }}
-            className="min-w-0 flex-1 rounded-xl px-1 text-left"
+            className="flex min-h-11 min-w-0 flex-1 items-center rounded-xl px-1 text-left"
             title="Chạm để sửa tên cuộc chia"
           >
             <h1 className="truncate font-display text-[19px] leading-tight font-bold text-ink">
@@ -602,15 +699,24 @@ export function SessionView({
             <GhostButton onClick={() => setMemberEditing({ kind: 'new', focusBank: false })}>
               <Plus size={16} aria-hidden /> Thêm người
             </GhostButton>
-            <span className="ml-auto flex items-center gap-2 text-xs text-ink-2">
-              <span>
-                <kbd className="font-mono">N</kbd> thêm khoản
+            <span className="ml-auto flex items-center gap-4 text-xs text-ink-2">
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded-md border border-line-strong bg-paper px-1.5 py-0.5 font-mono text-[12px] text-ink">
+                  N
+                </kbd>{' '}
+                thêm khoản
               </span>
-              <span>
-                <kbd className="font-mono">M</kbd> thêm người
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded-md border border-line-strong bg-paper px-1.5 py-0.5 font-mono text-[12px] text-ink">
+                  M
+                </kbd>{' '}
+                thêm người
               </span>
-              <span>
-                <kbd className="font-mono">⌘K</kbd> hành động
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded-md border border-line-strong bg-paper px-1.5 py-0.5 font-mono text-[12px] text-ink">
+                  ⌘K
+                </kbd>{' '}
+                hành động
               </span>
             </span>
           </div>
@@ -656,66 +762,58 @@ export function SessionView({
             <div className="pb-3" />
           </div>
         )}
-        <StatusLine status={online} className="min-h-[28px] items-center" />
-        <button
-          type="button"
-          data-strip-summary
-          aria-expanded={expanded}
-          onClick={() => (expanded ? collapseStrip() : expandStrip())}
-          className="flex min-h-[36px] w-full flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-left"
-        >
-          {stripSummaryContent}
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep">
-            Quyết toán
-            {discrepancy !== 0 && (
-              <span
-                aria-label="Có cảnh báo lệch số dư"
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-debt text-[11px] font-bold text-white"
+        {/* DOCK — phần neo luôn nhìn thấy của Strip (Finding E): Sheet
+            neo đáy theo chiều cao khối này qua --strip-h. */}
+        <div ref={dockRef}>
+          <StatusLine status={online} className="min-h-[28px] items-center" />
+          <button
+            type="button"
+            data-strip-summary
+            aria-expanded={expanded}
+            onClick={() => (expanded ? collapseStrip() : expandStrip())}
+            className="flex min-h-11 w-full flex-col gap-y-0.5 py-1 text-left"
+          >
+            {stripSummaryContent}
+          </button>
+          {deckNotice && (
+            <p role="status" className="pb-1 text-[13px] text-ink-2">
+              {deckNotice}
+            </p>
+          )}
+          {/* Action Deck */}
+          <div className="flex min-h-[56px] items-start gap-2 pb-2">
+            <div className="min-w-0 flex-1 [&>*]:w-full">
+              <PrimaryButton
+                disabledReason={
+                  session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
+                }
+                onClick={() => setExpenseEditing('new')}
+                className="w-full text-[15px]"
               >
-                !
-              </span>
-            )}
-            {expanded ? <ChevronDown size={15} aria-hidden /> : <ChevronUp size={15} aria-hidden />}
-          </span>
-        </button>
-        {deckNotice && (
-          <p role="status" className="pb-1 text-[13px] text-ink-2">
-            {deckNotice}
-          </p>
-        )}
-        {/* Action Deck */}
-        <div className="flex min-h-[56px] items-start gap-2 pb-2">
-          <div className="min-w-0 flex-1 [&>*]:w-full">
-            <PrimaryButton
-              disabledReason={
-                session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
-              }
-              onClick={() => setExpenseEditing('new')}
-              className="w-full text-[15px]"
+                <Plus size={16} aria-hidden /> Thêm khoản
+              </PrimaryButton>
+            </div>
+            <button
+              type="button"
+              aria-label="Chia sẻ link"
+              aria-disabled={session.expenses.length === 0 || undefined}
+              onClick={openShare}
+              className={cn(
+                'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep',
+                session.expenses.length === 0 && 'cursor-not-allowed text-ink-2',
+              )}
             >
-              <Plus size={16} aria-hidden /> Thêm khoản
-            </PrimaryButton>
+              <Link2 size={18} aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label="Thành viên"
+              onClick={focusMemberStrip}
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep"
+            >
+              <Users size={18} aria-hidden />
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="Chia sẻ link"
-            aria-disabled={session.expenses.length === 0 || undefined}
-            onClick={openShare}
-            className={cn(
-              'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep',
-              session.expenses.length === 0 && 'cursor-not-allowed text-ink-2',
-            )}
-          >
-            <Link2 size={18} aria-hidden />
-          </button>
-          <button
-            type="button"
-            aria-label="Thành viên"
-            onClick={focusMemberStrip}
-            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition hover:border-brand hover:text-brand-deep"
-          >
-            <Users size={18} aria-hidden />
-          </button>
         </div>
       </section>
 
@@ -870,26 +968,33 @@ export function SessionView({
         </div>
       </Sheet>
 
-      {/* Share Sheet — link chỉ mang thành viên, khoản chi và kết quả ai nợ ai (DATA-04). */}
+      {/* Share Sheet — cảnh báo 2 lớp (DATA-04(ii)): Lớp 1 headline +
+          nút xác nhận trong viewport đầu; Lớp 2 tối đa 3 gạch đầu dòng
+          ngay dưới headline. Link chỉ được tạo + copy SAU khi người dùng
+          bấm «Tôi hiểu, tạo link» (handleCopyShareLink). */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Chia sẻ cuộc chia này">
-        <p className="text-sm leading-relaxed text-ink">
-          Link gồm thành viên, khoản chi và kết quả ai nợ ai. Thông tin ngân hàng không nằm trong
-          link — mã QR chỉ hiện trên máy đã lưu tài khoản của người nhận.
+        <p className="text-sm leading-relaxed font-medium text-ink">
+          Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia — và link không thu hồi được
+          sau khi gửi.
         </p>
-        <p className="mt-3 rounded-xl bg-paper px-3 py-2.5 text-sm font-medium text-ink">
-          Link sẽ chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
-          tổng {formatVND(total)}
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Ai có link đều mở xem và sửa tiếp được bản sao của riêng họ — và link không thu hồi được
-          sau khi đã gửi, nên chỉ gửi cho người trong nhóm.
-        </p>
+        <ul className="mt-3 grid list-disc gap-2 pl-5 text-sm leading-relaxed text-ink-2">
+          <li>
+            Link chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
+            tổng {formatVND(total)} — không chứa thông tin ngân hàng; mã QR chỉ hiện trên máy đã lưu
+            tài khoản của người nhận.
+          </li>
+          <li>
+            Người nhận mở link sẽ có bản sao trên máy của họ và sửa tiếp được — đối chiếu lại trước
+            khi thanh toán theo.
+          </li>
+          <li>Chỉ gửi link cho người trong nhóm.</li>
+        </ul>
         <div className="mt-4 flex flex-wrap gap-2">
           <PrimaryButton onClick={handleCopyShareLink}>
             {shareState === 'copied' ? <Check size={16} /> : <Link2 size={16} />}
-            {shareState === 'copied' ? 'Đã copy link!' : 'Copy link'}
+            {shareState === 'copied' ? 'Đã copy link!' : 'Tôi hiểu, tạo link'}
           </PrimaryButton>
-          <GhostButton onClick={() => setShareOpen(false)}>Huỷ</GhostButton>
+          <GhostButton onClick={() => setShareOpen(false)}>Quay lại</GhostButton>
         </div>
         <span className="sr-only" role="status">
           {shareState === 'copied' ? 'Đã sao chép link chia sẻ vào bộ nhớ tạm.' : ''}

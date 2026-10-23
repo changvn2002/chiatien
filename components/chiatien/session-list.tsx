@@ -87,14 +87,18 @@ export function SessionList({
             <input
               id="new-session"
               className={inputClass}
-              placeholder="Ví dụ: Đà Lạt 3 ngày 2 đêm, Nhậu cuối tuần, Tiền trọ tháng 10…"
+              placeholder="Ví dụ: Đà Lạt 3 ngày 2 đêm…"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreate();
               }}
             />
-            <PrimaryButton onClick={handleCreate} disabled={!title.trim()} className="w-full">
+            <PrimaryButton
+              onClick={handleCreate}
+              disabledReason={!title.trim() ? 'Đặt tên cho cuộc chia để tạo' : undefined}
+              className="w-full"
+            >
               <Plus size={16} /> Tạo cuộc chia
             </PrimaryButton>
           </div>
@@ -108,7 +112,7 @@ export function SessionList({
             {/* Lý do (CQ-02): ảnh minh hoạ empty-state là WebP tĩnh đã nén
                 sẵn của chính app trong /public, kích thước hiển thị cố
                 định — next/image không thêm lợi ích ở đây. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
             <img
               src="/products/brand/empty-state.webp"
               alt=""
@@ -116,7 +120,7 @@ export function SessionList({
               className="mx-auto mb-3 max-h-[160px] w-auto"
               loading="lazy"
             />
-            <h2 className="font-display text-lg font-bold text-ink">Chưa có cuộc chia nào</h2>
+            <h2 className="font-display text-[19px] font-bold text-ink">Chưa có cuộc chia nào</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
               Dữ liệu chỉ lưu trên máy của bạn — không cần tài khoản.
             </p>
@@ -138,7 +142,7 @@ export function SessionList({
                   onClick={() => onOpen(s.id)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <span className="block truncate font-display text-lg font-bold text-ink">
+                  <span className="block truncate font-display text-[19px] font-bold text-ink">
                     {s.title}
                   </span>
                   <span className="font-figure mt-0.5 block truncate text-sm text-ink-2">

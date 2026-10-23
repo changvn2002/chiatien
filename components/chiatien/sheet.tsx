@@ -8,13 +8,42 @@ import { GhostButton } from './ui-bits';
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * Cửa sổ "còn tươi" của bản ghi kích hoạt pointerdown/click: một dialog
+ * mở trong khoảng này sau cử chỉ kích hoạt gần nhất (và cử chỉ đó khác
+ * phần tử đang focus) được coi là do chính cử chỉ đó mở. 5 giây đủ rộng
+ * cho chuỗi sheet (bấm nút trong sheet trước -> ConfirmDialog mở ở
+ * commit kế, bản ghi kích hoạt NGOÀI dialog vẫn là opener gốc) mà vẫn
+ * ngắn hơn nhiều so với khoảng nghỉ thao tác thông thường.
+ */
+const ACTIVATION_FRESH_MS = 5000;
+
 /** Thông tin phần tử đã mở sheet — ghi nhận MỘT LẦN ở chuyển mở. */
 interface OpenerRecord {
   el: HTMLElement | null;
   /** Giá trị data-autofocus-target của opener (nếu nó khai) — khoá tìm lại node thay thế. */
   target: string | null;
-  /** aria-label/title của opener — khoá dự phòng cuối khi node bị thay. */
+  /** aria-label/title của opener — khoá dự phòng khi node bị thay. */
   label: string | null;
+  /**
+   * Accessible-name-via-text của opener (textContent đã chuẩn hoá) —
+   * khoá dự phòng cho các nút CHỮ THƯỜNG (không aria-label/title, không
+   * data-autofocus-target): hàng ledger, nút «Thêm khoản»… Khi node gốc
+   * bị React thay giữa phiên mở, các khoá trên đều trượt và focus rơi về
+   * BODY — Panel #03 Finding G đo 8/8 trên bản live.
+   */
+  text: string | null;
+}
+
+/** Ghi nhận một phần tử thành OpenerRecord với đủ các khoá tìm lại. */
+function describeOpener(el: HTMLElement): OpenerRecord {
+  const rawText = (el.textContent ?? '').trim().replace(/\s+/g, ' ');
+  return {
+    el,
+    target: el.getAttribute('data-autofocus-target') ?? null,
+    label: el.getAttribute('aria-label') ?? el.getAttribute('title') ?? null,
+    text: rawText && rawText.length <= 120 ? rawText : null,
+  };
 }
 
 /**
@@ -41,7 +70,41 @@ function findFallbackOpener(record: OpenerRecord): HTMLElement | null {
     );
     if (byLabel) return byLabel;
   }
+  if (record.text) {
+    const byText = Array.from(
+      document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+    ).find((el) => (el.textContent ?? '').trim().replace(/\s+/g, ' ') === record.text);
+    if (byText) return byText;
+  }
   return null;
+}
+
+/**
+ * Trả focus về opener sau khi sheet đóng — BA NHỊP (Panel #03 Finding G):
+ * đồng bộ ngay trong effect đóng (panel đã rời DOM ở commit đóng, trình
+ * duyệt đã chốt việc reset focus về BODY trước khi effect chạy), một nhịp
+ * requestAnimationFrame, và một nhịp setTimeout 150ms. Lý do cần cả ba:
+ * cơ chế cũ chỉ có rAF — trong các harness đo CDP/trang nền,
+ * requestAnimationFrame bị bóp hoặc không chạy trước lúc đọc
+ * document.activeElement, và Panel #03 đo được 8/8 lượt rơi về BODY trên
+ * bản live dù code D-7 đã có mặt. Mọi nhịp đều tự kiềm: nếu một dialog
+ * KHÁC đang mở và đang giữ focus (sheet chuỗi — sheet sau mở cùng commit
+ * sheet trước đóng), nhịp trả focus KHÔNG tranh; nếu focus đã nằm đúng
+ * opener rồi thì focus() lại là vô hại.
+ */
+function restoreOpenerFocus(record: OpenerRecord) {
+  const attempt = () => {
+    const ae = document.activeElement as HTMLElement | null;
+    if (ae && ae !== document.body && ae.closest?.('[role="dialog"]')) return;
+    if (record.el?.isConnected) {
+      record.el.focus();
+      return;
+    }
+    findFallbackOpener(record)?.focus();
+  };
+  attempt();
+  requestAnimationFrame(attempt);
+  window.setTimeout(attempt, 150);
 }
 
 /**
@@ -79,6 +142,26 @@ function findFallbackOpener(record: OpenerRecord): HTMLElement | null {
  *    React gỡ panel và trình duyệt reset focus về BODY): opener còn
  *    trong document (isConnected) thì focus nó; đã bị thay node thì tìm
  *    node thay thế theo khoá đã ghi nhận.
+ *
+ * Panel #03 (Finding G) — D-7 vẫn bị đo 8/8 rơi về BODY trên bản live dù
+ * cơ chế trên đã có mặt, nên đợt này tăng cường tiếp ở đúng tầng Sheet:
+ * (a) restore chạy BA NHỊP (đồng bộ + rAF + setTimeout 150ms) thay vì
+ * chỉ rAF — nhịp rAF đơn độc có thể bị bóp/không kịp trong harness đo
+ * CDP và trang nền; (b) chuỗi khoá tìm node thay thế thêm accessible-name
+ * dạng text cho các nút chữ thường (hàng ledger, nút deck) vốn không có
+ * aria-label/title/data-autofocus-target; (c) mọi nhịp restore đều tự
+ * kiềm trước dialog khác đang mở (sheet chuỗi) để không giật focus của
+ * sheet sau. Xem restoreOpenerFocus.
+ *
+ * Bổ sung cùng Finding G (đo render thật bằng Chrome/CDP trên bản
+ * production cục bộ, ma trận 9 dialog × {chuột, chạm, click lập trình}):
+ * ba nhịp restore vẫn vô ích khi BẢN GHI opener trống/sai ngay từ đầu —
+ * kích hoạt không kéo focus (chạm trên trình duyệt không focus nút,
+ * click lập trình) cho 0/4 ô đúng (BODY ×3 + trả nhầm phần tử focus cũ
+ * ×1) trong khi chuột/chạm-giả-lập-focus đạt 18/18. Nên Sheet ghi nhận
+ * opener thêm từ pointerdown/click (mọi cử chỉ kích hoạt đều phát hai
+ * sự kiện này, kể cả khi focus không đi theo) và hợp nhất theo mốc
+ * thời gian ở điểm capture. Xem lastActivationRef + ACTIVATION_FRESH_MS.
  */
 export function Sheet({
   open,
@@ -98,7 +181,7 @@ export function Sheet({
   tinted?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const openerRef = useRef<OpenerRecord>({ el: null, target: null, label: null });
+  const openerRef = useRef<OpenerRecord>({ el: null, target: null, label: null, text: null });
   const wasOpenRef = useRef(false);
   const onCloseRef = useRef(onClose);
   // Phần tử ngoài dialog nhận focus gần nhất — theo dõi LIÊN TỤC từ lúc
@@ -106,21 +189,69 @@ export function Sheet({
   // opener có thể đã bị thay node ngay trong chính commit mở sheet
   // (parent re-render theo state mở) và document.activeElement đã kịp
   // rơi về BODY — ghi nhận ở thời điểm mở như bản cũ là quá muộn.
-  const lastFocusRef = useRef<OpenerRecord>({ el: null, target: null, label: null });
+  const lastFocusRef = useRef<OpenerRecord>({ el: null, target: null, label: null, text: null });
 
   useEffect(() => {
     function onFocusIn(event: FocusEvent) {
       const target = event.target as HTMLElement | null;
       if (!target || typeof target.getAttribute !== 'function') return;
       if (target.closest('[role="dialog"]')) return;
-      lastFocusRef.current = {
-        el: target,
-        target: target.getAttribute('data-autofocus-target') ?? null,
-        label: target.getAttribute('aria-label') ?? target.getAttribute('title') ?? null,
-      };
+      lastFocusRef.current = describeOpener(target);
     }
     document.addEventListener('focusin', onFocusIn, true);
     return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, []);
+
+  // Kích hoạt NGOÀI dialog gần nhất qua pointerdown/click, kèm mốc thời
+  // gian — nguồn ghi nhận opener THỨ HAI (Panel #03 Finding G, lane đo
+  // render thật 2026-10-23): bản ghi focusin + activeElement ở trên VẪN
+  // mù trong hai tình huống có bằng chứng đo trên bản production cục bộ
+  // (ma trận 9 dialog × chuột/chạm/click-lập-trình): (1) kích hoạt không
+  // kéo focus — chạm trên trình duyệt không chuyển focus vào nút (điển
+  // hình iOS Safari) hoặc click lập trình el.click(): không focusin nào
+  // phát, activeElement lúc mở là BODY -> openerRef rỗng -> Esc rơi về
+  // BODY (đo: Member/Share/Confirm-xoá-thành-viên đều BODY ở +100ms và
+  // +600ms); (2) focus CŨ còn sót ở một phần tử khác hẳn opener thật
+  // (mở sheet khoản chi bằng click lập trình khi focus đang ở chip thành
+  // viên): bản cũ bắt activeElement làm opener và trả focus NHẦM sang
+  // chip (đo thật, không phải BODY nhưng sai phần tử). pointerdown/click
+  // thì LUÔN phát theo cử chỉ kích hoạt dù focus có đi theo hay không,
+  // nên ghi nhận từ hai sự kiện này (capture, ngoài dialog, quy về tổ
+  // tiên focusable gần nhất — chạm thường trúng span/icon CON của nút)
+  // rồi hợp nhất ở điểm capture của effect mở: bản ghi kích hoạt còn
+  // tươi (<= ACTIVATION_FRESH_MS) và khác phần tử đang focus thì THẮNG
+  // activeElement; ngược lại giữ thứ tự cũ (activeElement -> focusin).
+  const lastActivationRef = useRef<{ record: OpenerRecord; ts: number }>({
+    record: { el: null, target: null, label: null, text: null },
+    ts: 0,
+  });
+
+  useEffect(() => {
+    function onActivation(event: Event) {
+      const raw = event.target as Element | null;
+      if (!raw || typeof raw.closest !== 'function') return;
+      if (raw.closest('[role="dialog"]')) return;
+      const cand = (raw.closest(
+        'button, [role="button"], [href], input, select, textarea, [tabindex]',
+      ) ?? raw) as HTMLElement;
+      if (typeof cand.getAttribute !== 'function') return;
+      // Scrim «Đóng» của sheet đang mở không phải opener: nó là nút
+      // aria-label "Đóng" trần, là anh em của panel trong cùng lớp phủ —
+      // ghi nó vào sẽ làm bẩn bản ghi của kích hoạt thật ngay trước.
+      if (
+        cand.getAttribute('aria-label') === 'Đóng' &&
+        cand.parentElement?.querySelector('[role="dialog"]')
+      ) {
+        return;
+      }
+      lastActivationRef.current = { record: describeOpener(cand), ts: Date.now() };
+    }
+    document.addEventListener('pointerdown', onActivation, true);
+    document.addEventListener('click', onActivation, true);
+    return () => {
+      document.removeEventListener('pointerdown', onActivation, true);
+      document.removeEventListener('click', onActivation, true);
+    };
   }, []);
 
   // onClose mới nhất đi qua ref để effect chính không phải chạy lại mỗi
@@ -131,19 +262,12 @@ export function Sheet({
 
   // Sheet bị gỡ khỏi cây khi đang mở (nơi gọi unmount luôn cả sheet):
   // nhánh đóng trong effect chính không có cơ hội chạy, nên cleanup lúc
-  // unmount tự lên lịch trả focus theo cùng cơ chế frame + node còn sống.
+  // unmount tự trả focus theo cùng cơ chế ba nhịp của restoreOpenerFocus.
   useEffect(() => {
     return () => {
       if (!wasOpenRef.current) return;
       wasOpenRef.current = false;
-      const record = openerRef.current;
-      requestAnimationFrame(() => {
-        if (record.el?.isConnected) {
-          record.el.focus();
-          return;
-        }
-        findFallbackOpener(record)?.focus();
-      });
+      restoreOpenerFocus(openerRef.current);
     };
   }, []);
 
@@ -151,37 +275,38 @@ export function Sheet({
     if (!open) {
       if (!wasOpenRef.current) return;
       wasOpenRef.current = false;
-      // Panel đã bị gỡ khỏi DOM ở commit này (Sheet trả về null). Đợi
-      // thêm một frame để trình duyệt chốt xong việc reset focus khi
-      // phần tử đang focus bị unmount, rồi mới trả focus — restore chạy
-      // đồng bộ trong cleanup như bản cũ là đua với chính việc unmount đó.
-      const record = openerRef.current;
-      const raf = requestAnimationFrame(() => {
-        if (record.el?.isConnected) {
-          record.el.focus();
-          return;
-        }
-        findFallbackOpener(record)?.focus();
-      });
-      return () => cancelAnimationFrame(raf);
+      // Panel đã bị gỡ khỏi DOM ở commit này (Sheet trả về null) — việc
+      // trả focus thuộc về restoreOpenerFocus (ba nhịp, có kiềm chế
+      // sheet-chuỗi), KHÔNG đặt trong cleanup như bản D-7 đầu tiên (đó
+      // chính là đường đua với unmount làm focus rơi về BODY).
+      restoreOpenerFocus(openerRef.current);
+      return;
     }
 
     // Chuyển đóng -> mở: ghi nhận opener MỘT LẦN (các lần effect chạy lại
     // trong cùng phiên mở không được ghi đè bằng phần tử trong panel).
-    // Ưu tiên activeElement hiện tại; nếu nó đã rơi về BODY (opener bị
-    // thay node ngay trong commit mở) thì dùng bản ghi focusin gần nhất.
+    // Hợp nhất ba nguồn (xem ghi chú lastActivationRef): bản ghi kích
+    // hoạt pointerdown/click còn tươi và KHÁC phần tử đang focus chứng
+    // tỏ dialog vừa được mở bởi cử chỉ đó trong khi focus không đi theo
+    // (hoặc focus cũ còn sót) -> bản ghi kích hoạt thắng. Ngoài trường
+    // hợp đó: ưu tiên activeElement hiện tại; nếu nó đã rơi về BODY
+    // (opener bị thay node ngay trong commit mở) thì dùng bản ghi kích
+    // hoạt còn tươi, cuối cùng là bản ghi focusin gần nhất.
     if (!wasOpenRef.current) {
       wasOpenRef.current = true;
       const active = document.activeElement as HTMLElement | null;
       const opener =
         active && active !== document.body && !active.closest('[role="dialog"]') ? active : null;
-      openerRef.current = opener
-        ? {
-            el: opener,
-            target: opener.getAttribute('data-autofocus-target') ?? null,
-            label: opener.getAttribute('aria-label') ?? opener.getAttribute('title') ?? null,
-          }
-        : lastFocusRef.current;
+      const act = lastActivationRef.current;
+      const freshActivation =
+        act.record.el && Date.now() - act.ts <= ACTIVATION_FRESH_MS ? act.record : null;
+      if (freshActivation && freshActivation.el !== opener) {
+        openerRef.current = freshActivation;
+      } else {
+        openerRef.current = opener
+          ? describeOpener(opener)
+          : (freshActivation ?? lastFocusRef.current);
+      }
     }
 
     const prevOverflow = document.body.style.overflow;
@@ -229,7 +354,20 @@ export function Sheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+    // Finding E (Panel #03): đáy của lớp phủ dừng ở đỉnh Settlement
+    // Strip thay vì phủ kín màn hình — session-view xuất bản biến
+    // --strip-h trên gốc Màn B = khoảng đáy viewport phải chừa (từ
+    // đỉnh dock của Strip — StatusLine + tóm tắt + Action Deck — tới
+    // đáy viewport, ĐÃ tính phần khung app-shell dưới gốc Màn B);
+    // Sheet là hậu duệ trong cùng cây DOM nên kế thừa được biến đó;
+    // ngoài Màn B (không có Strip) biến vắng mặt và fallback 0px giữ
+    // nguyên hành vi phủ đầy. Nhờ vậy «Settlement in Sight» đứng cả
+    // khi sheet mở: Strip vẫn nhìn thấy nguyên vẹn bên dưới sheet
+    // (điều kiện chấm lại §9.7 của Panel #03).
+    <div
+      className="fixed inset-x-0 top-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+      style={{ bottom: 'var(--strip-h, 0px)' }}
+    >
       <button
         type="button"
         aria-label="Đóng"
@@ -249,7 +387,7 @@ export function Sheet({
         )}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
-          <h2 className="min-w-0 truncate font-display text-lg font-bold text-ink">{title}</h2>
+          <h2 className="min-w-0 truncate font-display text-[19px] font-bold text-ink">{title}</h2>
           <button
             type="button"
             onClick={onClose}
