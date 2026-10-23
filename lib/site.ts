@@ -6,7 +6,7 @@
  * Mặc định là domain Vercel dự kiến của repo này; khi có domain chính thức,
  * chỉ cần đặt biến môi trường lúc deploy, không phải sửa code.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiatien.vercel.app').replace(
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiatien-five.vercel.app').replace(
   /\/+$/,
   '',
 );
