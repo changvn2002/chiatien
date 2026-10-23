@@ -5,7 +5,7 @@ import type { Session } from './types';
 
 /**
  * Share link: toàn bộ một cuộc chia được nén (lz-string, tương thích URL)
- * vào hash của link — dạng https://chiatien.vercel.app/#chia=<data>.
+ * vào hash của link — dạng https://chiatien-five.vercel.app/#chia=<data>.
  * Mở link là khôi phục nguyên cuộc chia để xem/sửa tiếp; dữ liệu KHÔNG đi qua
  * bất kỳ server nào (hash không được gửi lên server khi trình duyệt tải trang).
  *
@@ -97,7 +97,10 @@ function remapRecord(
   rec: Record<string, number>,
   map: Map<string, string>,
 ): Record<string, number> {
-  const out: Record<string, number> = {};
+  // Object.create(null) như mọi bảng theo member id khác (W2-F1): khoá cũ
+  // trong bảng custom/weights có thể là id nguy hiểm kiểu "__proto__" —
+  // gán vào object thường sẽ làm rơi phần tiền đó khi import.
+  const out: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const [k, v] of Object.entries(rec)) out[map.get(k) ?? k] = v;
   return out;
 }

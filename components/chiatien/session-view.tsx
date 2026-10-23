@@ -17,6 +17,7 @@ import { formatVND } from '@/lib/money';
 import { computeBalances, computeShares, totalSpent } from '@/lib/split';
 import { simplifyDebts } from '@/lib/settle';
 import { buildShareUrl } from '@/lib/share';
+import { expenseDraftKey } from '@/lib/storage';
 import type { Expense, Member, Session } from '@/lib/types';
 import { Avatar, GhostButton, IconButton, PrimaryButton, SectionTitle } from './ui-bits';
 import { ExpenseEditor, type ExpenseSave } from './expense-editor';
@@ -297,6 +298,7 @@ export function SessionView({
               <div className="mb-3">
                 <ExpenseEditor
                   members={session.members}
+                  draftKey={expenseDraftKey(session.id, null)}
                   onSave={saveExpense}
                   onCancel={() => setExpenseEditing(null)}
                 />
@@ -318,6 +320,7 @@ export function SessionView({
                           <ExpenseEditor
                             members={session.members}
                             initial={e}
+                            draftKey={expenseDraftKey(session.id, e.id)}
                             onSave={saveExpense}
                             onCancel={() => setExpenseEditing(null)}
                           />

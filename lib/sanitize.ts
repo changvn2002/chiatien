@@ -17,10 +17,53 @@ import type { Expense, Member, Session, SplitMode } from './types';
  *    để dữ liệu hỏng không phình giao diện.
  * Nhờ vậy mọi cuộc chia qua lớp này đều cho tổng số dư toàn phiên = 0.
  * (Lớp phòng thủ thứ hai nằm ở UI quyết toán: sumBalances + cảnh báo.)
+ *
+ * Đợt vá theo test W2 (2026-10-23 — file lib/w2-deep.spec.ts là đặc tả):
+ *  - Trần số tiền MAX_AMOUNT_VND: khoản chi nhóm thực tế không bao giờ tới
+ *    10^16 đồng (mười triệu tỷ — cỡ GDP cả nước), trong khi số float không
+ *    trần thì phép nhân amount × trọng số tràn thành Infinity/NaN và quyết
+ *    toán thành rác (W2-F2/F3). Dưới trần này, tầng tính chia nguyên đồng
+ *    bằng BigInt giữ tổng khớp TUYỆT ĐỐI. Vượt trần = khoản bị loại + đếm
+ *    vào droppedExpenses như mọi khoản không hợp lệ khác — không clamp
+ *    lặng lẽ sang một con số người dùng không hề nhập.
+ *  - Trần trọng số MAX_WEIGHT: trọng số là TỈ LỆ (1, 2, 0.5...), không phải
+ *    tiền; giá trị trên 10^6 chỉ có thể là dữ liệu sửa tay phá hoại — loại
+ *    khỏi bảng trọng số. Tầng tính cũng tự chuẩn hoá theo trọng số lớn nhất
+ *    nên kể cả trọng số hợp lệ rất lớn vẫn không tràn số.
+ *  - Mọi bảng tra theo member id (custom/weights) được dựng bằng
+ *    Object.create(null): id "__proto__" qua được lớp này sẽ phá toàn vẹn
+ *    tiền ở tầng tính nếu bảng là object thường (gán obj["__proto__"] không
+ *    tạo thuộc tính riêng — phần tiền của người đó biến mất im lặng, W2-F1).
+ *    Tầng tính (lib/split.ts) áp dụng cùng quy tắc cho bảng tích luỹ.
  */
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_NAME_LENGTH = 200;
+
+/** Trần số tiền một khoản chi / một phần custom — xem ghi chú đợt vá W2 ở trên. */
+const MAX_AMOUNT_VND = 10_000_000_000_000_000; // 10^16 đồng
+
+/** Trần trọng số chia theo phần — trọng số là tỉ lệ, không phải số tiền. */
+const MAX_WEIGHT = 1_000_000;
+
+/**
+ * Cắt chuỗi ở tối đa `max` ký tự UTF-16 NHƯNG không xé đôi một surrogate
+ * pair: nếu ký tự cuối sau khi cắt là nửa đầu của một emoji (high
+ * surrogate), bỏ luôn ký tự đó — chuỗi kết quả ngắn hơn 1 ký tự còn hơn
+ * mang ký tự lỗi U+D83D hiển thị thành ký tự thay thế (W2-F4).
+ */
+function truncateText(text: string, max: number): string {
+  if (text.length <= max) return text;
+  let cut = text.slice(0, max);
+  const last = cut.charCodeAt(cut.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) cut = cut.slice(0, -1);
+  return cut;
+}
+
+/** Timestamp chỉ nhận khi là số hữu hạn — NaN/Infinity bị thay bằng hiện tại (W2-F5). */
+function sanitizeTimestamp(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : Date.now();
+}
 
 export interface SanitizeResult {
   session: Session | null;
@@ -56,7 +99,7 @@ export function sanitizeSessionDetailed(
     if (typeof m.id !== 'string' || typeof m.name !== 'string' || !m.name.trim()) continue;
     if (seenMemberIds.has(m.id)) continue;
     seenMemberIds.add(m.id);
-    const member: Member = { id: m.id, name: m.name.slice(0, MAX_NAME_LENGTH) };
+    const member: Member = { id: m.id, name: truncateText(m.name, MAX_NAME_LENGTH) };
     if (
       m.bank &&
       typeof m.bank === 'object' &&
@@ -98,7 +141,9 @@ export function sanitizeSessionDetailed(
       continue;
     }
     const amount = Math.round(e.amount);
-    if (amount <= 0) {
+    if (amount <= 0 || amount > MAX_AMOUNT_VND) {
+      // Vượt trần an toàn (W2-F2): giữ lại thì tầng tính có nguy cơ tràn
+      // Infinity/NaN — loại + đếm như mọi khoản không hợp lệ khác.
       droppedExpenses += 1;
       continue;
     }
@@ -139,46 +184,59 @@ export function sanitizeSessionDetailed(
     seenExpenseIds.add(e.id);
     expenses.push({
       id: e.id,
-      title: e.title.slice(0, MAX_TITLE_LENGTH),
+      title: truncateText(e.title, MAX_TITLE_LENGTH),
       amount,
       payerId: e.payerId,
       participantIds,
       mode,
       custom,
       weights,
-      createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
+      createdAt: sanitizeTimestamp(e.createdAt),
     });
   }
 
   return {
     session: {
       id: typeof s.id === 'string' ? s.id : newId(),
-      title: s.title.slice(0, MAX_TITLE_LENGTH),
+      title: truncateText(s.title, MAX_TITLE_LENGTH),
       members,
       expenses,
-      createdAt: typeof s.createdAt === 'number' ? s.createdAt : Date.now(),
+      createdAt: sanitizeTimestamp(s.createdAt),
       updatedAt: Date.now(),
     },
     droppedExpenses,
   };
 }
 
-/** Bảng số tiền custom: chỉ giữ số hữu hạn ≥ 0, ép về nguyên đồng. */
+/**
+ * Bảng số tiền custom: chỉ giữ số hữu hạn ≥ 0 trong trần MAX_AMOUNT_VND,
+ * ép về nguyên đồng. Bảng dựng bằng Object.create(null) để khoá id nguy
+ * hiểm ("__proto__", "constructor", "prototype") vẫn là thuộc tính riêng
+ * bình thường — không làm rơi phần tiền của ai (W2-F1).
+ */
 function sanitizeMoneyRecord(rec: unknown): Record<string, number> {
-  if (!rec || typeof rec !== 'object') return {};
-  const out: Record<string, number> = {};
+  const out: Record<string, number> = Object.create(null) as Record<string, number>;
+  if (!rec || typeof rec !== 'object') return out;
   for (const [k, v] of Object.entries(rec)) {
-    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) out[k] = Math.round(v);
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_AMOUNT_VND) {
+      out[k] = Math.round(v);
+    }
   }
   return out;
 }
 
-/** Bảng trọng số: chỉ giữ số hữu hạn > 0 (0/âm coi như không tham gia phần đó). */
+/**
+ * Bảng trọng số: chỉ giữ số hữu hạn trong (0, MAX_WEIGHT] (0/âm coi như
+ * không tham gia phần đó; vượt trần tỉ lệ = dữ liệu sửa tay — loại).
+ * Cùng quy tắc Object.create(null) như bảng custom (W2-F1/F3).
+ */
 function sanitizeWeightsRecord(rec: unknown): Record<string, number> {
-  if (!rec || typeof rec !== 'object') return {};
-  const out: Record<string, number> = {};
+  const out: Record<string, number> = Object.create(null) as Record<string, number>;
+  if (!rec || typeof rec !== 'object') return out;
   for (const [k, v] of Object.entries(rec)) {
-    if (typeof v === 'number' && Number.isFinite(v) && v > 0) out[k] = v;
+    if (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= MAX_WEIGHT) {
+      out[k] = v;
+    }
   }
   return out;
 }

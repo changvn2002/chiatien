@@ -74,7 +74,9 @@ export function hasBank(member: Member): member is Member & { bank: BankInfo } {
  * vẫn an toàn.
  */
 export function vietQrUrl(bank: BankInfo, amount: number, addInfo: string): string {
-  const base = `https://img.vietqr.io/image/${encodeURIComponent(bank.bin)}-${encodeURIComponent(
+  // bin cũng phải trim như accountNumber (W2-F7): bin " 970436 " từng sinh
+  // path chứa %20 làm hỏng định dạng URL ảnh VietQR.
+  const base = `https://img.vietqr.io/image/${encodeURIComponent(bank.bin.trim())}-${encodeURIComponent(
     bank.accountNumber.trim(),
   )}-compact2.png`;
   const params = new URLSearchParams();

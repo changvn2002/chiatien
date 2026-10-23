@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TriangleAlert, X } from 'lucide-react';
 import { newId } from '@/lib/id';
 import { FAQ_ITEMS } from '@/lib/site';
 import { cloneForImport, readShareFromHashWithReport } from '@/lib/share';
-import { loadSessions, trySaveSessions } from '@/lib/storage';
+import { loadSessions, serializeSessions, STORAGE_KEY, trySaveSessions } from '@/lib/storage';
 import type { Session } from '@/lib/types';
 import { SessionList } from './session-list';
 import { SessionView } from './session-view';
@@ -13,6 +13,13 @@ import { SessionView } from './session-view';
 /**
  * Gốc của app Chia Tiền — quản lý danh sách cuộc chia, lưu bền bằng
  * localStorage, và nhận cuộc chia từ share link (#chia=...) khi mở trang.
+ *
+ * Mở nhiều tab (W5-02): mỗi tab giữ state riêng trong bộ nhớ, nên trước
+ * đây tab mở sau với state cũ sẽ ghi đè im lặng dữ liệu tab kia vừa thêm.
+ * Nay tab nào cũng nghe sự kiện `storage`: thấy dữ liệu trên máy khác với
+ * lần ghi gần nhất của CHÍNH mình thì nạp lại bản mới nhất ngay + hiện
+ * thông báo — lần ghi tiếp theo của tab này xuất phát từ dữ liệu mới
+ * nhất, không còn ghi đè mất dữ liệu của tab khác trong im lặng.
  */
 export function ChiaTienApp() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -21,6 +28,11 @@ export function ChiaTienApp() {
   const [saveFailed, setSaveFailed] = useState(false);
   const [importedTitle, setImportedTitle] = useState('');
   const [importedDropped, setImportedDropped] = useState(0);
+  const [externalChange, setExternalChange] = useState(false);
+  // Chuỗi JSON lần gần nhất tab này ghi (hoặc nạp) — mốc đối chiếu để phân
+  // biệt "storage đổi do chính mình" với "tab khác vừa ghi" trong sự kiện
+  // storage (sự kiện không bắn ở tab đã ghi, nhưng đối chiếu cho chắc).
+  const lastWrittenRef = useRef<string | null>(null);
 
   // Bootstrap một lần từ hệ thống ngoài (localStorage + URL hash): effect là
   // nơi đúng cho việc này theo React docs; setState ở đây không gây vòng lặp
@@ -45,6 +57,7 @@ export function ChiaTienApp() {
     }
     /* eslint-disable react-hooks/set-state-in-effect */
     setSessions(initial);
+    lastWrittenRef.current = serializeSessions(initial);
     if (imported) {
       setImportedTitle(imported.title);
       setImportedDropped(dropped);
@@ -55,8 +68,26 @@ export function ChiaTienApp() {
     if (imported) setSaveFailed(!trySaveSessions(initial));
   }, []);
 
+  // Đồng bộ xuyên tab (W5-02): tab khác ghi dữ liệu -> nạp lại bản mới
+  // nhất và báo rõ, thay vì giữ state cũ rồi ghi đè mất dữ liệu của họ.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY) return;
+      if (event.newValue !== null && event.newValue === lastWrittenRef.current) return;
+      const fresh = loadSessions();
+      lastWrittenRef.current = serializeSessions(fresh);
+      setSessions(fresh);
+      // Cuộc chia đang mở đã bị tab khác xoá -> quay về danh sách.
+      setActiveId((current) => (current && fresh.some((s) => s.id === current) ? current : null));
+      setExternalChange(true);
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   /** Mọi thay đổi dữ liệu đều qua đây: cập nhật state + ghi bền ngay lập tức. */
   function commit(next: Session[]) {
+    lastWrittenRef.current = serializeSessions(next);
     setSessions(next);
     setSaveFailed(!trySaveSessions(next));
   }
@@ -124,6 +155,27 @@ export function ChiaTienApp() {
             type="button"
             aria-label="Đóng thông báo"
             onClick={() => setImportedTitle('')}
+            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {externalChange && (
+        <div
+          role="status"
+          className="mt-4 mb-4 flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep"
+        >
+          <p className="flex-1">
+            Dữ liệu vừa được thay đổi ở một tab khác — app đã tải lại bản mới nhất để không tab nào
+            ghi đè làm mất dữ liệu của tab nào. Nếu bạn đang nhập dở trong form ở tab này, hãy kiểm
+            tra lại nội dung trước khi bấm lưu.
+          </p>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={() => setExternalChange(false)}
             className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-white/60"
           >
             <X size={16} />

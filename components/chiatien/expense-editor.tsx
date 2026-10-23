@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { formatVND } from '@/lib/money';
 import { computeShares, validateExpenseDraft, type ExpenseDraft } from '@/lib/split';
+import { clearExpenseDraft, loadExpenseDraft, saveExpenseDraft } from '@/lib/storage';
 import type { Expense, Member, SplitMode } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, GhostButton, PrimaryButton, inputClass, labelClass } from './ui-bits';
@@ -23,27 +24,45 @@ export interface ExpenseSave extends ExpenseDraft {
  * Form thêm/sửa khoản chi: tên, số tiền, người trả, nhóm người cùng chia
  * và 1 trong 3 kiểu chia. Lỗi validate hiển thị trực tiếp, nút Lưu chỉ bấm
  * được khi khoản chi hợp lệ — đặc biệt kiểu tuỳ chỉnh bắt tổng phải khớp.
+ *
+ * Draft đang nhập (W5-06 / backlog F4): khi được cấp draftKey, mọi thay
+ * đổi trong form được giữ vào localStorage và khôi phục nguyên trạng khi
+ * form mở lại — reload trang (hoặc lỡ tay đóng tab) không còn làm mất
+ * khoản đang gõ dở. Draft bị xoá khi lưu thành công hoặc bấm Huỷ.
  */
 export function ExpenseEditor({
   members,
   initial,
+  draftKey,
   onSave,
   onCancel,
 }: {
   members: Member[];
   initial?: Expense;
+  draftKey?: string;
   onSave: (draft: ExpenseSave) => void;
   onCancel: () => void;
 }) {
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [amount, setAmount] = useState(initial?.amount ?? 0);
-  const [payerId, setPayerId] = useState(initial?.payerId ?? members[0]?.id ?? '');
-  const [participantIds, setParticipantIds] = useState<string[]>(
-    initial?.participantIds ?? members.map((m) => m.id),
+  // Draft khôi phục được đọc MỘT lần lúc form mở; có draft thì nội dung
+  // đang nhập dở thắng giá trị ban đầu — đó chính là thứ người dùng cần lại.
+  const [restoredDraft] = useState<ExpenseDraft | null>(() =>
+    draftKey ? loadExpenseDraft(draftKey) : null,
   );
-  const [mode, setMode] = useState<SplitMode>(initial?.mode ?? 'equal');
-  const [custom, setCustom] = useState<Record<string, number>>(initial?.custom ?? {});
-  const [weights, setWeights] = useState<Record<string, number>>(initial?.weights ?? {});
+  const [title, setTitle] = useState(restoredDraft?.title ?? initial?.title ?? '');
+  const [amount, setAmount] = useState(restoredDraft?.amount ?? initial?.amount ?? 0);
+  const [payerId, setPayerId] = useState(
+    restoredDraft?.payerId ?? initial?.payerId ?? members[0]?.id ?? '',
+  );
+  const [participantIds, setParticipantIds] = useState<string[]>(
+    restoredDraft?.participantIds ?? initial?.participantIds ?? members.map((m) => m.id),
+  );
+  const [mode, setMode] = useState<SplitMode>(restoredDraft?.mode ?? initial?.mode ?? 'equal');
+  const [custom, setCustom] = useState<Record<string, number>>(
+    restoredDraft?.custom ?? initial?.custom ?? {},
+  );
+  const [weights, setWeights] = useState<Record<string, number>>(
+    restoredDraft?.weights ?? initial?.weights ?? {},
+  );
   // Chỉ "la" lỗi sau khi người dùng đã bắt đầu thao tác — mở form ra chưa
   // nhập gì mà đã thấy danh sách lỗi đỏ là báo lỗi cho việc họ chưa làm.
   const [touched, setTouched] = useState(false);
@@ -91,6 +110,23 @@ export function ExpenseEditor({
     return { kind: 'computed' as const, shares };
   }, [amount, participantIds, mode, custom, effectiveCustom, effectiveWeights, payerId, title]);
 
+  // Giữ draft liên tục theo từng thay đổi — reload ở bất kỳ thời điểm nào
+  // cũng khôi phục được đúng nội dung đang hiển thị trong form.
+  useEffect(() => {
+    if (!draftKey) return;
+    saveExpenseDraft(draftKey, { title, amount, payerId, participantIds, mode, custom, weights });
+  }, [draftKey, title, amount, payerId, participantIds, mode, custom, weights]);
+
+  function handleSave() {
+    if (draftKey) clearExpenseDraft(draftKey);
+    onSave({ ...draft, id: initial?.id });
+  }
+
+  function handleCancel() {
+    if (draftKey) clearExpenseDraft(draftKey);
+    onCancel();
+  }
+
   function toggleParticipant(id: string) {
     setParticipantIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
@@ -104,6 +140,12 @@ export function ExpenseEditor({
       onClick={() => setTouched(true)}
     >
       <div className="grid gap-4">
+        {restoredDraft && (
+          <p role="status" className="text-sm font-medium text-brand-deep">
+            Đã khôi phục nội dung bạn nhập dở từ lần trước — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ
+            để bỏ bản nháp này.
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="expense-title">
@@ -311,13 +353,10 @@ export function ExpenseEditor({
         )}
 
         <div className="flex gap-2">
-          <PrimaryButton
-            disabled={errors.length > 0}
-            onClick={() => onSave({ ...draft, id: initial?.id })}
-          >
+          <PrimaryButton disabled={errors.length > 0} onClick={handleSave}>
             <Check size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
           </PrimaryButton>
-          <GhostButton onClick={onCancel}>
+          <GhostButton onClick={handleCancel}>
             <X size={16} /> Huỷ
           </GhostButton>
         </div>
