@@ -6,16 +6,24 @@
 
 :root {
   color-scheme: light;
-  /* Font tự host (Fontsource, import trong app/layout.tsx). */
-  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Outfit', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  /* Font tự host (Fontsource, import trong app/layout.tsx).
+     Display + số tiền: Be Vietnam Pro (có subset vietnamese đầy đủ).
+     Body: Inter, fallback Be Vietnam Pro để glyph lạ vẫn đúng dấu. */
+  --font-sans: 'Inter', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --ink: #1c1917;
   --muted: #6f675c;
-  /* Placeholder: taupe ấm riêng, đạt 5.1:1 trên nền trắng (WCAG AA) — không dùng muted mờ. */
+  /* Placeholder: taupe ấm riêng, đạt 5.08:1 trên nền trắng (WCAG AA) — không dùng muted mờ. */
   --placeholder: #786d5b;
   --line: #e6ddcf;
+  /* Biên ô nhập/control: tín hiệu non-text ≥3:1 trên trắng/paper/editor tint. */
+  --line-strong: #8a7a5f;
   --paper: #f7f3ec;
   --card: #ffffff;
+  /* Nền dải điều hướng (stepper) + Settlement Rail. */
+  --rail: #fffbeb;
+  /* Nền editor trong sheet: brand-soft pha 40% trên paper. */
+  --editor: #f8f0e4;
   /* Màu thương hiệu: hổ phách đậm (amber) — không gradient, không tím-xanh. */
   --brand: #b45309;
   --brand-deep: #92400e;
@@ -32,8 +40,11 @@
   --color-muted: var(--muted);
   --color-placeholder: var(--placeholder);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-paper: var(--paper);
   --color-card: var(--card);
+  --color-rail: var(--rail);
+  --color-editor: var(--editor);
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-soft: var(--brand-soft);
@@ -50,14 +61,14 @@ body {
 }
 
 body {
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
 }
 
 .font-display {
-  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-family: var(--font-display);
   /* Số tiền và mọi con số hiển thị luôn thẳng cột theo từng chữ số. */
   font-variant-numeric: tabular-nums;
 }
@@ -87,4 +98,72 @@ button {
 
 html {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Chuyển động đã khai trong DESIGN.md: đổi bước + mở sheet, chỉ transform/opacity. */
+@keyframes ct-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ct-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ct-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ct-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-in {
+  animation: ct-sheet-in 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.animate-fade-in {
+  animation: ct-fade-in 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.animate-step-in {
+  animation: ct-step-in 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.animate-toast-in {
+  animation: ct-toast-in 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-in,
+  .animate-fade-in,
+  .animate-step-in,
+  .animate-toast-in {
+    animation: none;
+  }
 }

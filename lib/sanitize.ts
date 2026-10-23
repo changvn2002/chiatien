@@ -1,5 +1,5 @@
 import { newId } from './id';
-import type { Expense, Member, Session, SplitMode } from './types';
+import type { BankInfo, Expense, Member, Session, SplitMode } from './types';
 
 /**
  * Lớp làm sạch DUY NHẤT cho mọi dữ liệu cuộc chia đến từ bên ngoài app:
@@ -46,6 +46,12 @@ const MAX_AMOUNT_VND = 10_000_000_000_000_000; // 10^16 đồng
 /** Trần trọng số chia theo phần — trọng số là tỉ lệ, không phải số tiền. */
 const MAX_WEIGHT = 1_000_000;
 
+/** Trần độ dài các trường thông tin ngân hàng (ký tự) — brief mục 7. */
+export const MAX_BANK_BIN_LENGTH = 16;
+export const MAX_BANK_ACCOUNT_NUMBER_LENGTH = 32;
+export const MAX_BANK_ACCOUNT_NAME_LENGTH = 100;
+export const MAX_BANK_NAME_LENGTH = 100;
+
 /**
  * Cắt chuỗi ở tối đa `max` ký tự UTF-16 NHƯNG không xé đôi một surrogate
  * pair: nếu ký tự cuối sau khi cắt là nửa đầu của một emoji (high
@@ -69,27 +75,66 @@ export interface SanitizeResult {
   session: Session | null;
   /** Số khoản chi bị loại vì không hợp lệ (gồm cả custom lệch tổng). */
   droppedExpenses: number;
+  /**
+   * Có ít nhất một bank hợp lệ đã bị CẮT khỏi kết quả hay không — chỉ xảy
+   * ra ở đường sanitize với keepBank=false (đường share link, DATA-04).
+   * Đường storage (mặc định keepBank=true) luôn trả false.
+   */
+  strippedBank: boolean;
+}
+
+export interface SanitizeOptions {
+  allowEmptyMembers?: boolean;
+  /**
+   * Giữ thông tin ngân hàng của thành viên trong kết quả (mặc định true —
+   * đường localStorage). Đặt false ở đường share link: bank KHÔNG BAO GIỜ
+   * được đi vào/ra link chia sẻ (DATA-04, cắt cả ở tầng decode).
+   */
+  keepBank?: boolean;
+}
+
+/**
+ * Làm sạch một thông tin ngân hàng thô: trim mọi trường chuỗi, cắt ở trần
+ * độ dài từng trường. Sau trim mà số tài khoản rỗng -> không hợp lệ (null),
+ * đúng như thiếu trường. Dùng chung cho sanitize session và sổ ngân hàng
+ * per-device (lib/storage.ts) để hai đường cùng một chuẩn.
+ */
+export function sanitizeBankInfo(raw: unknown): BankInfo | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const b = raw as Partial<BankInfo>;
+  if (
+    typeof b.bin !== 'string' ||
+    typeof b.accountNumber !== 'string' ||
+    typeof b.accountName !== 'string'
+  ) {
+    return null;
+  }
+  const accountNumber = truncateText(b.accountNumber.trim(), MAX_BANK_ACCOUNT_NUMBER_LENGTH);
+  if (!accountNumber) return null;
+  return {
+    bin: truncateText(b.bin.trim(), MAX_BANK_BIN_LENGTH),
+    bankName:
+      typeof b.bankName === 'string' ? truncateText(b.bankName.trim(), MAX_BANK_NAME_LENGTH) : '',
+    accountNumber,
+    accountName: truncateText(b.accountName.trim(), MAX_BANK_ACCOUNT_NAME_LENGTH),
+  };
 }
 
 /** Làm sạch một cuộc chia thô; không hợp lệ ở mức cấu trúc -> session null. */
-export function sanitizeSession(
-  raw: unknown,
-  opts?: { allowEmptyMembers?: boolean },
-): Session | null {
+export function sanitizeSession(raw: unknown, opts?: SanitizeOptions): Session | null {
   return sanitizeSessionDetailed(raw, opts).session;
 }
 
 /** Như sanitizeSession nhưng kèm số khoản chi đã bị loại để UI thông báo. */
-export function sanitizeSessionDetailed(
-  raw: unknown,
-  opts?: { allowEmptyMembers?: boolean },
-): SanitizeResult {
-  const fail: SanitizeResult = { session: null, droppedExpenses: 0 };
+export function sanitizeSessionDetailed(raw: unknown, opts?: SanitizeOptions): SanitizeResult {
+  const fail: SanitizeResult = { session: null, droppedExpenses: 0, strippedBank: false };
   if (!raw || typeof raw !== 'object') return fail;
   const s = raw as Partial<Session>;
   if (typeof s.title !== 'string' || !Array.isArray(s.members) || !Array.isArray(s.expenses)) {
     return fail;
   }
+  const keepBank = opts?.keepBank ?? true;
+  let strippedBank = false;
 
   const members: Member[] = [];
   const seenMemberIds = new Set<string>();
@@ -100,19 +145,15 @@ export function sanitizeSessionDetailed(
     if (seenMemberIds.has(m.id)) continue;
     seenMemberIds.add(m.id);
     const member: Member = { id: m.id, name: truncateText(m.name, MAX_NAME_LENGTH) };
-    if (
-      m.bank &&
-      typeof m.bank === 'object' &&
-      typeof m.bank.bin === 'string' &&
-      typeof m.bank.accountNumber === 'string' &&
-      typeof m.bank.accountName === 'string'
-    ) {
-      member.bank = {
-        bin: m.bank.bin,
-        bankName: typeof m.bank.bankName === 'string' ? m.bank.bankName : '',
-        accountNumber: m.bank.accountNumber,
-        accountName: m.bank.accountName,
-      };
+    const bank = sanitizeBankInfo(m.bank);
+    if (bank) {
+      if (keepBank) {
+        member.bank = bank;
+      } else {
+        // DATA-04: bank bị cắt ở đường share — ghi nhận để UI/người nhận
+        // link biết dữ liệu ngân hàng đã từng có mặt và bị loại có chủ đích.
+        strippedBank = true;
+      }
     }
     members.push(member);
   }
@@ -205,6 +246,7 @@ export function sanitizeSessionDetailed(
       updatedAt: Date.now(),
     },
     droppedExpenses,
+    strippedBank,
   };
 }
 

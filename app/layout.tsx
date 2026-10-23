@@ -7,9 +7,9 @@ import '@fontsource/be-vietnam-pro/500.css';
 import '@fontsource/be-vietnam-pro/600.css';
 import '@fontsource/be-vietnam-pro/700.css';
 import '@fontsource/be-vietnam-pro/800.css';
-import '@fontsource/outfit/500.css';
-import '@fontsource/outfit/600.css';
-import '@fontsource/outfit/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
 
 export const viewport: Viewport = {
   // Màu brand — thanh trạng thái/trình duyệt trên mobile nhuộm theo app.
@@ -96,6 +96,13 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: `${SITE_URL}/`,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'vi',
+    },
+    {
       '@type': 'WebApplication',
       name: SITE_NAME,
       alternateName: 'chiatien',
@@ -105,6 +112,11 @@ const jsonLd = {
       applicationCategory: 'FinanceApplication',
       operatingSystem: 'Any',
       isAccessibleForFree: true,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'VND',
+      },
     },
     {
       '@type': 'FAQPage',

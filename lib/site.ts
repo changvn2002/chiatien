@@ -6,10 +6,9 @@
  * Mặc định là domain Vercel dự kiến của repo này; khi có domain chính thức,
  * chỉ cần đặt biến môi trường lúc deploy, không phải sửa code.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiatien-five.vercel.app').replace(
-  /\/+$/,
-  '',
-);
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://chiatien-five.vercel.app'
+).replace(/\/+$/, '');
 
 export const SITE_NAME = 'Chia Tiền';
 
@@ -37,12 +36,12 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: 'VietQR là gì? Vì sao app tạo được mã QR chuyển tiền?',
     answer:
-      'VietQR là chuẩn mã QR chuyển khoản do NAPAS vận hành, dùng chung cho mọi app ngân hàng tại Việt Nam. Khi một thành viên có nhập thông tin tài khoản ngân hàng, mỗi lần chuyển tiền tới người đó trong danh sách quyết toán sẽ kèm một mã VietQR chứa đúng số tiền và nội dung chuyển khoản — mở app ngân hàng, quét mã là chuyển, không phải gõ số tài khoản hay sợ nhầm số tiền.',
+      'VietQR là chuẩn mã QR chuyển khoản do NAPAS vận hành, dùng chung cho mọi app ngân hàng tại Việt Nam. Khi tài khoản của người nhận đã được lưu trên máy đang xem, mỗi lần chuyển tiền tới người đó sẽ kèm một mã VietQR chứa đúng số tiền và nội dung chuyển khoản — mở app ngân hàng, quét mã là chuyển, không phải gõ số tài khoản hay sợ nhầm số tiền.',
   },
   {
     question: 'Có cần cài app hay đăng ký tài khoản để dùng Chia Tiền không?',
     answer:
-      'Không cần cả hai. Khác với các app chia tiền phải tải từ App Store hay CH Play rồi đăng ký tài khoản, Chia Tiền chạy ngay trên trình duyệt: mở link là dùng, không cài đặt, không đăng nhập, không thu thập dữ liệu — mọi cuộc chia lưu ngay trên máy của bạn. Cần gửi cho cả nhóm thì bấm "Chia sẻ link": toàn bộ cuộc chia nằm trong chính đường link, ai mở link cũng xem và sửa tiếp được trên máy của họ, cũng không phải cài gì thêm.',
+      'Không cần cả hai. Khác với các app chia tiền phải tải từ App Store hay CH Play rồi đăng ký tài khoản, Chia Tiền chạy ngay trên trình duyệt: mở link là dùng, không cài đặt, không đăng nhập, không thu thập dữ liệu — mọi cuộc chia lưu ngay trên máy của bạn. Cần gửi cho cả nhóm thì bấm "Chia sẻ link": link chứa thành viên, khoản chi và kết quả ai nợ ai; ai mở link cũng xem và sửa tiếp được trên máy của họ, cũng không phải cài gì thêm. Thông tin ngân hàng không đi theo link — mã QR của mỗi người chỉ hiện trên máy đã lưu tài khoản của chính họ.',
   },
   {
     question: 'Nhóm đông người thì phải chuyển tiền bao nhiêu lần?',

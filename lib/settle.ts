@@ -54,7 +54,7 @@ export function buildSettlementText(
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
   const total = session.expenses.reduce((s, e) => s + e.amount, 0);
   const lines: string[] = [
-    `🧾 QUYẾT TOÁN — ${session.title}`,
+    `QUYẾT TOÁN — ${session.title}`,
     `Tổng chi: ${formatVND(total)} · ${session.expenses.length} khoản · ${session.members.length} người`,
     '',
   ];
@@ -68,7 +68,7 @@ export function buildSettlementText(
     );
   }
   if (transfers.length === 0) {
-    lines.push('Mọi người đã cân bằng, không ai nợ ai. 🎉');
+    lines.push('Mọi người đã cân bằng, không ai nợ ai.');
   } else {
     lines.push('Ai trả ai:');
     transfers.forEach((t, i) => {

@@ -12,8 +12,10 @@ export interface MemberDraft {
 }
 
 /**
- * Form thêm/sửa một thành viên. Thông tin ngân hàng là tuỳ chọn — điền thì
- * các giao dịch quyết toán trả cho người này mới có mã VietQR để quét.
+ * Nội dung form thêm/sửa một thành viên — vỏ bottom-sheet/dialog do
+ * components/chiatien/sheet.tsx đảm nhiệm. Thông tin ngân hàng là tuỳ chọn
+ * và CHỈ lưu trên máy này (sổ ngân hàng per-device, DATA-04): điền thì các
+ * giao dịch quyết toán trả cho người này mới có mã VietQR tại máy này.
  */
 export function MemberEditor({
   initial,
@@ -25,7 +27,7 @@ export function MemberEditor({
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [hasBank, setHasBank] = useState(Boolean(initial?.bank));
+  const [wantsBank, setWantsBank] = useState(Boolean(initial?.bank));
   const [bin, setBin] = useState(initial?.bank?.bin ?? BANKS[0].bin);
   const [accountNumber, setAccountNumber] = useState(initial?.bank?.accountNumber ?? '');
   const [accountName, setAccountName] = useState(initial?.bank?.accountName ?? '');
@@ -36,18 +38,18 @@ export function MemberEditor({
       setError('Chưa nhập tên thành viên.');
       return;
     }
-    if (hasBank) {
+    if (wantsBank) {
       const bank = BANKS.find((b) => b.bin === bin);
       if (!bank) {
         setError('Chưa chọn ngân hàng.');
         return;
       }
       if (!accountNumber.trim()) {
-        setError('Đã bật thông tin ngân hàng thì cần nhập số tài khoản.');
+        setError('Đã bật lưu tài khoản thì cần nhập số tài khoản.');
         return;
       }
       if (!accountName.trim()) {
-        setError('Đã bật thông tin ngân hàng thì cần nhập tên chủ tài khoản.');
+        setError('Đã bật lưu tài khoản thì cần nhập tên chủ tài khoản.');
         return;
       }
       onSave({
@@ -65,55 +67,61 @@ export function MemberEditor({
   }
 
   return (
-    <div className="rounded-2xl border border-brand/40 bg-brand-soft/40 p-4">
-      <div className="grid gap-3">
-        <div>
-          <label className={labelClass} htmlFor="member-name">
-            Tên thành viên
-          </label>
-          <input
-            id="member-name"
-            className={inputClass}
-            placeholder="Ví dụ: An, Bình, chị Chi…"
-            value={name}
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
-            }}
-          />
-        </div>
+    <div className="grid gap-4">
+      <div>
+        <label className={labelClass} htmlFor="member-name">
+          Tên thành viên
+        </label>
+        <input
+          id="member-name"
+          className={inputClass}
+          placeholder="Ví dụ: An, Bình, chị Chi…"
+          value={name}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+          }}
+        />
+      </div>
 
+      <div>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
           <input
             type="checkbox"
-            checked={hasBank}
-            onChange={(e) => setHasBank(e.target.checked)}
-            className="h-4 w-4 accent-brand"
+            checked={wantsBank}
+            onChange={(e) => setWantsBank(e.target.checked)}
+            className="h-4 w-4 shrink-0 accent-brand"
           />
-          <Landmark size={16} className="text-brand" />
-          Thêm tài khoản ngân hàng (để nhận tiền qua VietQR)
+          <Landmark size={16} className="shrink-0 text-brand-deep" aria-hidden />
+          <span>Lưu tài khoản ngân hàng trên máy này (để tạo VietQR)</span>
         </label>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          Tài khoản chỉ lưu trên máy này để tạo mã QR khi quyết toán — không nằm trong link chia sẻ,
+          không gửi đi đâu.
+        </p>
+      </div>
 
-        {hasBank && (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className={labelClass} htmlFor="member-bank">
-                Ngân hàng
-              </label>
-              <select
-                id="member-bank"
-                className={inputClass}
-                value={bin}
-                onChange={(e) => setBin(e.target.value)}
-              >
-                {BANKS.map((b) => (
-                  <option key={b.bin} value={b.bin}>
-                    {b.shortName}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {wantsBank && (
+        <div className="grid gap-3">
+          <div>
+            <label className={labelClass} htmlFor="member-bank">
+              Ngân hàng
+            </label>
+            <select
+              id="member-bank"
+              className={inputClass}
+              value={bin}
+              onChange={(e) => setBin(e.target.value)}
+            >
+              {BANKS.map((b) => (
+                <option key={b.bin} value={b.bin}>
+                  {b.shortName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="member-account">
                 Số tài khoản
@@ -140,22 +148,22 @@ export function MemberEditor({
               />
             </div>
           </div>
-        )}
-
-        {error && (
-          <p role="alert" className="text-sm font-medium text-debt">
-            {error}
-          </p>
-        )}
-
-        <div className="flex gap-2">
-          <PrimaryButton onClick={handleSave}>
-            <Check size={16} /> Lưu thành viên
-          </PrimaryButton>
-          <GhostButton onClick={onCancel}>
-            <X size={16} /> Huỷ
-          </GhostButton>
         </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-sm font-medium text-debt">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <PrimaryButton onClick={handleSave}>
+          <Check size={16} /> Lưu thành viên
+        </PrimaryButton>
+        <GhostButton onClick={onCancel}>
+          <X size={16} /> Huỷ
+        </GhostButton>
       </div>
     </div>
   );

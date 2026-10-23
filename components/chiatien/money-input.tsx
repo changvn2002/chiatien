@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { formatGrouped, parseVNDInput } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,10 @@ import { cn } from '@/lib/utils';
  * ("150000" -> "150.000"), giá trị đưa ra ngoài là số nguyên đồng.
  * Khi không focus, hiển thị luôn suy ra từ value bên ngoài (không cần effect
  * đồng bộ) — chỉ khi đang gõ mới giữ text nội bộ.
+ *
+ * Panel §7.8: ô nhập THẬT cao ≥44px và bấm vào bất cứ đâu trên khung bao
+ * cũng focus được vào ô nhập (trước đây input chỉ cao 24px, khung bao
+ * không bấm được).
  */
 export function MoneyInput({
   value,
@@ -27,16 +31,19 @@ export function MoneyInput({
 }) {
   const [focused, setFocused] = useState(false);
   const [typingText, setTypingText] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const text = focused ? typingText : value > 0 ? formatGrouped(value) : '';
 
   return (
     <div
+      onClick={() => inputRef.current?.focus()}
       className={cn(
-        'flex items-center gap-1 rounded-xl border border-line bg-card px-3 py-2.5 focus-within:border-brand',
+        'flex min-h-11 cursor-text items-center gap-1 rounded-xl border border-line-strong bg-card px-3 transition focus-within:border-brand-deep',
         className,
       )}
     >
       <input
+        ref={inputRef}
         type="text"
         inputMode="numeric"
         autoComplete="off"
@@ -54,9 +61,11 @@ export function MoneyInput({
           setTypingText(next > 0 ? formatGrouped(next) : '');
           onChange(next);
         }}
-        className="w-full bg-transparent text-right font-display text-base font-semibold text-ink outline-none placeholder:text-placeholder"
+        className="h-11 min-w-0 w-full bg-transparent text-right font-display text-base font-semibold text-ink outline-none placeholder:text-placeholder"
       />
-      <span className="shrink-0 text-sm font-medium text-muted">đ</span>
+      <span aria-hidden className="shrink-0 text-sm font-medium text-muted">
+        đ
+      </span>
     </div>
   );
 }

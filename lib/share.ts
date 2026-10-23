@@ -13,9 +13,29 @@ import type { Session } from './types';
  * Dữ liệu giải mã từ link luôn qua lớp làm sạch nghiêm ngặt dùng chung ở
  * lib/sanitize.ts (cùng bộ quy tắc với localStorage) — link bị sửa tay
  * không thể tạo ra một cuộc chia lệch tiền.
+ *
+ * DATA-04 (BLOCKER kiến trúc, từ v2): thông tin ngân hàng của thành viên
+ * KHÔNG BAO GIỜ nằm trong link chia sẻ — link bị chuyển tiếp/log/lưu ở bất
+ * cứ đâu cũng không lộ số tài khoản của ai. Phòng thủ hai tầng:
+ *  - Tầng ENCODE: payload v2 chỉ chứa members {id, name} — bank bị cắt
+ *    trước khi nén, kể cả khi session truyền vào có bank.
+ *  - Tầng DECODE: link v1 cũ (từng chứa bank) hoặc link bị sửa tay chèn
+ *    bank đều bị sanitize với keepBank=false; SanitizeResult.strippedBank
+ *    cho UI biết bank đã bị cắt để thông báo cho người nhận link.
+ * Bank info sống trong "sổ ngân hàng" per-device (lib/storage.ts), khoá
+ * theo (sessionId, memberId) — không đi theo link.
  */
 const SHARE_PREFIX = 'chia=';
-const SHARE_VERSION = 1;
+const SHARE_VERSION = 2;
+
+/**
+ * Trần độ dài mã share được chấp nhận giải mã (SEC-12.4): mã dài hơn bị
+ * từ chối TRƯỚC khi giải nén để link quái vật không đốt CPU/bộ nhớ.
+ */
+export const MAX_SHARE_CODE_LENGTH = 200_000;
+
+/** Trần độ dài chuỗi JSON sau giải nén — lớp thứ hai chống zip-bomb lz. */
+const MAX_DECOMPRESSED_LENGTH = 2_000_000;
 
 interface SharePayload {
   v: number;
@@ -23,7 +43,12 @@ interface SharePayload {
 }
 
 export function encodeSessionShare(session: Session): string {
-  const payload: SharePayload = { v: SHARE_VERSION, s: session };
+  // DATA-04 tầng encode: bản sao session với members CHỈ còn {id, name}.
+  const stripped: Session = {
+    ...session,
+    members: session.members.map((m) => ({ id: m.id, name: m.name })),
+  };
+  const payload: SharePayload = { v: SHARE_VERSION, s: stripped };
   return compressToEncodedURIComponent(JSON.stringify(payload));
 }
 
@@ -32,21 +57,25 @@ export function buildShareUrl(session: Session): string {
   return `${base}#${SHARE_PREFIX}${encodeSessionShare(session)}`;
 }
 
-const EMPTY_RESULT: SanitizeResult = { session: null, droppedExpenses: 0 };
+const EMPTY_RESULT: SanitizeResult = { session: null, droppedExpenses: 0, strippedBank: false };
 
 /**
  * Giải mã chuỗi share kèm số khoản chi đã bị lớp làm sạch loại bỏ;
  * dữ liệu hỏng/không đúng format -> session null (không throw).
+ * Chấp nhận payload v1 (link cũ) và v2; MỌI đường đều sanitize với
+ * keepBank=false nên bank không bao giờ lọt qua link vào app (DATA-04).
  */
 export function decodeSessionShareWithReport(code: string): SanitizeResult {
   try {
+    if (code.length > MAX_SHARE_CODE_LENGTH) return EMPTY_RESULT;
     const json = decompressFromEncodedURIComponent(code);
     if (!json) return EMPTY_RESULT;
+    if (json.length > MAX_DECOMPRESSED_LENGTH) return EMPTY_RESULT;
     const parsed: unknown = JSON.parse(json);
     if (!parsed || typeof parsed !== 'object') return EMPTY_RESULT;
     const payload = parsed as Partial<SharePayload>;
-    if (payload.v !== SHARE_VERSION) return EMPTY_RESULT;
-    return sanitizeSessionDetailed(payload.s);
+    if (payload.v !== 1 && payload.v !== SHARE_VERSION) return EMPTY_RESULT;
+    return sanitizeSessionDetailed(payload.s, { keepBank: false });
   } catch {
     return EMPTY_RESULT;
   }

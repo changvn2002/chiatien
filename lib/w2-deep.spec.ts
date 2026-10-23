@@ -14,7 +14,7 @@
  *   W2-C  ma trận hỏng localStorage qua loadSessions.
  *   W2-D  FINDINGS — mỗi test mã hoá bất biến ĐÚNG và đang FAIL tại thời
  *         điểm viết (bằng chứng tái hiện tối thiểu, có mã finding W2-F*).
- *   W2-E  fuzz VietQR URL builder.
+ *   W2-E  fuzz VietQR payload builder (DATA-08).
  *
  * Chạy lại:  TMPDIR=~/workspace/mini-apps/tmp npx -y pnpm@10.32.1 vitest run lib/w2-deep.spec.ts
  */
@@ -23,13 +23,9 @@ import { compressToEncodedURIComponent } from 'lz-string';
 import { sanitizeSession, sanitizeSessionDetailed } from './sanitize';
 import { computeBalances, computeShares, sumBalances } from './split';
 import { buildSettlementText, simplifyDebts } from './settle';
-import {
-  decodeSessionShare,
-  decodeSessionShareWithReport,
-  encodeSessionShare,
-} from './share';
+import { decodeSessionShare, decodeSessionShareWithReport, encodeSessionShare } from './share';
 import { loadSessions } from './storage';
-import { vietQrUrl, BANKS } from './vietqr';
+import { buildVietQrPayload, crc16Ccitt, BANKS } from './vietqr';
 import type { Expense, Session } from './types';
 
 const SEED_SETTLE = 1959364781;
@@ -114,9 +110,12 @@ describe('W2-A1 simplifyDebts — 10.000 case số dư ngẫu nhiên (seed 19593
       for (let i = 0; i < n - 1; i++) {
         const r = rng();
         let v: number;
-        if (r < 0.25) v = 0; // nhiều người dư 0
-        else if (r < 0.55) v = Math.floor(rng() * 2_000_001) - 1_000_000; // ±1tr
-        else if (r < 0.85) v = Math.floor(rng() * 2e9) - 1e9; // ±1 tỉ
+        if (r < 0.25)
+          v = 0; // nhiều người dư 0
+        else if (r < 0.55)
+          v = Math.floor(rng() * 2_000_001) - 1_000_000; // ±1tr
+        else if (r < 0.85)
+          v = Math.floor(rng() * 2e9) - 1e9; // ±1 tỉ
         else v = Math.floor(rng() * 2e15) - 1e15; // ±10^15 — vẫn < 2^53, nguyên chính xác
         balances[ids[i]] = v;
         sum += v;
@@ -161,7 +160,14 @@ describe('W2-A1 simplifyDebts — 10.000 case số dư ngẫu nhiên (seed 19593
     const MAX = Number.MAX_SAFE_INTEGER; // 9007199254740991
     expect(simplifyDebts({ a: MAX, b: -MAX })).toEqual([{ fromId: 'b', toId: 'a', amount: MAX }]);
     expect(simplifyDebts({ a: 0, b: 0, c: 0, d: 0, e: 0 })).toEqual([]);
-    const big: Record<string, number> = { rich: 4 * 1e15, d1: -1e15, d2: -1e15, d3: -1e15, d4: -1e15, z: 0 };
+    const big: Record<string, number> = {
+      rich: 4 * 1e15,
+      d1: -1e15,
+      d2: -1e15,
+      d3: -1e15,
+      d4: -1e15,
+      z: 0,
+    };
     const t = simplifyDebts(big);
     expect(t).toHaveLength(4);
     const after = applyTransfers(big, t);
@@ -207,7 +213,8 @@ describe('W2-A2 computeShares/computeBalances — 2.000 phiên ngẫu nhiên h�
         }
         if (mode === 'shares') {
           for (const id of participants) {
-            weights[id] = rng() < 0.5 ? 1 + Math.floor(rng() * 10) : Math.round((0.1 + rng() * 5) * 10) / 10;
+            weights[id] =
+              rng() < 0.5 ? 1 + Math.floor(rng() * 10) : Math.round((0.1 + rng() * 5) * 10) / 10;
           }
         }
         expenses.push(
@@ -266,16 +273,37 @@ function validRawSession(): Record<string, unknown> {
     members: VN_NAMES.slice(0, 4).map((name, i) => ({ id: `m${i}`, name })),
     expenses: [
       {
-        id: 'e0', title: 'Phòng', amount: 1_800_000, payerId: 'm0',
-        participantIds: ['m0', 'm1', 'm2', 'm3'], mode: 'equal', custom: {}, weights: {}, createdAt: 11,
+        id: 'e0',
+        title: 'Phòng',
+        amount: 1_800_000,
+        payerId: 'm0',
+        participantIds: ['m0', 'm1', 'm2', 'm3'],
+        mode: 'equal',
+        custom: {},
+        weights: {},
+        createdAt: 11,
       },
       {
-        id: 'e1', title: 'Ăn tối', amount: 450_000, payerId: 'm1',
-        participantIds: ['m1', 'm2'], mode: 'custom', custom: { m1: 200_000, m2: 250_000 }, weights: {}, createdAt: 12,
+        id: 'e1',
+        title: 'Ăn tối',
+        amount: 450_000,
+        payerId: 'm1',
+        participantIds: ['m1', 'm2'],
+        mode: 'custom',
+        custom: { m1: 200_000, m2: 250_000 },
+        weights: {},
+        createdAt: 12,
       },
       {
-        id: 'e2', title: 'Xe', amount: 900_000, payerId: 'm2',
-        participantIds: ['m0', 'm2', 'm3'], mode: 'shares', custom: {}, weights: { m0: 1, m2: 2, m3: 1 }, createdAt: 13,
+        id: 'e2',
+        title: 'Xe',
+        amount: 900_000,
+        payerId: 'm2',
+        participantIds: ['m0', 'm2', 'm3'],
+        mode: 'shares',
+        custom: {},
+        weights: { m0: 1, m2: 2, m3: 1 },
+        createdAt: 13,
       },
     ],
     createdAt: 1,
@@ -302,7 +330,18 @@ function expectKeptSessionSound(s: Session) {
 describe('W2-B1 fuzz có cấu trúc qua đường share-link — 2.000 đột biến (seed 246813579)', () => {
   it('không throw; khoản hỏng bị loại + droppedExpenses đếm đúng; phiên giữ lại không bao giờ lệch tiền', () => {
     const rng = mulberry32(SEED_FUZZ);
-    const amountPool: unknown[] = [-100_000, 0, 0.4, 1, '100000', null, true, 100.5, 999_999_999_999_999, 50_000];
+    const amountPool: unknown[] = [
+      -100_000,
+      0,
+      0.4,
+      1,
+      '100000',
+      null,
+      true,
+      100.5,
+      999_999_999_999_999,
+      50_000,
+    ];
     let cases = 0;
     let keptSessions = 0;
     let totalDropped = 0;
@@ -316,27 +355,48 @@ describe('W2-B1 fuzz có cấu trúc qua đường share-link — 2.000 đột b
         const e = expenses[Math.floor(rng() * expenses.length)];
         const mem = members[Math.floor(rng() * members.length)];
         switch (kind) {
-          case 0: e.amount = amountPool[Math.floor(rng() * amountPool.length)]; break;
+          case 0:
+            e.amount = amountPool[Math.floor(rng() * amountPool.length)];
+            break;
           case 1: {
             const c = { ...(e.custom as Record<string, number>) };
             const keys = Object.keys(c);
-            if (keys.length) c[keys[0]] = (c[keys[0]] ?? 0) + (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 5000));
+            if (keys.length)
+              c[keys[0]] =
+                (c[keys[0]] ?? 0) + (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 5000));
             e.custom = c;
             break;
           }
-          case 2: e.participantIds = ['m0', 'ghost', 42, null]; break;
-          case 3: e.payerId = rng() < 0.5 ? 'ghost' : null; break;
-          case 4: e.mode = rng() < 0.5 ? 'custom' : 'khong-co-mode-nay'; break;
-          case 5: mem.name = ['', '   ', 'x'.repeat(500), 'Tên 😀 rất dài '.repeat(30), 123, null][Math.floor(rng() * 6)]; break;
-          case 6: mem.id = members[0].id; break; // trùng id thành viên
-          case 7: e.id = expenses[0].id; break; // trùng id khoản
+          case 2:
+            e.participantIds = ['m0', 'ghost', 42, null];
+            break;
+          case 3:
+            e.payerId = rng() < 0.5 ? 'ghost' : null;
+            break;
+          case 4:
+            e.mode = rng() < 0.5 ? 'custom' : 'khong-co-mode-nay';
+            break;
+          case 5:
+            mem.name = ['', '   ', 'x'.repeat(500), 'Tên 😀 rất dài '.repeat(30), 123, null][
+              Math.floor(rng() * 6)
+            ];
+            break;
+          case 6:
+            mem.id = members[0].id;
+            break; // trùng id thành viên
+          case 7:
+            e.id = expenses[0].id;
+            break; // trùng id khoản
           case 8: {
             const w = { ...(e.weights as Record<string, number>) };
-            for (const k of Object.keys(w)) w[k] = [-2, 0, 'hai', 1.5][Math.floor(rng() * 4)] as number;
+            for (const k of Object.keys(w))
+              w[k] = [-2, 0, 'hai', 1.5][Math.floor(rng() * 4)] as number;
             e.weights = w;
             break;
           }
-          case 9: e.participantIds = []; break;
+          case 9:
+            e.participantIds = [];
+            break;
         }
       }
       const totalExpenses = (raw.expenses as unknown[]).length;
@@ -358,12 +418,15 @@ describe('W2-B1 fuzz có cấu trúc qua đường share-link — 2.000 đột b
       }
     }
     expect(cases).toBe(2_000);
-    console.log(`[W2-B1] cases=${cases} keptSessions=${keptSessions} totalDropped=${totalDropped} seed=${SEED_FUZZ}`);
+    console.log(
+      `[W2-B1] cases=${cases} keptSessions=${keptSessions} totalDropped=${totalDropped} seed=${SEED_FUZZ}`,
+    );
   }, 120_000);
 
   it('500 chuỗi rác (ký tự lz + unicode + emoji + rỗng + rất dài): decode không bao giờ throw, kết quả null hoặc phiên cân bằng', () => {
     const rng = mulberry32(SEED_FUZZ ^ 0x9e3779b9);
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-_$%=&#ăêô😀\n\t ';
+    const alphabet =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-_$%=&#ăêô😀\n\t ';
     let nulls = 0;
     for (let trial = 0; trial < 500; trial++) {
       const len = trial === 0 ? 0 : trial === 1 ? 10_000 : Math.floor(rng() * 200);
@@ -388,7 +451,11 @@ describe('W2-B1 fuzz có cấu trúc qua đường share-link — 2.000 đột b
         title: `Đi chơi ${pick()} 🎉`,
         members: [member('a', pick()), member('b', pick()), member('c', pick())],
         expenses: [
-          expense({ amount: 1 + Math.floor(rng() * 1e12), payerId: 'a', participantIds: ['a', 'b', 'c'] }),
+          expense({
+            amount: 1 + Math.floor(rng() * 1e12),
+            payerId: 'a',
+            participantIds: ['a', 'b', 'c'],
+          }),
         ],
       });
       const restored = decodeSessionShare(encodeSessionShare(s));
@@ -404,14 +471,28 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
   const twoMembers = [member('a', 'An'), member('b', 'Bình')];
 
   it('đầu vào không phải object / thiếu cấu trúc -> session null, không throw', () => {
-    for (const raw of [null, undefined, 42, 'str', true, [], {}, { title: 'T' }, { title: 9, members: [], expenses: [] }, { title: 'T', members: 'x', expenses: [] }, { title: 'T', members: [], expenses: {} }]) {
+    for (const raw of [
+      null,
+      undefined,
+      42,
+      'str',
+      true,
+      [],
+      {},
+      { title: 'T' },
+      { title: 9, members: [], expenses: [] },
+      { title: 'T', members: 'x', expenses: [] },
+      { title: 'T', members: [], expenses: {} },
+    ]) {
       expect(sanitizeSession(raw)).toBeNull();
     }
   });
 
   it('amount kiểu sai/cực đoan (string, NaN, Infinity, âm, 0, 0.4) -> khoản bị loại, đếm đúng', () => {
     for (const amount of ['100000', NaN, Infinity, -Infinity, -5, 0, 0.4, null, undefined]) {
-      const r = sanitizeSessionDetailed(session({ members: twoMembers, expenses: [expense({ amount: amount as number })] }));
+      const r = sanitizeSessionDetailed(
+        session({ members: twoMembers, expenses: [expense({ amount: amount as number })] }),
+      );
       expect(r.session).not.toBeNull();
       expect(r.session!.expenses).toEqual([]);
       expect(r.droppedExpenses).toBe(1);
@@ -430,7 +511,10 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
     ];
     for (const custom of badCustoms) {
       const r = sanitizeSessionDetailed(
-        session({ members: twoMembers, expenses: [expense({ mode: 'custom', custom: custom as Record<string, number> })] }),
+        session({
+          members: twoMembers,
+          expenses: [expense({ mode: 'custom', custom: custom as Record<string, number> })],
+        }),
       );
       expect(r.session!.expenses).toEqual([]);
       expect(r.droppedExpenses).toBe(1);
@@ -459,7 +543,8 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
 
   it('thành viên rác: tên rỗng/chỉ khoảng trắng/không phải chuỗi bị loại; trùng id giữ người đầu; phiên hết thành viên -> null (trừ allowEmptyMembers)', () => {
     const r = sanitizeSession({
-      id: 's', title: 'T',
+      id: 's',
+      title: 'T',
       members: [
         { id: 'a', name: 'An' },
         { id: 'a', name: 'An TRÙNG' },
@@ -471,7 +556,9 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
       expenses: [],
     });
     expect(r!.members).toEqual([{ id: 'a', name: 'An' }]);
-    expect(sanitizeSession({ id: 's', title: 'T', members: [{ id: 'b', name: ' ' }], expenses: [] })).toBeNull();
+    expect(
+      sanitizeSession({ id: 's', title: 'T', members: [{ id: 'b', name: ' ' }], expenses: [] }),
+    ).toBeNull();
     const emptyOk = sanitizeSession(
       { id: 's', title: 'T', members: [], expenses: [] },
       { allowEmptyMembers: true },
@@ -484,7 +571,11 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
     const r = sanitizeSession(
       session({
         members: [
-          { id: 'a', name: 'An', bank: { bin: '970436', bankName: 'VCB', accountNumber: '0123' } } as unknown as Session['members'][number],
+          {
+            id: 'a',
+            name: 'An',
+            bank: { bin: '970436', bankName: 'VCB', accountNumber: '0123' },
+          } as unknown as Session['members'][number],
           member('b', 'B'.repeat(500)),
         ],
         expenses: [expense({ title: 'T'.repeat(500) })],
@@ -497,9 +588,14 @@ describe('W2-B2 ma trận sanitize trực tiếp (kiểu sai / thiếu trường
     expect(r!.title).toHaveLength(200);
   });
 
-  it('phiên bản sai / payload lạ qua decode: v=2, v="1", thiếu s, s=null -> null', () => {
+  it('phiên bản lạ / payload lạ qua decode: v="1", v=3, thiếu s, s=null -> null; v=1 và v=2 hợp lệ', () => {
+    // Cập nhật 2026-10-23 (DATA-04): share schema lên v2 — v=2 là bản hiện hành
+    // phải decode được, v=1 cũ vẫn nhập được (bank bị cắt ở tầng decode).
+    // Bản gốc của test này khẳng định v=2 -> null theo chính sách version cũ.
     const enc = (payload: unknown) => compressToEncodedURIComponent(JSON.stringify(payload));
-    expect(decodeSessionShare(enc({ v: 2, s: validRawSession() }))).toBeNull();
+    expect(decodeSessionShare(enc({ v: 2, s: validRawSession() }))).not.toBeNull();
+    expect(decodeSessionShare(enc({ v: 1, s: validRawSession() }))).not.toBeNull();
+    expect(decodeSessionShare(enc({ v: 3, s: validRawSession() }))).toBeNull();
     expect(decodeSessionShare(enc({ v: '1', s: validRawSession() }))).toBeNull();
     expect(decodeSessionShare(enc({ v: 1 }))).toBeNull();
     expect(decodeSessionShare(enc({ v: 1, s: null }))).toBeNull();
@@ -717,13 +813,36 @@ describe('W2-D FINDINGS (đang FAIL — bằng chứng, không phải lỗi củ
     expect(new Set(loaded.map((s) => s.id)).size).toBe(loaded.length);
   });
 
-  it('W2-F7 [LOW] vietQrUrl: bin có khoảng trắng hai đầu phải được trim như accountNumber (path không chứa %20)', () => {
-    const url = vietQrUrl(
-      { bin: ' 970436 ', bankName: 'VCB', accountNumber: '0123456789', accountName: 'NGUYEN VAN AN' },
-      50_000,
-      'Tra tien',
+  it('W2-F7 [LOW] bank: bin/accountNumber có khoảng trắng hai đầu phải được trim ở sanitize — payload VietQR không chứa khoảng trắng', () => {
+    // Cập nhật 2026-10-23 (DATA-08): vietQrUrl (img.vietqr.io) đã bị xoá; QR nay
+    // dựng từ payload EMVCo local. Ý định gốc của F7 giữ nguyên: khoảng trắng
+    // thừa trong trường bank không bao giờ được lọt vào artifact QR — nay việc
+    // trim nằm ở sanitize (mọi đường nạp), payload chỉ chứa dữ liệu đã sạch.
+    const r = sanitizeSessionDetailed(
+      session({
+        members: [
+          {
+            ...member('a', 'An'),
+            bank: {
+              bin: ' 970436 ',
+              bankName: 'VCB',
+              accountNumber: ' 0123456789 ',
+              accountName: 'NGUYEN VAN AN',
+            },
+          },
+          member('b', 'Bình'),
+        ],
+      }),
     );
-    expect(new URL(url).pathname).toBe('/image/970436-0123456789-compact2.png');
+    const bank = r.session!.members[0].bank!;
+    expect(bank.bin).toBe('970436');
+    expect(bank.accountNumber).toBe('0123456789');
+    const payload = buildVietQrPayload(bank, 50_000, 'Tra tien');
+    // Khoảng trắng chỉ được phép nằm trong nội dung chuyển khoản (addInfo) —
+    // phần cấu trúc (BIN/số tài khoản) tuyệt đối không chứa khoảng trắng thừa.
+    expect(payload.replace('Tra tien', '')).not.toContain(' ');
+    expect(payload).toContain('0006970436');
+    expect(payload).toContain('01100123456789');
   });
 
   it('W2-F8 [LOW] computeShares gọi trực tiếp với participantIds trùng: tổng phần chia vẫn phải = amount (hiện sanitize khử trùng nên đường ngoài an toàn — đây là lỗ hổng API trực tiếp)', () => {
@@ -736,41 +855,93 @@ describe('W2-D FINDINGS (đang FAIL — bằng chứng, không phải lỗi củ
 /* W2-E — fuzz VietQR                                                  */
 /* ------------------------------------------------------------------ */
 
-describe('W2-E vietQrUrl — 1.000 case ký tự đặc biệt (seed 1122334455)', () => {
-  it('URL luôn parse được, tham số khứ hồi chính xác, không rò fragment, không khoảng trắng thô, amount nguyên', () => {
+describe('W2-E buildVietQrPayload — 1.000 case ký tự đặc biệt (seed 1122334455)', () => {
+  // Cập nhật 2026-10-23 (DATA-08): vietQrUrl bị xoá, thay bằng bộ dựng payload
+  // EMVCo/VietQR local. Fuzz giữ cùng seed + cùng họ dữ liệu cực đoan; bất biến
+  // đổi từ "URL parse được + tham số khứ hồi" sang "payload là TLV hợp lệ, CRC
+  // khớp, các trường khứ hồi nguyên vẹn qua parse TLV, amount không hợp lệ bị
+  // từ chối bằng RangeError thay vì sinh QR sai".
+  it('payload luôn là TLV hợp lệ + CRC khớp + trường khứ hồi đúng; amount không hợp lệ -> RangeError', () => {
     const rng = mulberry32(SEED_VIETQR);
     const fragments = [
-      'Nguyễn', 'Văn', 'A & B', '100%', 'a+b', 'x=1&y=2', '#tag', '?hoi', 'dấu / gạch',
-      '😀', '"nhay"', "'don'", '  khoang trang  ', 'Quyết toán Đà Lạt', 'a\nb', 'a\tb', '%20', '%26',
+      'Nguyễn',
+      'Văn',
+      'A & B',
+      '100%',
+      'a+b',
+      'x=1&y=2',
+      '#tag',
+      '?hoi',
+      'dấu / gạch',
+      '😀',
+      '"nhay"',
+      "'don'",
+      '  khoang trang  ',
+      'Quyết toán Đà Lạt',
+      'a\nb',
+      'a\tb',
+      '%20',
+      '%26',
     ];
+    const parseTlv = (s: string) => {
+      const out = new Map<string, string>();
+      let i = 0;
+      while (i < s.length) {
+        const tag = s.slice(i, i + 2);
+        const len = Number(s.slice(i + 2, i + 4));
+        expect(Number.isInteger(len)).toBe(true);
+        out.set(tag, s.slice(i + 4, i + 4 + len));
+        i += 4 + len;
+      }
+      expect(i).toBe(s.length); // độ dài khai báo phải khớp tuyệt đối, không dư/thiếu
+      return out;
+    };
     let cases = 0;
+    let thrown = 0;
     for (let trial = 0; trial < 1_000; trial++) {
       const bankDef = BANKS[Math.floor(rng() * BANKS.length)];
       const pickText = () =>
-        Array.from({ length: 1 + Math.floor(rng() * 3) }, () => fragments[Math.floor(rng() * fragments.length)]).join(' ');
-      const accountNumber = `${Math.floor(rng() * 1e9)}${rng() < 0.3 ? pickText() : ''}`;
+        Array.from(
+          { length: 1 + Math.floor(rng() * 3) },
+          () => fragments[Math.floor(rng() * fragments.length)],
+        ).join(' ');
+      // Số tài khoản giữ trong miền dữ liệu đã sanitize (số + hậu tố ngắn) để
+      // độ dài TLV 2 chữ số luôn đủ — đúng miền đầu vào thật của builder.
+      const accountSuffix = ['X1', 'a b', '007', ''][Math.floor(rng() * 4)];
+      const accountNumber = `${Math.floor(rng() * 1e9)}${rng() < 0.3 ? accountSuffix : ''}`;
       const accountName = pickText();
       const addInfo = pickText();
       const amount = rng() < 0.2 ? 0 : Math.floor(rng() * 1e12) + (rng() < 0.3 ? 0.7 : 0);
-      const url = vietQrUrl(
-        { bin: bankDef.bin, bankName: bankDef.name, accountNumber, accountName },
-        amount,
-        addInfo,
-      );
+      const bank = { bin: bankDef.bin, bankName: bankDef.name, accountNumber, accountName };
       cases++;
-      expect(url).not.toContain(' ');
-      const parsed = new URL(url); // throw tại đây = FAIL
-      expect(parsed.hash).toBe('');
-      expect(parsed.pathname.startsWith(`/image/${bankDef.bin}-`)).toBe(true);
-      expect(parsed.pathname.endsWith('-compact2.png')).toBe(true);
-      expect(parsed.pathname.split('/')).toHaveLength(3); // /image/<file> — ký tự / trong account phải đã encode
-      if (amount > 0) expect(parsed.searchParams.get('amount')).toBe(String(Math.round(amount)));
-      else expect(parsed.searchParams.get('amount')).toBeNull();
-      if (addInfo.trim()) expect(parsed.searchParams.get('addInfo')).toBe(addInfo.trim());
-      if (accountName.trim()) expect(parsed.searchParams.get('accountName')).toBe(accountName.trim());
+      if (!(Number.isInteger(amount) && amount > 0)) {
+        expect(() => buildVietQrPayload(bank, amount, addInfo)).toThrow(RangeError);
+        thrown++;
+        continue;
+      }
+      const payload = buildVietQrPayload(bank, amount, addInfo);
+      expect(payload.startsWith('000201010212')).toBe(true);
+      expect(payload.slice(-4)).toBe(crc16Ccitt(payload.slice(0, -4)));
+      const tlv = parseTlv(payload);
+      expect(tlv.get('53')).toBe('704');
+      expect(tlv.get('58')).toBe('VN');
+      expect(tlv.get('54')).toBe(String(amount));
+      const mai = parseTlv(tlv.get('38')!);
+      expect(mai.get('00')).toBe('A000000727');
+      expect(mai.get('02')).toBe('QRIBFTTA');
+      const bene = parseTlv(mai.get('01')!);
+      expect(bene.get('00')).toBe(bankDef.bin);
+      expect(bene.get('01')).toBe(accountNumber);
+      const expectedInfo = addInfo.trim().slice(0, 50);
+      if (expectedInfo) {
+        const add = parseTlv(tlv.get('62')!);
+        expect(add.get('08')).toBe(expectedInfo);
+      } else {
+        expect(tlv.has('62')).toBe(false);
+      }
     }
     expect(cases).toBe(1_000);
-    console.log(`[W2-E] cases=${cases} seed=${SEED_VIETQR}`);
+    console.log(`[W2-E] cases=${cases} thrown=${thrown} seed=${SEED_VIETQR}`);
   });
 });
 
@@ -790,7 +961,10 @@ describe('W2-G buildSettlementText hậu-sanitize', () => {
           id: `x${k}`,
           amount: 1 + Math.floor(rng() * 5e9),
           payerId: ids[Math.floor(rng() * 50)],
-          participantIds: ids.filter(() => rng() < 0.4).concat(ids[k % 50]).filter((v, i, a) => a.indexOf(v) === i),
+          participantIds: ids
+            .filter(() => rng() < 0.4)
+            .concat(ids[k % 50])
+            .filter((v, i, a) => a.indexOf(v) === i),
         }),
       );
     }

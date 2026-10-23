@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Chia Tiền — dấu chia, bản đơn sắc">
+  <!-- Bản đơn sắc của logo mark v2: dấu chia mực #1C1917, không nền.
+       Dùng trên nền sáng khi không được dùng màu brand (in ấn, footer tài liệu). -->
+  <circle cx="48" cy="26" r="8" fill="#1C1917"/>
+  <rect x="22" y="42" width="52" height="12" rx="6" fill="#1C1917"/>
+  <circle cx="48" cy="70" r="8" fill="#1C1917"/>
+</svg>

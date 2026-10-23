@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Chia Tiền — dấu chia">
-  <!-- Nền hổ phách đậm, bo góc -->
+  <!-- Logo mark v2 (redesign wave) — dựng tay, nguồn sự thật vector.
+       Tiến hoá từ mark v1 (public/products/brand/chiatien-logo.svg):
+       chấm to hơn (r 7.5) và thanh dài hơn để đọc rõ ở 16–24px;
+       tỉ lệ quang học: khoảng trắng trên/dưới thanh bằng nhau. -->
   <rect x="4" y="4" width="88" height="88" rx="22" fill="#B45309"/>
-  <!-- Dấu chia (÷): hai chấm kem và thanh ngang trắng — "chia" theo đúng nghĩa đen -->
-  <circle cx="48" cy="31" r="7" fill="#FAECD7"/>
-  <rect x="27" y="43.5" width="42" height="9" rx="4.5" fill="#FFFFFF"/>
-  <circle cx="48" cy="65" r="7" fill="#FAECD7"/>
+  <circle cx="48" cy="30" r="7.5" fill="#FAECD7"/>
+  <rect x="26" y="43" width="44" height="10" rx="5" fill="#FFFFFF"/>
+  <circle cx="48" cy="66" r="7.5" fill="#FAECD7"/>
 </svg>

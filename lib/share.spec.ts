@@ -1,9 +1,11 @@
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { describe, expect, it } from 'vitest';
 import {
   cloneForImport,
   decodeSessionShare,
   decodeSessionShareWithReport,
   encodeSessionShare,
+  MAX_SHARE_CODE_LENGTH,
 } from './share';
 import { computeBalances, computeShares, sumBalances } from './split';
 import type { Expense, Session } from './types';
@@ -54,11 +56,15 @@ const session: Session = {
 };
 
 describe('share link roundtrip', () => {
-  it('encode -> decode khôi phục nguyên cuộc chia (kể cả tiếng Việt + emoji + bank)', () => {
+  // DATA-04 đổi spec (2026-10-23): bank KHÔNG còn sống sót qua encode→decode
+  // nữa — test cũ khẳng định điều NGƯỢC với DATA-04 nên được viết lại: decode
+  // trả members bằng bản gốc NGOẠI TRỪ bank bị cắt ở cả hai tầng (encode
+  // không đưa bank vào payload; decode sanitize với keepBank=false).
+  it('encode -> decode khôi phục cuộc chia (tiếng Việt + emoji) NGOẠI TRỪ bank bị cắt (DATA-04)', () => {
     const restored = decodeSessionShare(encodeSessionShare(session));
     expect(restored).not.toBeNull();
     expect(restored?.title).toBe(session.title);
-    expect(restored?.members).toEqual(session.members);
+    expect(restored?.members).toEqual(session.members.map((m) => ({ id: m.id, name: m.name })));
     expect(restored?.expenses).toEqual(session.expenses);
   });
 
@@ -256,5 +262,75 @@ describe('sanitize toàn vẹn tiền — dữ liệu bị sửa tay qua link (Q
     expect(report.session).not.toBeNull();
     expect(report.droppedExpenses).toBe(2);
     expect(report.session?.expenses.map((e) => e.id)).toEqual(['good']);
+  });
+});
+
+describe('DATA-04 — bank không bao giờ nằm trong share link', () => {
+  it('(a) payload thô sau encode: v=2, members chỉ còn {id, name}, không key bank/accountNumber/bin/accountName ở bất kỳ đâu, không chứa số tài khoản', () => {
+    const code = encodeSessionShare(session);
+    const json = decompressFromEncodedURIComponent(code);
+    expect(json).not.toBeNull();
+    // Số tài khoản của fixture (0123456789) không được xuất hiện trong payload.
+    expect(json).not.toContain('0123456789');
+    const payload = JSON.parse(json!) as { v: number; s: Session };
+    expect(payload.v).toBe(2);
+    for (const m of payload.s.members) {
+      expect(Object.keys(m).sort()).toEqual(['id', 'name']);
+      expect(m).not.toHaveProperty('bank');
+    }
+    expect(json).not.toContain('"bank"');
+    expect(json).not.toContain('accountNumber');
+    expect(json).not.toContain('accountName');
+    expect(json).not.toContain('"bin"');
+  });
+
+  it('(b) link v1 chứa bank (dựng bằng lz-string): decode cắt bank + strippedBank = true, phần còn lại nguyên vẹn', () => {
+    const v1Code = compressToEncodedURIComponent(JSON.stringify({ v: 1, s: session }));
+    const report = decodeSessionShareWithReport(v1Code);
+    expect(report.session).not.toBeNull();
+    expect(report.strippedBank).toBe(true);
+    expect(report.session?.members).toEqual(
+      session.members.map((m) => ({ id: m.id, name: m.name })),
+    );
+    expect(report.session?.expenses).toEqual(session.expenses);
+  });
+
+  it('(b2) fixture link v1 dạng CHUỖI CỨNG (sinh bằng encoder v1 trước khi nâng v2): decode cắt bank + strippedBank = true', () => {
+    // Chuỗi này được sinh ngày 2026-10-23 bằng encodeSessionShare CỦA V1
+    // (payload {v:1, s} với member m1 có bank 970436 / 0123456789 /
+    // NGUYEN VAN AN) — giữ làm regression fixture cho link cũ đã phát hành.
+    const V1_HARDCODED_CODE =
+      'N4IgbiBcCMA0IGcqgJYBMqILRmlgZigB4AuArgE4CmI8JKJANjZCAGLHnUAEutIAWyoCARlQpJIAbVQZWA6PwB2AQyGYAgkv4iVSgNbIQIlNtYBOAOwAGACwBmAGw69+gHJqWIAGooqJAGMAe1FXfhUA4LIlEjcyUXFMa2gAJntbAFZHSwAOc3DIoOjYz0w3AHEAVQBNAFE3bm8NBuaQAF822FlMARTlUtYAIQAbpQALdoBdeCoiAAcqJQQqSRkQdEwqRToGZkxAIEAlbhJARbwUcIEimKgU6zu7+DmVAE9xAEk5QW2QJ4p6AJQTxiH1WX34vRA00EQTQXioAEcyCpGPwAmQECQQshOiAAO5UFAAczGJEkwBxAWoKhIVDQGhIUGgTLaUMpVGptPpjIeIDIczQHLpDMgt2sHSAA';
+    const report = decodeSessionShareWithReport(V1_HARDCODED_CODE);
+    expect(report.session).not.toBeNull();
+    expect(report.session?.id).toBe('s-v1-fixture');
+    expect(report.strippedBank).toBe(true);
+    expect(report.session?.members).toEqual([
+      { id: 'm1', name: 'An' },
+      { id: 'm2', name: 'Bình' },
+    ]);
+    expect(report.session?.expenses).toHaveLength(1);
+    expect(report.session?.expenses[0].amount).toBe(200_000);
+  });
+
+  it('(c) mã share vượt MAX_SHARE_CODE_LENGTH -> bị từ chối trước khi giải nén (null + session null)', () => {
+    const huge = 'A'.repeat(MAX_SHARE_CODE_LENGTH + 1);
+    expect(decodeSessionShare(huge)).toBeNull();
+    const report = decodeSessionShareWithReport(huge);
+    expect(report.session).toBeNull();
+    expect(report.strippedBank).toBe(false);
+    expect(MAX_SHARE_CODE_LENGTH).toBe(200_000);
+  });
+
+  it('payload v2 bị sửa tay chèn bank -> decode vẫn cắt bank (tầng sanitize), strippedBank = true', () => {
+    const tamperedV2 = compressToEncodedURIComponent(JSON.stringify({ v: 2, s: session }));
+    const report = decodeSessionShareWithReport(tamperedV2);
+    expect(report.strippedBank).toBe(true);
+    expect(report.session?.members.every((m) => m.bank === undefined)).toBe(true);
+  });
+
+  it('phiên bản lạ (v=3) -> null như trước', () => {
+    const v3 = compressToEncodedURIComponent(JSON.stringify({ v: 3, s: session }));
+    expect(decodeSessionShare(v3)).toBeNull();
   });
 });
