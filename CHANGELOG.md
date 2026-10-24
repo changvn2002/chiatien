@@ -3,6 +3,69 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.9.0] — 2026-10-25 — Thiết kế lại «Giấy thật»: phiếu gấp thành vật giấy thật trên tờ sheet có biên
+
+Đợt thiết kế lại toàn diện theo lệnh user 2026-10-24 (hồ sơ:
+~/workspace/mini-apps/chiatien-redesign/, 11 vòng chụp–chấm–sửa;
+panel vòng cuối R11 **PASS 5/5 + §6 5/5 designer-grade, 0 phiếu
+AI-made** — biên bản docs/reviews/v1.9.0-review-record.md).
+
+### Changed
+
+- **Panel quyết toán thành SHEET có biên thật:** nền bàn xám trung
+  tính phía trên, sheet trắng bo góc trên + bóng đổ lên + vành cố
+  định không cuộn; nội dung cuộn bên trong sheet. Toà nhà đọc
+  thành AppBar / bàn xám / sheet trắng / dock ở cả 390 và 1440.
+- **Điểm nghỉ cuộn được bảo chứng:** scroll-snap trên các khối/hàng
+  + neo snap cuối panel — tại mọi điểm nghỉ VÀ ở đáy tuyệt đối của
+  cả 3 luồng (bảng đầy đủ, hoàn tất, nhóm 12) hàng đầu luôn nguyên
+  vẹn: 0 ký tự cắt giữa thân, 0 ghost xuyên lớp (hai dải fade bán
+  trong của các vòng trước đã xoá hẳn).
+- **Dấu mở = một ấn bản dựng nguyên rồi mới xẻ:** hai bản sao của
+  cùng một ấn bản, mỗi bản clip theo đa giác giấy phía nó; khe xé
+  hằng số 4px trên mọi phiếu, tick nối thẳng qua khe. Dấu đóng thu
+  về một họ hình học duy nhất (xoay ±5°, tỉ lệ 0.96–1.04) — biến
+  thiên còn lại chỉ ở mực xốp, như dấu đóng tay thật.
+- **Nắp phiếu mở thành mặt sau của tờ giấy:** trường hạt mịn đếm
+  được thay thớ vẽ tay; ghost in xuyên phân tầng theo mật độ mực
+  thật (tên đậm nhất → avatar chỉ còn vòng + initials, hết đĩa
+  đặc); tông ấm thu về ~11% sát nếp gấp (R11), phần còn lại cùng
+  họ giấy trắng với thân phiếu.
+- **Nhóm đông có tín hiệu đếm người:** chip «+N» (vd «+10») thay
+  chip thứ ba cắt dở — đọc ngay là «còn N người», cuộn cuối hiện
+  trọn mọi thành viên + nút Thêm.
+- **Lớp 1 desktop ôm khít nội dung:** khay co theo số phiếu, hết
+  vùng xám đóng khung trống; footer nằm trong khung hình.
+
+### Fixed
+
+- **Cả 4 MINOR của Panel #07** (đầu vào bắt buộc của đợt):
+  MINOR-1 thẻ hoàn tất làm mới dấu sau khi sửa phiên (phiếu mở tự
+  tái dàn theo `session.updatedAt`, hết mảnh phiếu kẹt); MINOR-2
+  import cùng một link không còn tạo phiên trùng; MINOR-3 toàn bộ
+  thẻ phiếu là vùng chạm mở phiếu; MINOR-4 nội dung phiếu mở phía
+  người nhận về đúng dạng inline §4 («An nhận từ: Chi 240.000 ·
+  Dũng 180.000 · Bình 40.000»).
+- Tem «ĐÃ CHỐT» trên thẻ hoàn tất nằm trọn trong thẻ ở mọi bề
+  rộng (104→96px).
+
+### Design tokens
+
+- 13 hex mới của đợt (họ bàn/sheet + họ giấy phiếu) đăng ký vào
+  `design/tokens.chiatien-v4.json` nhóm `redesign-wave-additions`
+  (class W, có provenance) — `tokens:verify` PASS (62 giá trị);
+  seed V4 #FF5722 và thang V4 giữ nguyên byte-identical.
+
+### Invariants
+
+- `git diff -- lib` = **0 byte** (Test Tắt Game giữ nguyên);
+  payload/schema link chia sẻ không đổi; luật nhãn lớp 1
+  «bản N của link này» giữ nguyên. Suite **252/252**; test duy
+  nhất được sửa trong cả đợt là test khoá định dạng cũ mà Panel
+  #07 MINOR-4 ra lệnh bỏ (R8, parent phê duyệt). Parent chạy lại
+  cổng trên cây phát hành: suite 252/252, typecheck PASS,
+  format:check PASS trên file phát hành, tokens:verify PASS.
+
 ## [1.8.1] — 2026-10-24 — Sửa nóng S-1 của Panel #07: dấu bản lớp 1 hết nói sai giờ chốt
 
 ### Fixed

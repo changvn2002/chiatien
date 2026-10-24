@@ -48,6 +48,46 @@ export function sessionContentKey(session: Session): string {
   return (hash >>> 0).toString(16);
 }
 
+/**
+ * Vân tay NỘI DUNG của một phiên để dedupe khi import link (MINOR-2,
+ * Panel #07): cloneForImport cấp id MỚI cho phiên/thành viên/khoản chi
+ * ở mỗi lần import, nên sessionContentKey (vốn phủ id) không bao giờ
+ * khớp giữa hai lần mở cùng một link. Vân tay này thay mọi id bằng
+ * TÊN của thành viên tương ứng (payer/participants/custom/weights đều
+ * tra theo tên) — hai lần import cùng một link cho cùng một vân tay,
+ * và một phiên đã có trên máy với đúng nội dung đó cũng khớp. Giới
+ * hạn khai thật: hai thành viên trùng tên trong cùng phiên thì các
+ * khoản gắn với họ không phân biệt được ở vân tay này (app vẫn cho
+ * phép trùng tên) — dedupe khi đó có thể gộp nhầm; chấp nhận vì link
+ * trùng hệt là ca phổ biến cần chặn.
+ */
+export function importLinkFingerprint(session: Session): string {
+  const nameById = new Map(session.members.map((m) => [m.id, m.name]));
+  const byName = (rec: Record<string, number>) =>
+    Object.entries(rec)
+      .map(([id, v]) => [nameById.get(id) ?? id, v] as const)
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]));
+  const canonical = JSON.stringify({
+    t: session.title,
+    m: session.members.map((m) => m.name),
+    e: session.expenses.map((e) => ({
+      t: e.title,
+      a: e.amount,
+      p: nameById.get(e.payerId) ?? e.payerId,
+      ps: e.participantIds.map((id) => nameById.get(id) ?? id),
+      mode: e.mode,
+      c: byName(e.custom),
+      w: byName(e.weights),
+    })),
+  });
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < canonical.length; i++) {
+    hash ^= canonical.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 const SEAL_KEY_PREFIX = 'chiatien:phieu-seal:v1:';
 const OPENED_KEY_PREFIX = 'chiatien:phieu-opened:v1:';
 const OFF_KEY = 'chiatien:phieu-off:v1';

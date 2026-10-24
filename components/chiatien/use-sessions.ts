@@ -12,7 +12,12 @@ import {
   trySaveSessions,
 } from '@/lib/storage';
 import type { Session } from '@/lib/types';
-import { ensureImportedSeal, titleForcesStatic, type SealMark } from './phieu';
+import {
+  ensureImportedSeal,
+  importLinkFingerprint,
+  titleForcesStatic,
+  type SealMark,
+} from './phieu';
 
 /**
  * Toàn bộ wiring storage của app — tách khỏi app.tsx theo ARC-11 khoản 2
@@ -76,7 +81,19 @@ export function useSessions() {
     let imported: Session | null = null;
     if (shared) {
       imported = cloneForImport(shared);
-      initial = [imported, ...initial];
+      // MINOR-2 (Panel #07): mở CÙNG một link lần hai không được tạo
+      // phiên trùng. cloneForImport luôn cấp id mới nên dedupe theo
+      // id là vô nghĩa — dedupe theo VÂN TAY NỘI DUNG link
+      // (importLinkFingerprint): đã có phiên trên máy với đúng nội
+      // dung đó thì DÙNG LẠI phiên đó (không prepend bản sao), vẫn đi
+      // qua đúng luồng import (lớp 1 + dấu link) như lần mở đầu.
+      const fingerprint = importLinkFingerprint(imported);
+      const existing = initial.find((s) => importLinkFingerprint(s) === fingerprint);
+      if (existing) {
+        imported = existing;
+      } else {
+        initial = [imported, ...initial];
+      }
       // Xoá hash khỏi thanh địa chỉ để reload không import trùng.
       window.history.replaceState(null, '', window.location.pathname);
     }

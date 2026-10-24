@@ -344,6 +344,199 @@ body {
   animation: ct-phieu-fold 240ms var(--ease-lock) forwards;
 }
 
+/* === HƯỚNG A «GIẤY THẬT» (REDESIGN R2 — mock thắng A + R1-SYNTHESIS) ===
+   Phiếu = tờ giấy thật trên mặt bàn xám trung tính sạch: bóng đổ mềm
+   nhiều lớp bám silhouette (filter drop-shadow — bám cả rìa xé răng
+   cưa ở chân phiếu), hạt giấy SVG rất nhẹ, nếp gấp ĐÚNG 50% là một dải
+   sáng/bóng gradient. Thân phiếu KHÔNG kẻ ngang kiểu vở học sinh
+   (R1-SYNTHESIS mục 4). Seed #FF5722 chỉ ở dấu mực + đoạn kẻ đầu phiếu
+   + cạnh phiếu đang mở như kỷ luật cũ. */
+
+/* Hạt giấy: nhiễu fractal alpha 0.05 (đúng mock A) phủ ::before. */
+.paper-grain {
+  position: relative;
+}
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Bóng phiếu: 3 lớp drop-shadow bám đúng silhouette giấy + rìa xé.
+   R4 (mục 4): mỗi phiếu là một ĐẢO bóng riêng trên mặt bàn — lớp tiếp
+   xúc gần đậm hơn và lớp xa mềm hơn để các phiếu tách hẳn khỏi nhau
+   khi khoảng thở lưới tăng, khay không còn đọc thành băng liền. */
+.slip-shadow {
+  filter: drop-shadow(0 2px 2px rgba(23, 24, 28, 0.13))
+    drop-shadow(0 6px 10px rgba(23, 24, 28, 0.1)) drop-shadow(0 18px 28px rgba(23, 24, 28, 0.12));
+}
+
+/* R6 (mục 3 + 5): .scroll-fade-y ĐÃ XOÁ HẲN. Mask-image trên vùng
+   cuộn panel là gốc của HAI lỗi panel kết tội: (i) nó làm chữ tiền
+   (số dư 40px) tan mờ ngay trên dock — đọc như chữ hiện XUYÊN QUA
+   dock trong mờ; (ii) mask là thuộc tính TẠO CONTAINING BLOCK cho
+   hậu duệ position:fixed, nên Sheet VietQR (render trong
+   SettlementPanel bên trong vùng cuộn) bị kẹt trong vùng cuộn thay
+   vì phủ viewport: panel sheet bị clip bởi overflow của vùng cuộn
+   và đỉnh QR bị chính dải fade 16px ăn mất. Bỏ mask: mép vùng cuộn
+   cắt sắc như mọi vùng cuộn bình thường, dock đặc 100% gánh phần
+   phân tầng, Sheet fixed trở về đúng viewport. */
+
+/* R4 (mục 1): dải chip cuộn ngang (nhóm đông) — mép phải mờ dần báo
+   «còn nữa» có chủ ý thay vì chip bị cắt cụt không tín hiệu. */
+.strip-fade-x {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+}
+
+/* Bóng tờ giấy lớn (thẻ hoàn tất): 5 lớp mềm như mock A --shadow-paper. */
+.sheet-shadow {
+  box-shadow:
+    0 1px 1px rgba(23, 24, 28, 0.05),
+    0 2px 4px rgba(23, 24, 28, 0.05),
+    0 10px 22px rgba(23, 24, 28, 0.08),
+    0 26px 48px rgba(23, 24, 28, 0.09),
+    0 48px 80px rgba(23, 24, 28, 0.05);
+}
+
+/* Nếp gấp tại đúng 50%: dải 38px — bóng gấp đậm nhất ở tâm, vệt sáng
+   ngay dưới tâm như giấy bị gấp (mock A .crease). Chỉ phủ phiếu ĐÓNG.
+   R3: tăng độ đọc ở mobile (panel R2 ghế 3 không thấy nếp gấp): bóng
+   tâm 0.10 -> 0.17, vai bóng 0.055 -> 0.095.
+   R4 (mục 4): PHÂN TÔNG HAI MẶT rõ hơn để nếp gấp thắng đường xé —
+   mặt trên trắng, mặt dưới xám giấy nhẹ, chuyển tông ĐÚNG ở sống gấp
+   50% (xem .slip-face-closed); dải gấp nâu mực hơn ở tâm (0.17 ->
+   0.21) và vệt sáng sống gấp sắc hơn. */
+.slip-crease {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 38px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(23, 24, 28, 0) 0%,
+    rgba(23, 24, 28, 0.12) 38%,
+    rgba(23, 24, 28, 0.21) 50%,
+    rgba(255, 255, 255, 1) 54%,
+    rgba(23, 24, 28, 0.07) 72%,
+    rgba(23, 24, 28, 0) 100%
+  );
+}
+
+/* R4 (mục 4): hai mặt của phiếu ĐÓNG phân tông tại đúng nếp gấp —
+   nửa trên trắng sáng, nửa dưới xám giấy nhẹ; mắt đọc «một tờ gấp
+   đôi» trước khi đọc đường bóng của .slip-crease. */
+.slip-face-closed {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 49.7%, #f2f2f3 50.3%, #f5f5f6 100%);
+}
+
+/* R4 (mục 3): phiếu ĐÃ MỞ — nếp gấp MỞ PHẲNG: mặt trong là MỘT mặt
+   giấy trong liền mạch (tông kem giấy trong khác hẳn hai mặt ngoài),
+   KHÔNG bóng gấp, KHÔNG phân tông hai mặt, KHÔNG dải bóng mép mở
+   (.slip-open-fold của R3 đã xoá — chính nó làm phiếu mở còn đọc như
+   đang gấp). R6 (mục 1): mặt trong nay là phần LIỀN DƯỚI NẮP PHẲNG —
+   cạnh trên của nó là phía còn lại của vết xé tại đường nếp cũ, nơi
+   nửa dưới của dấu xé nằm. */
+.slip-open-surface {
+  background: #fffbf4;
+}
+
+/* R6 (mục 1a): NẮP PHẲNG của phiếu mở = MẶT SAU của nửa trên tờ
+   giấy, TRẢI PHẲNG trên mặt trong (flat-lay nhìn từ trên xuống) —
+   bỏ hẳn rotateX/phối cảnh/bóng đổ của nắp lật R5 (panel R5: khối
+   be trơn đọc như placeholder). Tông kem sâu hơn mặt trong đúng
+   một bậc, hơi sâu lại ở 8% cuối về phía cạnh xé như mép giấy hứng
+   bóng tiếp xúc; cạnh dưới là CẠNH XÉ (clip-path trong slip-card,
+   không hairline thẳng, không box-shadow cạnh — bóng tiếp xúc do
+   dải gradient 18px ở đỉnh mặt trong gánh). */
+/* R7 (mục 2b): shading CONG GIẤY cho nắp — sáng hơn ở cạnh trên
+   (mép giấy xa nếp, hứng sáng), sâu DẦN đều về phía đường nếp ở
+   chân nắp (phần giấy cong xuống + bóng tiếp xúc); bỏ dải sáng
+   ngược ở 92% của bản R6 vốn làm chân nắp đọc phẳng. Bóng inset ở
+   chân nắp do class shadow trên chính phần tử nắp gánh thêm.
+   R8 (việc 5b): tông nắp BỚT ngả vàng/khaki, dịch về họ giấy trắng
+   — mọi điểm dừng nông hơn/trắng hơn bản R7 (#f4edd9→#dbcda6),
+   vẫn sâu dần đều về nếp để đọc cong giấy.
+   R9 (việc 3): panel R8 vẫn phán họ khaki rõ rệt ở điểm sâu
+   #e9dbb6 — kéo hẳn vào HỌ GIẤY TRẮNG của phiếu đóng (#ffffff /
+   #f5f5f6): điểm sâu nhất nay #f2e7cf, mặt sau chỉ ấm hơn mặt
+   trước MỘT HƠI THỞ, vẫn sâu dần đều về nếp để đọc cong giấy. */
+.slip-flap-back {
+  /* R10 (việc 4): độ ấm CHỈ tập trung ở ~20% cuối sát nếp gấp —
+     phần còn lại thuộc họ giấy trắng của phiếu đóng; nắp hết đọc
+     thành «hai loại giấy» ở nếp. */
+  /* R11 (việc 3): ghế 1 R10 vẫn đọc TOÀN MẶT nắp là be/khaki liền
+     ở tỉ lệ thường (4 ghế còn lại ghi NHỎ cùng hướng) — vùng ấm
+     thu còn ~11% CUỐI sát nếp: gần như trắng tuyệt đối tới 89%
+     chiều cao nắp, chỉ dải cuối mới ấm dần tới #f4ead2 ngay tại
+     nếp gấp (bóng tiếp xúc của nếp). */
+  background: linear-gradient(
+    180deg,
+    #fffefb 0%,
+    #fefefd 62%,
+    #fefdf9 89%,
+    #faf3e3 95%,
+    #f4ead2 100%
+  );
+}
+
+/* R10 (việc 4): TRƯỜNG HẠT MỊN của nắp phiếu mở — thay hẳn thớ vẽ
+   tay (SVG path thưa) của R8/R9 mà panel đếm được 0 sợi ở cận 2×.
+   Cùng mẫu data-uri feTurbulence của .paper-grain nhưng hạt mịn
+   hơn (baseFrequency 0.6), alpha 0.12, tile 120×120: một trường
+   hạt phủ đều không hướng, đếm được ở 2× như hạt giấy thật.
+   R11 (việc 3): alpha 0.12 → 0.07 — ở R10 trường hạt chỉ phủ NẮP
+   làm nắp tối hơn thân phiếu nhẵn, đọc thành đường chuyển vật
+   liệu tại nếp; giảm alpha để nắp và thân đọc CÙNG một họ giấy ở
+   tỉ lệ thường, hạt vẫn đếm được ở cận 2× (phương án được chọn
+   sau khi chụp thử render cả hai hướng — xem IMPL-R11-LOG). */
+.slip-flap-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  pointer-events: none;
+}
+
+/* R11 (việc 1): NEO ĐỆM CUỐI của panel sheet (session-settlement-
+   strip.tsx) — thay công thức đệm đáy var(--strip-h) + 24 (hằng
+   191px ở mọi trạng thái panel của R10). Chiều cao neo tính theo
+   % chiều cao hộp nội dung của chính panel (panel pb = 0 nên
+   100% = chiều cao panel − đệm trên 12px): maxScroll của panel
+   do đó luôn bằng (điểm cuối nội dung − một hằng số đuôi) trong
+   MỌI trạng thái, bất kể chiều cao panel là 460 hay 508px:
+   - 278px => maxScroll rơi đúng ĐỈNH HÀNG SỐ DƯ «Chi» (từ đó tới
+     cuối nội dung là 290px bất biến) khi panel KHÔNG có thẻ hoàn
+     tất;
+   - 394px (khi panel chứa [data-completion-card], qua :has) =>
+     maxScroll rơi đúng ĐỈNH HÀNG PHIẾU CUỐI của thẻ (từ đó tới
+     cuối nội dung là 406px bất biến).
+   Điểm dừng đáy tuyệt đối vì vậy là một vị trí snap đã thiết kế
+   trùng biên hàng — 0 ký tự bị cắt giữa thân ở biên trên, không
+   phiếu nào bị chặt đôi; hàng cuối + CTA vẫn nguyên vẹn phía
+   trên dock với đệm thật bằng đúng chiều cao neo (170px không
+   thẻ / 54–102px có thẻ, đo ở pack R11). */
+.sheet-end-spacer {
+  height: max(0px, calc(100% - 278px));
+}
+[data-sheet-panel]:has([data-completion-card]) .sheet-end-spacer {
+  height: max(0px, calc(100% - 394px));
+}
+
+/* R6 (mục 4): .torn-edge (sóng tam giác đều bằng gradient) ĐÃ XOÁ —
+   chân phiếu nay là SVG silhouette xé bất quy tắc theo member.id
+   (component TornEdge trong slip-card.tsx); panel R5 kết tội sóng
+   đều trên mọi phiếu là «tín hiệu xé vé» đồng loạt. */
+
+/* Mặt bàn xám trung tính sạch sau các tờ phiếu (mock A --desk). */
+.desk {
+  background: radial-gradient(1200px 700px at 50% -10%, #f4f4f5 0%, #e9e9ea 55%, #e2e2e3 100%);
+}
+
 /* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
 ::selection {
   background: var(--brand-100);
@@ -354,6 +547,16 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand-900);
   outline-offset: 2px;
+}
+
+/* R7 (mục 4a): ngoại lệ TRUNG TÍNH cho nút «…» của AppBar phiên —
+   panel R6 bắt một vòng focus CAM lạ quanh nút này trên màn
+   static-sensitive (bối cảnh đã triệt cam, vòng cam thành phần tử
+   chói duy nhất còn sót). Vòng focus của riêng nút này về mực
+   trung tính grey-900: vẫn thấy rõ tuyệt đối (16:1 trên trắng),
+   chỉ đổi họ màu. */
+.focus-neutral:focus-visible {
+  outline-color: var(--grey-900);
 }
 
 input,

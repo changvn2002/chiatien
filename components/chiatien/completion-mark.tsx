@@ -175,7 +175,10 @@ export function CompletionMark({ active }: { active: boolean }) {
   if (mode === 'idle') return null;
 
   return (
-    <div data-completion-mark className="flex items-center gap-3">
+    // R3 (mục 5): đệm trên + scroll-margin — dòng «Đã chốt chia» không
+    // bị mép vùng cuộn của panel cắt mất nửa trên khi thẻ hoàn tất
+    // được cuộn tới.
+    <div data-completion-mark className="flex scroll-mt-8 items-center gap-3 pt-1">
       {mode === 'animating' ? (
         <canvas
           ref={canvasRef}

@@ -345,7 +345,12 @@ describe('§9(a)(b)(d) — lớp 1 người nhận', () => {
     expect(onShowFullTable).toHaveBeenCalledTimes(1);
   });
 
-  it('người được nhận: phiếu của An hiện danh sách nhận từ trung tính, không mũi tên nợ', () => {
+  it('người được nhận: phiếu của An hiện chiều nhận INLINE đúng §4 (MINOR-4), không dạng danh sách, không mũi tên nợ', () => {
+    // parent phê duyệt cập nhật đúng test phieu.spec.tsx theo MINOR-4
+    // (R8): bản cũ khoá định dạng DANH SÁCH «Chi: 240.000 ₫»… mà
+    // MINOR-4 của Panel #07 ra lệnh bỏ — nội dung phiếu mở hiện hành
+    // là dạng INLINE đúng §4: «An nhận từ: Chi 240.000 ₫ · Dũng
+    // 180.000 ₫ · Bình 40.000 ₫» (thứ tự giảm dần theo số tiền).
     render(
       <RecipientLayer1
         session={standardSession}
@@ -357,9 +362,14 @@ describe('§9(a)(b)(d) — lớp 1 người nhận', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Phần của An' }));
     const layer = document.querySelector('[data-layer1]');
     expect(layer?.textContent).toContain('An nhận từ:');
-    expect(layer?.textContent).toContain('Chi: 240.000');
-    expect(layer?.textContent).toContain('Dũng: 180.000');
-    expect(layer?.textContent).toContain('Bình: 40.000');
+    // Dạng inline §4: tên người gửi + số tiền, nối nhau bằng « · ».
+    expect(layer?.textContent).toContain('An nhận từ: Chi 240.000');
+    expect(layer?.textContent).toContain('· Dũng 180.000');
+    expect(layer?.textContent).toContain('· Bình 40.000');
+    // Dạng danh sách cũ bị cấm quay lại: không «Tên: số» cho người gửi.
+    expect(layer?.textContent).not.toContain('Chi: 240.000');
+    expect(layer?.textContent).not.toContain('Dũng: 180.000');
+    expect(layer?.textContent).not.toContain('Bình: 40.000');
   });
 });
 

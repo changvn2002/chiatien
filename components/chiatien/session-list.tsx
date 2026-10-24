@@ -38,7 +38,13 @@ export function SessionList({
 
   function handleCreate() {
     const t = title.trim();
-    if (!t) return;
+    if (!t) {
+      // R7 (mục 4b): nút tạo KHÔNG còn trạng thái disabled-xám (xem
+      // khối nút bên dưới) nên bấm lúc chưa có tên phải có hồi đáp:
+      // đưa focus về ô tên thay vì im lặng như nút bị khoá.
+      document.getElementById('new-session')?.focus();
+      return;
+    }
     onCreate(t);
     setTitle('');
   }
@@ -94,11 +100,14 @@ export function SessionList({
                 if (e.key === 'Enter') handleCreate();
               }}
             />
-            <PrimaryButton
-              onClick={handleCreate}
-              disabledReason={!title.trim() ? 'Đặt tên cho cuộc chia để tạo' : undefined}
-              className="w-full"
-            >
+            {/* R7 (mục 4b): nút tạo là NÚT CHÍNH THƯỜNG (brand đậm
+                như mọi PrimaryButton) NGAY CẢ khi ô tên đang trống —
+                bản cũ dùng disabledReason nên ở trạng thái mặc định
+                của home nó render xám deck-sand + dòng lý do, đọc
+                như nút bị khoá (panel R6, home-390). Bỏ hẳn
+                disabledReason ở nút này: chưa có tên thì bấm vào
+                chỉ focus ô tên (handleCreate), không tạo phiên rỗng. */}
+            <PrimaryButton onClick={handleCreate} className="w-full">
               <IconPlus size={16} /> Tạo cuộc chia
             </PrimaryButton>
           </div>

@@ -264,6 +264,36 @@ export function ChiaTienApp() {
         )}
       </main>
 
+      {/* R4 (mục 6): lớp 1 người nhận trên desktop phải KẾT THÚC bằng
+          chân trang chuẩn của app (đường kẻ + dòng đóng mang logo
+          mono) — trang không còn tan vào sa mạc trắng vô chủ sau lưới
+          phiếu. Chỉ dòng đóng chuẩn, không lặp khối FAQ của màn danh
+          sách. main flex-1 đẩy footer xuống đáy khung khi nội dung
+          ngắn. */}
+      {active && layer1Active && loaded && (
+        <footer className="border-t border-line py-6">
+          <p className="flex items-center justify-center gap-2 text-center text-xs text-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo mono ở footer là SVG tĩnh của chính app như logo header (CQ-02) */}
+            <img
+              src="/products/brand/chiatien-logo-mono.svg"
+              alt=""
+              aria-hidden
+              width={16}
+              height={16}
+            />
+            {/* R7 (mục 4c): dòng đóng gói trong span text-balance —
+                bản cũ ở 390px gãy để «Việt.» mồ côi một mình một
+                dòng (zero-slip-open); cân dòng chia chữ thành các
+                dòng tương đương, không đổi nội dung chữ. Ở bề rộng
+                lớn chữ vẫn một dòng như cũ (balance không ép gãy
+                khi đã vừa một dòng). */}
+            <span className="text-balance">
+              Chia Tiền — công cụ chia tiền nhóm miễn phí cho người Việt.
+            </span>
+          </p>
+        </footer>
+      )}
+
       {/* Nội dung giới thiệu/FAQ chỉ ở màn danh sách, dạng accordion đóng mặc
           định — không lặp dưới một cuộc chia đang mở (panel §7.4). */}
       {!active && loaded && (

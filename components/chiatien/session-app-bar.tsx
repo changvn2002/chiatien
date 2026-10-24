@@ -28,7 +28,10 @@ export function SessionAppBar({
   // — logo ÷ KHÔNG lặp ở đây: app-shell header ngay phía trên đã
   // render logo rồi (Finding K, hai logo xếp chồng trong 150px đầu).
   return (
-    <div className="flex h-12 shrink-0 items-center gap-2">
+    // R3 (mục 14): AppBar nổi TRÊN lớp scrim của dải quyết toán mở rộng
+    // (z-10) — tiêu đề phiên giữ mực ink đầy đủ ở mọi màn, không còn
+    // xám mờ như bị vô hiệu hoá ở completion/table/group12.
+    <div className="relative z-20 flex h-12 shrink-0 items-center gap-2">
       {editing ? (
         <input
           aria-label="Tên cuộc chia"
@@ -57,7 +60,10 @@ export function SessionAppBar({
         type="button"
         aria-label="Hành động của cuộc chia"
         onClick={onOpenActions}
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-card"
+        // R7 (mục 4a): vòng focus của nút này TRUNG TÍNH (grey-900,
+        // .focus-neutral trong globals.css) — vòng cam brand-900
+        // quanh «…» bị panel R6 bắt trên màn static-sensitive.
+        className="focus-neutral inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-card"
       >
         <IconMoreHorizontal size={20} aria-hidden />
       </button>

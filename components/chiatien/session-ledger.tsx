@@ -138,7 +138,12 @@ export function SessionLedger({
     ) : null;
 
   const ledger = (
-    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto min-[900px]:flex-none min-[900px]:overflow-visible">
+    // R4 (mục 2): ĐỆM ĐÁY TUYỆT ĐỐI cho vùng cuộn ledger = chiều cao
+    // dải quyết toán dính (--strip-h) + 24px thở — cuộn tới đáy tuyệt
+    // đối, hàng tổng cuối luôn nguyên vẹn phía trên dải dính. Thêm
+    // scrollbar-gutter stable để cột số mép phải không nằm dưới
+    // thanh cuộn overlay (R3 mục 6).
+    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-[calc(var(--strip-h,132px)_+_24px)] [scrollbar-gutter:stable] min-[900px]:flex-none min-[900px]:overflow-visible min-[900px]:pb-0">
       {memberNotice && (
         <p
           role="alert"

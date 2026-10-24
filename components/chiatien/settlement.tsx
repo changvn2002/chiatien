@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, GhostButton, PrimaryButton, copyText } from './ui-bits';
 import { CompletionMark } from './completion-mark';
 import { CompletionCard } from './completion-card';
-import type { SealMark } from './phieu';
+import { titleForcesStatic, type SealMark } from './phieu';
 import { Sheet } from './sheet';
 import { useSettleLock } from './session-view-hooks';
 
@@ -151,6 +151,17 @@ export function SettlementPanel({
     const idx = session.members.findIndex((m) => m.id === id);
     return idx >= 0 ? (colors[idx] ?? 0) : 0;
   };
+  // R3 (mục 13): phiên nhạy cảm dạng tĩnh (giỗ/phúng điếu/thăm bệnh…)
+  // giảm bão hoà + diện tích accent: các nút cam đặc trong panel
+  // (VietQR từng lệnh, nhắn xin QR, Copy/Chia sẻ chính) chuyển xám
+  // đậm trung tính. Chỉ trình diễn, chỉ khi titleForcesStatic khớp —
+  // đúng phạm vi «dạng tĩnh» mà luật nhạy cảm đã khoá.
+  const calmAccent = titleForcesStatic(session.title);
+  // R4 (mục 5): tĩnh nhạy cảm — nút về MỰC ĐẬM ĐẶC (grey-900, tương
+  // phản đủ, không xám nhạt như bị khoá), vẫn 0 cam chói.
+  const calmBtnClass = calmAccent
+    ? 'bg-grey-900 text-white hover:bg-grey-800 active:bg-grey-800'
+    : undefined;
   const totalTransfers = transfers.reduce((s, t) => s + t.amount, 0);
   const totalLocking = useSettleLock(totalTransfers);
   const allSettled = transfers.length === 0 && session.expenses.length > 0;
@@ -259,7 +270,7 @@ export function SettlementPanel({
         </>
       )}
 
-      <div>
+      <div className="snap-start">
         <h2 className="mb-2 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
           Ai trả ai
         </h2>
@@ -305,7 +316,10 @@ export function SettlementPanel({
                       type="button"
                       aria-expanded={openQr === i}
                       onClick={() => setOpenQr(i)}
-                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
+                      className={cn(
+                        'inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600',
+                        calmBtnClass,
+                      )}
                     >
                       <IconQr size={14} /> VietQR
                     </button>
@@ -313,7 +327,11 @@ export function SettlementPanel({
                 </>
               );
               return (
-                <li key={`${t.fromId}-${t.toId}-${i}`} data-transfer-row={`${t.fromId}-${t.toId}`}>
+                <li
+                  key={`${t.fromId}-${t.toId}-${i}`}
+                  data-transfer-row={`${t.fromId}-${t.toId}`}
+                  className="snap-start"
+                >
                   {variant === 'stacked' ? (
                     <div className="min-h-[52px] py-2">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
@@ -340,7 +358,7 @@ export function SettlementPanel({
         {/* Khối thiếu-QR gom theo NGƯỜI NHẬN (D-1): hàng phẳng cùng bảng —
             hairline trên/dưới, không nền, không bo góc, không hộp lồng. */}
         {missingRecipients.map(({ member, count, total }) => (
-          <div key={member.id} className="border-y border-line py-4">
+          <div key={member.id} className="snap-start border-y border-line py-4">
             <p className="text-base font-semibold text-ink">
               Chưa có mã QR trên máy này — {member.name}
             </p>
@@ -355,7 +373,10 @@ export function SettlementPanel({
               <button
                 type="button"
                 onClick={() => handleAsk(member, count, total)}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
+                className={cn(
+                  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600',
+                  calmBtnClass,
+                )}
               >
                 {askedId === member.id ? <IconCheck size={15} /> : <IconLink size={15} />}
                 Nhắn xin QR của {member.name}
@@ -389,7 +410,7 @@ export function SettlementPanel({
         ))}
       </div>
 
-      <div>
+      <div className="snap-start">
         <h2 className="mb-1 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
           Số dư từng người
         </h2>
@@ -401,7 +422,7 @@ export function SettlementPanel({
             return (
               <li
                 key={m.id}
-                className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-2"
+                className="grid min-h-[52px] snap-start grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-2"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={28} />
@@ -510,8 +531,11 @@ export function SettlementPanel({
           vượt panel, nút phụ wrap xuống dòng riêng (flex-wrap sẵn có)
           thay vì chữ trong nút wrap. Nhãn giữ nguyên văn bản đã khoá. */}
       {allSettled ? (
-        <div className="flex flex-wrap gap-2">
-          <PrimaryButton onClick={handleShare} className="flex-1 whitespace-nowrap">
+        <div className="flex snap-start flex-wrap gap-2">
+          <PrimaryButton
+            onClick={handleShare}
+            className={cn('flex-1 whitespace-nowrap', calmBtnClass)}
+          >
             <IconLink size={16} /> Chia sẻ link
           </PrimaryButton>
           <GhostButton onClick={onCopy} className="whitespace-nowrap">
@@ -520,8 +544,8 @@ export function SettlementPanel({
           </GhostButton>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          <PrimaryButton onClick={onCopy} className="flex-1 whitespace-nowrap">
+        <div className="flex snap-start flex-wrap gap-2">
+          <PrimaryButton onClick={onCopy} className={cn('flex-1 whitespace-nowrap', calmBtnClass)}>
             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
             {copied ? 'Đã copy!' : 'Copy tóm tắt'}
           </PrimaryButton>

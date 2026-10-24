@@ -347,7 +347,12 @@ export function StatusLine({ status, className }: { status: OnlineStatus; classN
     <p
       role="status"
       aria-live="polite"
-      className={cn('flex items-center gap-1.5 text-xs font-medium text-ink-2', className)}
+      // R8 (việc 1): microtext trạng thái nâng tương phản lên
+      // grey-700 (#616161, ~6:1 trên trắng) thay ink-2 #757575 —
+      // panel R7 bắt microtext dock xám nhạt va chạm thị giác với
+      // dòng nội dung phía trên; StatusLine là microtext ở MỌI bề
+      // mặt nó sống (dock, chân cột desktop, home) nên nâng tại đây.
+      className={cn('flex items-center gap-1.5 text-xs font-medium text-grey-700', className)}
     >
       {status === 'offline' ? (
         <>

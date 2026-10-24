@@ -18,6 +18,7 @@ import {
   previewSeal,
   rememberPhieuOff,
   sealSession,
+  sessionContentKey,
   titleForcesStatic,
   type SealMark,
 } from './phieu';
@@ -85,6 +86,19 @@ export function SessionView({
   const [slipsOn, setSlipsOn] = useState(false);
   // Dấu bản local theo sessionId (§1.7) — không vào payload.
   const [sealState, setSealState] = useState<SealMark | null>(() => loadSeal(session.id));
+  // MINOR-1 (Panel #07): sealState chỉ nạp một lần lúc mở phiên — sau
+  // khi SỬA phiên, thẻ hoàn tất còn đang hiện sẽ kẹp dấu CŨ (bản/giờ
+  // của nội dung trước) cạnh TỔNG MỚI. Dấu hiển thị phải suy lại từ
+  // vân tay nội dung HIỆN TẠI: vân tay khớp -> giữ nguyên dấu; lệch
+  // -> bản xem trước (previewSeal: bản N+1 + giờ hiện tại + vân tay
+  // mới, KHÔNG ghi local — chỉ hành động chốt/copy thật mới persist,
+  // và khi đó candidate tính ra đúng cùng bản N+1 này). Sửa ngược nội
+  // dung về như cũ -> vân tay khớp lại -> dấu cũ trở lại đúng nghĩa.
+  const displaySeal = useMemo<SealMark | null>(() => {
+    if (!sealState) return null;
+    if (sealState.contentKey === sessionContentKey(session)) return sealState;
+    return previewSeal(session, Date.now());
+  }, [sealState, session]);
   // Text mặc định vừa thử copy — nguồn cho ô copy thủ công khi thất bại.
   const [lastSummaryText, setLastSummaryText] = useState('');
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(false);
@@ -326,7 +340,7 @@ export function SessionView({
     onCopy: handleCopySettlement,
     onShare: openShare,
     slipsEnabled,
-    seal: sealState,
+    seal: displaySeal,
     fallbackCopyText: lastSummaryText || undefined,
     qrRequest,
     onEditMember: (m: Member, opts?: { focusBank?: boolean }) =>
@@ -338,10 +352,13 @@ export function SessionView({
       ref={rootRef}
       className="relative flex h-[calc(100dvh-104px)] min-w-0 flex-col overflow-x-clip min-[900px]:h-auto min-[900px]:min-h-0"
     >
-      {/* Scrim paper 60% trên ledger khi dải mở rộng (mobile). */}
-      {expanded && (
-        <div aria-hidden className="absolute inset-0 z-10 bg-paper/60 min-[900px]:hidden" />
-      )}
+      {/* R5 (mục 3): KHÔNG còn scrim phủ workspace khi panel mở rộng.
+          Lớp sương paper/60 của R2–R4 phủ mờ hàng ledger dưới dải
+          thành viên ở mọi màn đã-chốt (panel R4: «lớp sương đông
+          cứng», 4/5 ghế) — nay ledger BIẾN MẤT hoàn toàn ở mobile khi
+          đã-chốt (xem khối lưới bên dưới), nên không còn nội dung nào
+          để phủ sương. R6 (mục 3): fade trong panel (.scroll-fade-y)
+          cũng đã XOÁ — dock đặc hoàn toàn, mép vùng cuộn cắt sắc. */}
 
       <SessionAppBar
         title={session.title}
@@ -353,7 +370,31 @@ export function SessionView({
         onOpenActions={() => setSessionActionOpen(true)}
       />
 
-      <div className="grid min-h-0 min-w-0 flex-1 items-start min-[900px]:grid-cols-[minmax(0,1fr)_288px] min-[900px]:gap-8 lg:grid-cols-[minmax(0,640px)_320px] xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12">
+      {/* R3 (mục 1): khi lớp phiếu BẬT, trạng thái đã-chốt ở ≥1024px
+          dùng BỀ RỘNG NỘI DUNG CHÍNH — lưới bỏ cột panel 320/360px,
+          cột quyết toán xuống dưới ledger ở bề rộng đầy đủ (cap 920px
+          căn giữa ở aside) để lưới phiếu có tỉ lệ giấy tự nhiên và
+          trang cuộn thay cho thanh cuộn nội bộ trong khay phiếu.
+          Lớp phiếu TẮT -> lưới desktop cũ nguyên vẹn. */}
+      {/* R4 (mục 1 — GỐC RỄ lỗi vỡ dải thành viên): lưới workspace có
+          SÀN chiều cao 152px (dải thành viên 104px khi wrap 2 hàng +
+          48px ledger ló) và KHÔNG bao giờ bị dải quyết toán ép về 0 —
+          xem session-settlement-strip: section chuyển sang co được
+          (shrink + min-h-0), panel cuộn nội bộ thay vì section phình
+          quá chiều cao gốc rồi sơn đè cột trái. */}
+      {/* R5 (mục 3): ở trạng thái ĐÃ-CHỐT (panel mobile mở rộng),
+          lưới workspace trên mobile CO LẠI vừa dải thành viên
+          (bỏ sàn 152px + flex-1 ở <900px) — panel bắt đầu NGAY dưới
+          dải thành viên, ledger đã ẩn hoàn toàn (xem bọc ledger ở
+          dưới). Desktop ≥900px giữ nguyên hình học cũ. */}
+      <div
+        className={
+          (slipsEnabled
+            ? 'grid min-h-[152px] min-w-0 flex-1 items-start min-[900px]:grid-cols-[minmax(0,1fr)_288px] min-[900px]:gap-8 min-[1024px]:grid-cols-[minmax(0,1fr)]'
+            : 'grid min-h-[152px] min-w-0 flex-1 items-start min-[900px]:grid-cols-[minmax(0,1fr)_288px] min-[900px]:gap-8 lg:grid-cols-[minmax(0,640px)_320px] xl:grid-cols-[minmax(0,720px)_360px] xl:gap-12') +
+          (expanded ? ' max-[899px]:min-h-0 max-[899px]:flex-none' : '')
+        }
+      >
         <div className="flex min-h-0 min-w-0 flex-col self-stretch lg:self-auto">
           {/* Command Bar desktop */}
           <div className="hidden h-[52px] shrink-0 items-center gap-2 min-[900px]:flex">
@@ -397,28 +438,46 @@ export function SessionView({
             onOpenMember={openMember}
             onAddMember={addMember}
           />
-          <SessionLedger
-            session={session}
-            nameOf={nameOf}
-            total={total}
-            memberNotice={memberNotice}
-            expandedExpenseId={expandedExpenseId}
-            onFocusExpense={setFocusedExpenseId}
-            onOpenExpenseAction={setExpenseAction}
-            onAddMember={addMember}
-            onAddExpense={addExpense}
-            onTotalVisibility={handleTotalVisibility}
-            allSettled={allSettled}
-          />
+          {/* R5 (mục 3): ĐÃ-CHỐT (panel mobile mở rộng) -> ledger
+              biến mất HOÀN TOÀN trên mobile (không lát cắt, không
+              scrim, không vệt xám mép phải, không gạch lơ lửng của
+              hàng tổng): vùng workspace phía trên panel chỉ còn dải
+              thành viên. `hidden` ở <900px, `contents` từ 900px —
+              desktop giữ ledger nguyên vẹn như cũ (panel desktop là
+              cột riêng, không có sương nào ở đó). Chưa chốt
+              (expanded=false) -> `contents` ở mọi bề rộng: workspace
+              y hệt trước R5. */}
+          <div className={expanded ? 'hidden min-[900px]:contents' : 'contents'}>
+            <SessionLedger
+              session={session}
+              nameOf={nameOf}
+              total={total}
+              memberNotice={memberNotice}
+              expandedExpenseId={expandedExpenseId}
+              onFocusExpense={setFocusedExpenseId}
+              onOpenExpenseAction={setExpenseAction}
+              onAddMember={addMember}
+              onAddExpense={addExpense}
+              onTotalVisibility={handleTotalVisibility}
+              allSettled={allSettled}
+            />
+          </div>
         </div>
 
-        {/* Cột quyết toán desktop — cùng SettlementPanel, biến thể stacked. */}
+        {/* Cột quyết toán desktop — cùng SettlementPanel, biến thể stacked.
+            R3 (mục 1): lớp phiếu bật + ≥1024px -> aside rời cột hẹp,
+            nằm tĩnh dưới ledger, cap 920px căn giữa (xem lưới ở trên);
+            panel chuyển biến thể row cho vừa bề rộng mới. */}
         <aside
           aria-label="Quyết toán"
-          className="sticky top-6 hidden border-l border-line-strong pl-6 min-[900px]:block"
+          className={
+            slipsEnabled
+              ? 'sticky top-6 hidden border-l border-line-strong pl-6 min-[900px]:block min-[1024px]:static min-[1024px]:mx-auto min-[1024px]:w-full min-[1024px]:max-w-[920px] min-[1024px]:border-t min-[1024px]:border-l-0 min-[1024px]:pt-6 min-[1024px]:pl-0'
+              : 'sticky top-6 hidden border-l border-line-strong pl-6 min-[900px]:block'
+          }
         >
           <h2 className="mb-3 font-display text-[25px] font-extrabold text-ink">Quyết toán</h2>
-          <SettlementPanel {...panelProps} variant="stacked" />
+          <SettlementPanel {...panelProps} variant={slipsEnabled ? 'row' : 'stacked'} />
           <StatusLine status={online} className="mt-4" />
         </aside>
       </div>
