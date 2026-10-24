@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { IconX } from './icons';
 import { cn } from '@/lib/utils';
 import { GhostButton } from './ui-bits';
@@ -289,6 +290,18 @@ export function Sheet({
      về trạng thái entering. */
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
+  // Portal (sửa TC6, v1.9.1): Sheet render qua portal ra document.body
+  // để thoát mọi stacking context của cây gọi (aside sticky desktop /
+  // section z-20 của Settlement Strip mobile) — các context đó từng
+  // giam z-50 của lớp phủ DƯỚI dải thành viên z-30, làm chip thành
+  // viên vẽ đè lên đầu sheet VietQR trên live v1.9.0. portalReady đọc
+  // qua useSyncExternalStore (server snapshot = false) để không
+  // render portal trước khi có document ở client.
+  const portalReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const mountedRef = useRef(open);
   const closeTimerRef = useRef<number | undefined>(undefined);
   // Đồng bộ trạng thái mount/closing với chuyển `open` + timer 125ms là
@@ -405,19 +418,20 @@ export function Sheet({
     };
   }, [open]);
 
-  if (!mounted) return null;
+  if (!mounted || !portalReady) return null;
 
-  return (
+  return createPortal(
     // Finding E (Panel #03): đáy của lớp phủ dừng ở đỉnh Settlement
     // Strip thay vì phủ kín màn hình — session-view xuất bản biến
     // --strip-h trên gốc Màn B = khoảng đáy viewport phải chừa (từ
     // đỉnh dock của Strip — StatusLine + tóm tắt + Action Deck — tới
     // đáy viewport, ĐÃ tính phần khung app-shell dưới gốc Màn B);
-    // Sheet là hậu duệ trong cùng cây DOM nên kế thừa được biến đó;
-    // ngoài Màn B (không có Strip) biến vắng mặt và fallback 0px giữ
-    // nguyên hành vi phủ đầy. Nhờ vậy «Settlement in Sight» đứng cả
-    // khi sheet mở: Strip vẫn nhìn thấy nguyên vẹn bên dưới sheet
-    // (điều kiện chấm lại §9.7 của Panel #03).
+    // biến được xuất bản ĐỒNG THỜI lên documentElement nên Sheet vẫn
+    // kế thừa được dù render qua portal (v1.9.1); ngoài Màn B (không
+    // có Strip) biến vắng mặt và fallback 0px giữ nguyên hành vi phủ
+    // đầy. Nhờ vậy «Settlement in Sight» đứng cả khi sheet mở: Strip
+    // vẫn nhìn thấy nguyên vẹn bên dưới sheet (điều kiện chấm lại
+    // §9.7 của Panel #03).
     //
     // D4-CT-5 (phát hiện thêm của Verifier B, sửa W3): trần chiều cao
     // của panel là min(92dvh, 100%) — 100% là chiều cao VÙNG CHỨA
@@ -468,7 +482,8 @@ export function Sheet({
         </div>
         <div className="px-4 pb-5 sm:px-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

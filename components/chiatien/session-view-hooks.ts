@@ -152,6 +152,11 @@ export function useStripHeightPublisher(
       if (next === lastPublished) return;
       lastPublished = next;
       root.style.setProperty('--strip-h', next);
+      // v1.9.1 (TC6): Sheet render qua portal ra document.body nên
+      // không còn kế thừa biến từ gốc Màn B — xuất bản đồng thời lên
+      // documentElement để sheet qua portal vẫn neo đúng đáy; cleanup
+      // của effect gỡ biến khỏi documentElement khi rời Màn B.
+      document.documentElement.style.setProperty('--strip-h', next);
     };
     publish();
     // Section đổi chiều cao khi: panel mở rộng/thu gọn, deckNotice
@@ -179,6 +184,10 @@ export function useStripHeightPublisher(
     const mo =
       typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => publish());
     if (mo) mo.observe(root, { childList: true, subtree: true });
+    // v1.9.1: sheet qua portal mount thẳng vào body (ngoài cây gốc)
+    // — quan sát thêm childList của body để nhịp publish lúc sheet
+    // mở vẫn bắn như trước.
+    if (mo && document.body) mo.observe(document.body, { childList: true });
     window.addEventListener('resize', publish);
     window.visualViewport?.addEventListener('resize', publish);
     const raf = requestAnimationFrame(publish);
@@ -187,6 +196,7 @@ export function useStripHeightPublisher(
     return () => {
       observer?.disconnect();
       mo?.disconnect();
+      document.documentElement.style.removeProperty('--strip-h');
       window.removeEventListener('resize', publish);
       window.visualViewport?.removeEventListener('resize', publish);
       cancelAnimationFrame(raf);

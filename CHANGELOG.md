@@ -3,6 +3,31 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.9.1] — 2026-10-25 — Sửa nóng TC6: sheet modal không còn bị dải thành viên vẽ đè
+
+### Fixed
+
+- **Sheet bị dải thành viên che đầu (TC6 — phát hiện bởi đợt
+  chụp pack live v1.9.0, Checker A):** trên desktop, chip thành
+  viên cuối + nút «+ Thêm» vẽ ĐÈ lên đầu sheet VietQR và scrim
+  không làm mờ được dải thành viên — tiêu đề sheet không đọc
+  trọn. Gốc rễ: sheet VietQR render bên trong SettlementPanel,
+  mà panel nằm trong các stacking context đứng dưới dải thành
+  viên z-30 (aside `sticky` ở desktop; section z-20 của
+  Settlement Strip ở mobile) nên z-50 của lớp phủ bị giam dưới
+  z-30. Mọi sheet khác (render ở gốc SessionView) không dính.
+  Sửa: **Sheet render qua portal ra `document.body`** (mọi
+  sheet, gồm ConfirmDialog, đều thoát context của cây gọi);
+  biến `--strip-h` được xuất bản đồng thời lên `documentElement`
+  để sheet qua portal vẫn neo đúng đáy theo Finding E và được
+  gỡ khi rời Màn B. Hành vi còn lại (focus trap, exit 125ms,
+  trả focus) giữ nguyên — suite 252/252.
+
+### Invariants
+
+- `git diff -- lib` = 0 byte. Cổng parent: suite 252/252,
+  typecheck/lint/format/tokens:verify PASS, build PASS.
+
 ## [1.9.0] — 2026-10-25 — Thiết kế lại «Giấy thật»: phiếu gấp thành vật giấy thật trên tờ sheet có biên
 
 Đợt thiết kế lại toàn diện theo lệnh user 2026-10-24 (hồ sơ:
