@@ -126,6 +126,34 @@ describe('flow lõi ở tầng component', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('MemberEditor (Panel #05 F-R5-2): trường số tài khoản CÓ lỗi → aria-invalid="true" + aria-describedby trỏ đúng id của phần tử lỗi; KHÔNG lỗi → cả hai vắng mặt', () => {
+    const onSave = vi.fn();
+    render(<MemberEditor onSave={onSave} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Tên thành viên'), { target: { value: 'Chi' } });
+    fireEvent.click(screen.getByLabelText(/Lưu tài khoản trên máy này/));
+    const input = screen.getByLabelText('Số tài khoản') as HTMLInputElement;
+    expect(input.id).toBe('member-account');
+
+    // Trạng thái CÓ lỗi («abc» — đúng ca panel đo trên live):
+    fireEvent.change(input, { target: { value: 'abc' } });
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    const describedby = input.getAttribute('aria-describedby');
+    expect(describedby).toBe('member-account-error');
+    const target = document.getElementById(describedby!);
+    expect(target).toBeTruthy();
+    expect(target!.getAttribute('role')).toBe('alert');
+    expect(target!.textContent).toBe(screen.getByRole('alert').textContent);
+    expect(target!.textContent).toContain('quá ngắn');
+
+    // Trạng thái KHÔNG lỗi (số tài khoản hợp lệ): cả hai thuộc tính
+    // vắng mặt và không còn phần tử lỗi để trỏ tới.
+    fireEvent.change(input, { target: { value: '0123456789' } });
+    expect(input.getAttribute('aria-invalid')).not.toBe('true');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    expect(input.getAttribute('aria-describedby')).toBeNull();
+    expect(document.getElementById('member-account-error')).toBeNull();
+  });
+
   it('MemberEditor (D-3): tên trùng sau chuẩn hoá -> lỗi tại trường nguyên văn + đường mở thành viên đã có', () => {
     const onSave = vi.fn();
     const onOpenExisting = vi.fn();

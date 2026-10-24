@@ -289,7 +289,11 @@ export function SettlementPanel({
             <p className="text-sm font-semibold text-ink">
               Chưa có mã QR trên máy này — {member.name}
             </p>
-            <p className="mt-1 text-sm leading-relaxed text-ink-2">
+            {/* Panel #05 R2-F1 (MINOR): text-wrap: pretty (text-pretty)
+                chống từ «này.» mồ côi ở dòng cuối — Impeccable URL-mode
+                đo 2 vị trí (8%/9%) trên đúng đoạn giải thích này. Chỉ áp
+                cho đoạn này, không áp tràn lan. */}
+            <p className="mt-1 text-sm leading-relaxed text-pretty text-ink-2">
               {count} lệnh chuyển (tổng {formatVNDDisplay(total)}) đang chờ mã QR này.
             </p>
             <div className="mt-2 grid gap-2">

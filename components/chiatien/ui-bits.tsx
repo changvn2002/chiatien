@@ -1,44 +1,95 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
-import { IDENTITY_PALETTE, initialsOf } from '@/lib/identity';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { createAvatar } from '@dicebear/core';
+import { initials } from '@dicebear/collection';
+import { IDENTITY_PALETTE, memberNameKey, normalizeMemberName } from '@/lib/identity';
 import { cn } from '@/lib/utils';
 import { IconWifiOff } from './icons';
 
 /* ------------------------------------------------------------------ */
-/* Avatar REDESIGN-V3 — cơ chế đĩa + initials + viền (LK-15/16/17).     */
+/* Avatar DiceBear — style `initials`, sinh 100% tại client (offline), */
+/* KHÔI PHỤC theo lệnh override của user 2026-10-24 (luật thường trực: */
+/* avatar mặc định ở mọi project dùng thư viện DiceBear — @dicebear/   */
+/* core + @dicebear/collection, seed tất định, KHÔNG qua HTTP API).    */
+/* Đợt V3 từng gỡ DiceBear thay bằng SVG initials nội bộ (LK-16) — cơ  */
+/* chế đó nay bị override; renderer nội bộ đã gỡ hẳn, không dead code. */
 /*                                                                     */
-/* DiceBear và nền avatar đặc ĐÃ CHẾT HẲN (LK-16): render là SVG       */
-/* inline tự sinh — đĩa tròn fill neutral-50 #FAF3F1 CHUNG cho mọi     */
-/* thành viên (đĩa không mang identity, ĐÓNG BĂNG), viền solid màu ô   */
-/* identity, initials (initialsOf của lib/identity.ts) Inter 600 mang  */
-/* màu ô. Màu vẫn được gán ở tầng dữ liệu (assignIdentityColors —       */
-/* QUYẾT ĐỊNH M-2: seed chỉ-tên + thứ tự chuẩn); component CHỈ nhận    */
-/* colorIndex đã gán sẵn, không tự chọn màu.                           */
+/* BẤT BIẾN M-2 (QUYẾT ĐỊNH M-2 của lib/identity.ts, Panel #04 từng    */
+/* bắt lỗi này): màu của một người CHỈ phụ thuộc nameKey — không phụ  */
+/* thuộc thứ tự thành viên, không đổi giữa các phiên. Vì vậy:          */
+/* - `colorIndex` vẫn là màu ĐÃ được gán ở tầng dữ liệu                */
+/*   (assignIdentityColors) và component truyền vào DiceBear đúng MỘT */
+/*   phần tử backgroundColor = hex ô đó — DiceBear KHÔNG tự chọn màu  */
+/*   theo seed từ cả palette (mảng 1 phần tử thì prng.pick tất định   */
+/*   bất kể seed).                                                     */
+/* - seed truyền vào DiceBear = memberNameKey(name) (tên chuẩn hoá,   */
+/*   hạ chữ thường) — tất định theo tên, không theo id/thứ tự.         */
 /*                                                                     */
-/* Tầng cỡ khoá (INTERFACE-SPEC §4): đĩa 24 → initials 10px, viền       */
-/* 1,5px; đĩa 28 → 11px, viền 2px; đĩa 32 → 12px, viền 2px. Prop       */
-/* `size` ánh xạ về tầng gần nhất không vượt trần 32 (22→24, 36→32).   */
-/* Tĩnh tuyệt đối (LK-17/C8): 0 animation/transition trên avatar.      */
-/* aria-hidden ở CẢ span bọc lẫn <svg> gốc (Panel #04 F-R2-02 giữ).    */
+/* Glyph: getInitials của @dicebear/initials lấy chữ đầu của từ đầu +  */
+/* từ cuối (giữ dấu tiếng Việt, viết hoa) — khớp initialsOf với tên    */
+/* nhiều từ («Nguyễn Văn An» → NA, «Đức Anh» → ĐA). CHÊNH LỆCH đã đo:  */
+/* tên MỘT từ thì DiceBear mặc định lấy 2 ký tự đầu («Bình» → BÌ) còn  */
+/* initialsOf chỉ lấy 1 («B») — khử bằng option `chars: 1` khi tên     */
+/* chuẩn hoá có đúng 1 từ, để glyph luôn bằng initialsOf(name).         */
+/*                                                                     */
+/* Render bằng SVG INLINE trong DOM (createAvatar(...).toString() qua */
+/* dangerouslySetInnerHTML), KHÔNG <img>/data URI/HTTP: SVG inline kế  */
+/* thừa webfont Inter 600 của trang. Tĩnh tuyệt đối: 0 animation/      */
+/* transition trên avatar. aria-hidden ở CẢ span bọc lẫn <svg> gốc     */
+/* (Panel #04 F-R2-02 giữ).                                            */
 /* ------------------------------------------------------------------ */
 
-const AVATAR_TIERS = [
-  { size: 24, fontSize: 10, strokeWidth: 1.5 },
-  { size: 28, fontSize: 11, strokeWidth: 2 },
-  { size: 32, fontSize: 12, strokeWidth: 2 },
-] as const;
+const avatarSvgCache = new Map<string, string>();
 
-function avatarTier(size: number) {
-  if (size <= 26) return AVATAR_TIERS[0];
-  if (size <= 30) return AVATAR_TIERS[1];
-  return AVATAR_TIERS[2];
+function avatarSvg(name: string, colorIndex: number): string {
+  const paletteSize = IDENTITY_PALETTE.length;
+  // Guard runtime như cơ chế cũ: colorIndex lạ/undefined rơi về màu đầu
+  // palette thay vì làm sập màn hình.
+  const safeIndex = Number.isFinite(colorIndex) ? Math.trunc(colorIndex) : 0;
+  const idx = ((safeIndex % paletteSize) + paletteSize) % paletteSize;
+  const nameKey = memberNameKey(name);
+  const key = `${nameKey}|${idx}`;
+  const cached = avatarSvgCache.get(key);
+  if (cached) return cached;
+  const wordCount = normalizeMemberName(name).split(' ').filter(Boolean).length;
+  const rawSvg = createAvatar(initials, {
+    seed: nameKey,
+    // IDENTITY_PALETTE giữ dạng '#RRGGBB'; schema DiceBear cần hex không '#'.
+    // Mảng ĐÚNG 1 phần tử = ô M-2 đã gán cho người này (bất biến M-2).
+    backgroundColor: [IDENTITY_PALETTE[idx].replace('#', '')],
+    textColor: ['ffffff'],
+    fontFamily: ['Inter', 'sans-serif'],
+    fontWeight: 600,
+    fontSize: 46,
+    // Tên một từ: DiceBear mặc định lấy 2 ký tự đầu — ép về 1 cho khớp
+    // initialsOf (xem ghi chú glyph ở đầu khối).
+    ...(wordCount === 1 ? { chars: 1 } : {}),
+  }).toString();
+  // Panel #03 (MINOR): DiceBear nhúng một khối <metadata> RDF dài 688 ký
+  // tự (dc:title/dc:creator/dc:rights — chứa chuỗi "DiceBear" nhiều lần)
+  // vào đầu mọi SVG. SVG được inject INLINE nên khối đó lọt vào
+  // textContent của span avatar và nhiễm accessible name của mọi nút
+  // chứa avatar (nút thành viên, hàng quyết toán…). Lọc bỏ CHỈ khối
+  // <metadata>…</metadata> trước khi cache/inject — hình, glyph chữ viết
+  // tắt và màu nền nằm NGOÀI khối đó nên giữ nguyên từng byte.
+  // Panel #04 (F-R2-02, MINOR): gắn aria-hidden="true" vào thẻ <svg> GỐC
+  // (chỉ lần xuất hiện đầu tiên — mọi byte hình/glyph/màu còn lại giữ
+  // nguyên): span bọc ngoài đã aria-hidden nhưng screen reader vẫn có
+  // thể chạm tới cây SVG con; icon trang trí phải ẩn ở cả hai tầng.
+  const svg = rawSvg
+    .replace(/<metadata[\s\S]*?<\/metadata>/, '')
+    .replace(/<svg/, '<svg aria-hidden="true"');
+  avatarSvgCache.set(key, svg);
+  return svg;
 }
 
 /**
- * Avatar đĩa + initials + viền — SVG inline sinh tại client, không gọi
- * mạng, không thư viện avatar. `colorIndex` là chỉ số palette danh tính
- * ĐÃ được gán ở tầng dữ liệu (assignIdentityColors ở lib/identity.ts).
+ * Avatar tròn DiceBear initials — SVG inline sinh tại client, không gọi
+ * mạng (không api.dicebear.com, không fetch ảnh). `colorIndex` là chỉ
+ * số palette danh tính ĐÃ được gán ở tầng dữ liệu (assignIdentityColors
+ * ở lib/identity.ts) cho vị trí của thành viên trong cuộc chia;
+ * component không tự suy màu từ id hay để DiceBear chọn màu theo seed.
  */
 export function Avatar({
   name,
@@ -49,49 +100,14 @@ export function Avatar({
   colorIndex: number;
   size?: number;
 }) {
-  const paletteSize = IDENTITY_PALETTE.length;
-  // Guard runtime như cơ chế cũ: colorIndex lạ/undefined rơi về màu đầu
-  // palette thay vì làm sập màn hình.
-  const safeIndex = Number.isFinite(colorIndex) ? Math.trunc(colorIndex) : 0;
-  const idx = ((safeIndex % paletteSize) + paletteSize) % paletteSize;
-  const hex = IDENTITY_PALETTE[idx];
-  const tier = avatarTier(size);
-  const center = tier.size / 2;
+  const svg = useMemo(() => avatarSvg(name, colorIndex), [name, colorIndex]);
   return (
     <span
       aria-hidden
-      className="inline-flex shrink-0"
-      style={{ width: tier.size, height: tier.size }}
-    >
-      <svg
-        aria-hidden="true"
-        width={tier.size}
-        height={tier.size}
-        viewBox={`0 0 ${tier.size} ${tier.size}`}
-        className="block"
-      >
-        <circle
-          cx={center}
-          cy={center}
-          r={center - tier.strokeWidth / 2}
-          fill="#FAF3F1"
-          stroke={hex}
-          strokeWidth={tier.strokeWidth}
-        />
-        <text
-          x={center}
-          y={center}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontFamily="Inter, sans-serif"
-          fontWeight={600}
-          fontSize={tier.fontSize}
-          fill={hex}
-        >
-          {initialsOf(name)}
-        </text>
-      </svg>
-    </span>
+      className="inline-flex shrink-0 overflow-hidden rounded-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+      style={{ width: size, height: size }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
 

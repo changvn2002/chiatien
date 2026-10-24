@@ -296,6 +296,12 @@ export function MemberEditor({
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
                 onBlur={() => setAcctBlurred(true)}
+                // Panel #05 F-R5-2 (MINOR): nối dây chương trình trường ↔
+                // lỗi — khi lỗi hiện, input mang aria-invalid="true" và
+                // aria-describedby trỏ đúng id của <p role="alert"> lỗi
+                // bên dưới; khi không lỗi, cả hai thuộc tính đều vắng mặt.
+                aria-invalid={showAcctError && acctError ? true : undefined}
+                aria-describedby={showAcctError && acctError ? 'member-account-error' : undefined}
               />
               {initialBankInvalid && (
                 <p className="mt-1.5 text-sm font-medium text-debt-ink">
@@ -303,7 +309,11 @@ export function MemberEditor({
                 </p>
               )}
               {showAcctError && acctError && (
-                <p role="alert" className="mt-1.5 text-sm font-medium text-debt-ink">
+                <p
+                  id="member-account-error"
+                  role="alert"
+                  className="mt-1.5 text-sm font-medium text-debt-ink"
+                >
                   {acctError}
                 </p>
               )}

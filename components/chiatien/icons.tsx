@@ -12,8 +12,9 @@ import type { CSSProperties } from 'react';
  * more, wifi-off) được vẽ mới trong file này THEO ĐÚNG luật cấu trúc đó.
  *
  * API tương thích bộ icon cũ ở các call-site: `size`, `className`,
- * `aria-hidden`, `style`. Icon là trang trí — nơi gọi chịu trách nhiệm
- * aria-hidden / nhãn của nút chứa.
+ * `aria-hidden`, `style`. Icon là trang trí — `aria-hidden` mặc định
+ * true ngay tại gốc (Panel #05 R2-F2); nơi gọi chịu trách nhiệm nhãn
+ * của nút chứa và chỉ override aria-hidden khi có lý do tường minh.
  */
 export type CtIconProps = {
   size?: number;
@@ -35,7 +36,11 @@ function base(props: CtIconProps) {
     strokeLinejoin: 'miter' as const,
     className,
     style,
-    'aria-hidden': props['aria-hidden'],
+    // Panel #05 R2-F2 (MINOR): icon của hệ LÀ trang trí (khai ở đầu file)
+    // nên mặc định aria-hidden="true" ngay tại gốc — trước đây nơi gọi
+    // quên truyền là SVG rơi vào DOM thiếu aria-hidden (điển hình IconQr
+    // trong nút «VietQR»). Nơi gọi vẫn override tường minh được.
+    'aria-hidden': props['aria-hidden'] ?? true,
     focusable: false as const,
   };
 }
@@ -211,7 +216,7 @@ export function IconSettleGlyph(props: CtIconProps) {
       viewBox="0 0 24 24"
       fill="currentColor"
       className={className}
-      aria-hidden={props['aria-hidden']}
+      aria-hidden={props['aria-hidden'] ?? true}
       focusable={false}
     >
       <path d="M 3 9.2 H 13 V 6.4 L 20.4 12 L 13 17.6 V 14.8 H 3 V 13.4 H 5.6 V 10.6 H 3 Z M 7.4 10.6 H 9.8 V 13.4 H 7.4 Z" />
@@ -275,7 +280,7 @@ export function IconMoreHorizontal(props: CtIconProps) {
       viewBox="0 0 24 24"
       fill="currentColor"
       className={className}
-      aria-hidden={props['aria-hidden']}
+      aria-hidden={props['aria-hidden'] ?? true}
       focusable={false}
     >
       <circle cx="5" cy="12" r="1.7" />

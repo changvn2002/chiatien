@@ -3,6 +3,32 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.6.1] — 2026-10-24 — Khôi phục DiceBear + đóng 4 MINOR của Panel #05
+
+### Changed
+
+- **Avatar mặc định render lại bằng thư viện DiceBear** (@dicebear/core +
+  @dicebear/collection 9.4.3, style `initials`, render client-side) theo
+  luật thường trực của chủ dự án — đợt V3 tự ý thay bằng SVG nội bộ là
+  quyết định bị huỷ bỏ. Seed vẫn là khoá tên theo quyết định M-2 nên mỗi
+  người giữ nguyên đúng một màu qua mọi phiên và mọi thứ tự thành viên
+  (bất biến đã kiểm chứng 120/120 hoán vị); màu nền avatar là đúng ô
+  palette M-2 đã gán cho người đó.
+
+### Fixed
+
+- Trường số tài khoản ngân hàng: khi có lỗi, input mang
+  `aria-invalid="true"` + `aria-describedby` trỏ tới thông điệp lỗi
+  (Panel #05 F-R5-2).
+- Mọi icon SVG trang trí trong các nút có nhãn đều có `aria-hidden`
+  (mặc định tại gốc bộ icon; quét DOM sau sửa = 0 vi phạm) — Panel #05
+  R2-F2.
+- Đoạn giải thích khối thiếu-QR dùng `text-wrap: pretty`, hết từ mồ
+  côi ở cuối đoạn (Panel #05 R2-F1).
+- favicon.ico bake lại từ đúng path nguồn của micro (một nguồn duy
+  nhất); render-check ở 16px đạt ngưỡng GATE-C3 (ink-bbox 12×12,
+  tách 2 run trên cả hai trục) — Panel #05 F-R1-1.
+
 ## [1.6.0] — 2026-10-24 — REDESIGN-V3: nhận diện Deep Orange
 
 ### Changed

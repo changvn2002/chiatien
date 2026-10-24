@@ -5,7 +5,10 @@
  *   public/icons/icon-512.png            512×512  — icon PWA (app-icon V3)
  *   public/icons/icon-maskable-512.png   512×512  — icon maskable (app-icon full-bleed)
  *   public/icons/apple-touch-icon.png    180×180  — icon iOS (app-icon full-bleed)
- *   app/favicon.ico                      16/32/48 — favicon (cùng nguồn mark, LK-26)
+ *   app/favicon.ico                      16/32/48 — favicon (bake THẲNG từ
+ *                                        file micro chiatien-logo-micro.svg —
+ *                                        Panel #05 F-R1-1, xem mục favicon ở
+ *                                        cuối script)
  *
  * Artwork nguồn (REDESIGN-V3, LK-26: favicon + app-icon cùng một nguồn mark):
  * app-icon V3 = tile brand-500 #A5482F bo rx 20/96 + mark «Kẻ Đôi» bằng giấy
@@ -133,11 +136,20 @@ render(
   'public/icons/apple-touch-icon.png',
 );
 
-// Favicon ICO 16/32/48 từ cùng app-icon (LK-26).
+// Favicon ICO 16/32/48 — bake THẲNG từ file micro chuyên dụng
+// public/products/brand/chiatien-logo-micro.svg (Panel #05 F-R1-1,
+// điều kiện đóng của R1/R4): trước đây favicon thu nhỏ từ app-icon
+// (tile brand + mark giấy scale 0.7) nên ở 16px mép mark mềm và mực
+// chỉ chiếm ~55% khung. Micro dùng ĐÚNG path nguồn đó (byte-identical
+// với chiatien-logo.svg, một nguồn duy nhất LK-26) nhưng mark phủ
+// 10–86/96 lưới — render thẳng file micro ở từng cỡ cho mép sắc và
+// ink-bbox @16 đạt ngưỡng GATE-C3 (≥11×11, 2 run trên mỗi trục).
+// Script chỉ raster hoá nguyên bản file micro, không vẽ lại path.
+const microSvg = readBrand('chiatien-logo-micro.svg');
 const faviconPngs = {
-  16: render(appIconSquare, 16, null),
-  32: render(appIconSquare, 32, null),
-  48: render(appIconSquare, 48, null),
+  16: render(microSvg, 16, null),
+  32: render(microSvg, 32, null),
+  48: render(microSvg, 48, null),
 };
 const ico = buildIco(faviconPngs);
 writeFileSync(path.join(root, 'app/favicon.ico'), ico);
