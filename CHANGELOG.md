@@ -3,6 +3,26 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.7.2] — 2026-10-24 — Sửa nhánh ĐK2 của M-HDR-1: nhãn nút back không còn quấn
+
+### Fixed
+
+- **Nút back quấn 2 dòng ở @320** (vòng đo lại Panel #06 trên live
+  v1.7.1 bắt được; 2 ghế đo mù nhau cùng số tới 0,01px): đợt v1.7.1
+  chỉ kiểm «hiện đủ chữ, không cắt» mà bỏ sót nhánh «nhãn nút 1
+  dòng» của điều kiện đóng ĐK2. Sửa đúng 1 dòng class của nút:
+  giảm chiều rộng tự nhiên trước (`text-sm` + `px-1.5` ở <431px,
+  tự nhiên «Tất cả» 75,95px < 81,47px chỗ trống) rồi mới khoá
+  `whitespace-nowrap` + `shrink-0`; ≥431px khôi phục đúng 16px/px-2
+  của v1.7.1; breakpoint nhãn đủ 391 giữ nguyên.
+- **Nhãn đủ cũng quấn ở dải 391–~406** (phát hiện thêm khi đo):
+  cùng cơ chế sửa trên đóng luôn — «Tất cả cuộc chia» ở 14px tự
+  nhiên 147,44px < 152,47px chỗ trống ở 391.
+- Đo trên build thật ở 320/390/391/400/431→1440 (3 nguồn độc lập):
+  nút 1 dòng ở mọi viewport, header scrollW == clientW ở mọi
+  viewport, wordmark và banner không thoái hóa. Đóng ĐK2 hoàn toàn
+  chỉ khi vòng đo lại trên live cho cùng kết quả.
+
 ## [1.7.1] — 2026-10-24 — V4-FIX: chữ hiển thị về Be Vietnam Pro + hero hình người + M-HDR-1/R2-06-F1
 
 ### Fixed

@@ -106,7 +106,7 @@ export function ChiaTienApp() {
           <button
             type="button"
             onClick={goBackToList}
-            className="ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+            className="ml-auto inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg px-1.5 text-sm font-semibold whitespace-nowrap text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink min-[431px]:px-2 min-[431px]:text-base"
           >
             <IconChevronLeft size={16} aria-hidden />
             <span className="hidden min-[391px]:inline">Tất cả cuộc chia</span>
