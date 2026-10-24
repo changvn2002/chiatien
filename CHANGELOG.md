@@ -3,6 +3,43 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.8.0] — 2026-10-24 — «MỞ PHIẾU»: lớp nghi thức phiếu gấp cho khoảnh khắc chốt chia
+
+Thiết kế: ~/workspace/mini-apps/chiatien-game/ (WINNER-SPEC v2.1 +
+PARENT-ADJUDICATION + RED-TEAM-ATTACK + DELTA-REVIEW).
+
+### Added
+
+- Khi chốt chia, kết quả được đóng thành PHIẾU GẤP theo từng người
+  (giấy sổ trắng + kẻ mực; seed #FF5722 chỉ ở kẻ đôi đầu phiếu, vòng
+  dấu chốt, cạnh chọn; accent-solid thẻ 3,62% @390 / 3,76% @1440,
+  trần F-1 10,3%). Mở phiếu 240ms, nội dung (số tiền + VietQR) có
+  sẵn từ frame đầu — animation không làm cổng nội dung. Avatar
+  DiceBear tĩnh tuyệt đối; chỉ phiếu được chuyển động.
+- Link người nhận lớp 1: tóm tắt trung tính + phiếu đóng của mọi
+  thành viên + «Bảng đầy đủ» đúng 1 chạm. Dấu «chốt lúc HH:MM ·
+  bản N» nhất quán trên thẻ, lớp 1 và text chia sẻ; sửa phiên rồi
+  gửi lại mang bản N+1.
+- Nhóm đông: trên 8 phiếu, lưới chuyển tĩnh (ngưỡng parent duyệt).
+
+### Changed
+
+- **Text chia sẻ mặc định chỉ còn tóm tắt** (tên phiên, tổng, số
+  lần chuyển, link, dấu bản/giờ) ở cả chế độ thường và tĩnh — chuỗi
+  «A → B: số» không còn đi vào tin nhắn nhóm. Chi tiết đầy đủ thành
+  hành động riêng «Sao chép chi tiết đầy đủ» trong Action Sheet.
+- Nhãn nút copy mặc định đổi «Copy bản quyết toán» → **«Copy tóm
+  tắt»** (phân xử copy của parent: nhãn phải khớp đầu ra thật).
+- Gợi ý trên mặt phiếu: «Chạm để xem phần của bạn».
+
+### Invariants
+
+- **Test Tắt Game ĐẠT: `git diff -- lib` = 0 byte** — engine chia
+  + payload share schema v2 nguyên vẹn; lớp phiếu là trình diễn
+  thuần, dấu bản đếm local theo phiên, không vào payload. Suite
+  252/252 (236 cũ nguyên vẹn + 16 test mới), bundle +2.965 B
+  trong ngân sách, 0 dependency mới.
+
 ## [1.7.2] — 2026-10-24 — Sửa nhánh ĐK2 của M-HDR-1: nhãn nút back không còn quấn
 
 ### Fixed

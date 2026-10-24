@@ -47,7 +47,7 @@
     "typecheck": "tsc --noEmit",
     "test:coverage": "vitest run --coverage"
   },
-  "version": "1.7.2",
+  "version": "1.8.0",
   "engines": {
     "node": "24.x",
     "pnpm": "10.32.1"

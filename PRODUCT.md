@@ -64,7 +64,9 @@ trọn cuộc chia.
   không dấu). Chỉ giao dịch trả cho thành viên có ngân hàng mới sinh VietQR.
 - 3 kiểu chia mỗi khoản chi: chia đều (xử lý lẻ đồng chính xác tuyệt đối),
   tuỳ chỉnh số tiền (bắt tổng khớp số tiền khoản chi), theo phần/trọng số.
-- Copy bản quyết toán dạng text; link chia sẻ nén toàn bộ cuộc chia trong
+- Copy tóm tắt quyết toán dạng text (tên phiên, tổng, số lần chuyển,
+  link); chi tiết đầy đủ là hành động sao chép riêng trong app. Link
+  chia sẻ nén toàn bộ cuộc chia trong
   hash của URL (lz-string) — hash không bao giờ gửi lên máy chủ.
 - Hoàn toàn client-side: không tài khoản, không backend, không analytics,
   không thu thập dữ liệu.

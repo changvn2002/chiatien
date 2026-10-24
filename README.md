@@ -45,7 +45,9 @@ viên, khoản chi và kết quả quyết toán — **link không chứa thông
   tài khoản của người nhận phải **đã lưu trên chính máy đang xem** (xem mục
   ngân hàng bên dưới) — máy chưa lưu thì app hiện rõ trạng thái "Chưa có mã
   QR trên máy này" và hai cách đi tiếp.
-- **Copy bản quyết toán** dạng text, dán thẳng vào Zalo/Messenger cho cả nhóm.
+- **Copy tóm tắt** dạng text (tên phiên, tổng tiền, số lần chuyển, link),
+  dán thẳng vào Zalo/Messenger cho cả nhóm; bản chi tiết đầy đủ có nút
+  sao chép riêng trong app cho ai cần.
 - **Link chia sẻ chứa thành viên + khoản chi + kết quả ai nợ ai** (nén
   lz-string trong phần fragment của URL) — gửi link là người nhận mở ra
   xem/sửa tiếp được, không cần tài khoản hay máy chủ trung gian. Trước khi

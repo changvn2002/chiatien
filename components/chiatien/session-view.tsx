@@ -11,6 +11,16 @@ import type { Expense, Member, Session } from '@/lib/types';
 import { GhostButton, PrimaryButton, StatusLine, copyText, useOnlineStatus } from './ui-bits';
 import type { ExpenseSave } from './expense-editor';
 import type { MemberDraft } from './member-editor';
+import {
+  buildSummaryShareText,
+  loadSeal,
+  persistSeal,
+  previewSeal,
+  rememberPhieuOff,
+  sealSession,
+  titleForcesStatic,
+  type SealMark,
+} from './phieu';
 import { SettlementPanel } from './settlement';
 import { SessionAppBar } from './session-app-bar';
 import { SessionLedger } from './session-ledger';
@@ -45,6 +55,7 @@ export function SessionView({
   onChange,
   onDelete,
   onNotifyUndo,
+  qrRequest = null,
 }: {
   session: Session;
   startExpanded?: boolean;
@@ -52,6 +63,8 @@ export function SessionView({
   onChange: (next: Session) => void;
   onDelete: () => void;
   onNotifyUndo: (label: string, undo: () => void) => void;
+  /** Yêu cầu mở QR chuyển tiếp từ lớp 1 người nhận (link -> phiếu -> QR). */
+  qrRequest?: { index: number; nonce: number } | null;
 }) {
   const expandedRef = useRef(startExpanded);
   const { expanded, expandStrip, collapseStrip } = useStripExpansion(startExpanded, expandedRef);
@@ -66,6 +79,14 @@ export function SessionView({
   const [shareUrl, setShareUrl] = useState('');
   const [settledCopied, setSettledCopied] = useState(false);
   const [settledCopyFailed, setSettledCopyFailed] = useState(false);
+  // Lớp phiếu (v1.8.0): opt-in theo phiên, mặc định TẮT — trạng thái BẬT
+  // chỉ sống trong bộ nhớ của lần mở này, KHÔNG bao giờ được nhớ (§3);
+  // chỉ trạng thái TẮT tường minh mới ghi local (rememberPhieuOff).
+  const [slipsOn, setSlipsOn] = useState(false);
+  // Dấu bản local theo sessionId (§1.7) — không vào payload.
+  const [sealState, setSealState] = useState<SealMark | null>(() => loadSeal(session.id));
+  // Text mặc định vừa thử copy — nguồn cho ô copy thủ công khi thất bại.
+  const [lastSummaryText, setLastSummaryText] = useState('');
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(false);
   const [pendingDeleteMember, setPendingDeleteMember] = useState<Member | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
@@ -92,6 +113,18 @@ export function SessionView({
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
   const allSettled = session.expenses.length > 0 && transfers.length === 0;
   const firstTransfer = transfers[0];
+  // Bộ lọc từ khoá tên phiên (§3): khớp -> tĩnh cứng, công tắc bị khoá tắt.
+  const staticForced = titleForcesStatic(session.title);
+  const slipsEnabled = slipsOn && !staticForced;
+
+  function toggleSlips() {
+    if (staticForced) return;
+    setSlipsOn((prev) => {
+      const next = !prev;
+      if (!next) rememberPhieuOff(session.id);
+      return next;
+    });
+  }
 
   useStripHeightPublisher(rootRef, dockRef);
 
@@ -179,7 +212,33 @@ export function SessionView({
   }
 
   /* ---------------- Copy / chia sẻ ---------------- */
+  /**
+   * Copy MẶC ĐỊNH (§4 — cả chế độ phiếu lẫn tĩnh): CHỈ text tóm tắt
+   * trung tính + link. Không chuỗi mũi tên, không số của cá nhân nào.
+   * Dấu bản chỉ được GHI (persist) khi copy thật sự thành công; bản xem
+   * trước (previewSeal) dùng để dựng text mà chưa chốt số bản.
+   */
   async function handleCopySettlement() {
+    const candidate = previewSeal(session, Date.now());
+    const text = buildSummaryShareText(session, transfers, candidate, buildShareUrl(session));
+    setLastSummaryText(text);
+    const ok = await copyText(text);
+    if (ok) {
+      persistSeal(session.id, candidate);
+      setSealState(candidate);
+    }
+    setSettledCopied(ok);
+    setSettledCopyFailed(!ok);
+    if (ok) window.setTimeout(() => setSettledCopied(false), 2500);
+  }
+
+  /**
+   * Copy CHI TIẾT ĐẦY ĐỦ — hành động riêng TƯỜNG MINH (§4), chỉ tồn tại
+   * trong Session Action Sheet («Sao chép chi tiết đầy đủ»). Nội dung là
+   * buildSettlementText nguyên vẹn của lib (chuỗi lệnh đầy đủ) — không
+   * bao giờ là đầu ra mặc định của bất kỳ nút Copy/Chia sẻ nào.
+   */
+  async function handleCopyDetailed() {
     const ok = await copyText(buildSettlementText(session, balances, transfers));
     setSettledCopied(ok);
     setSettledCopyFailed(!ok);
@@ -189,7 +248,16 @@ export function SessionView({
   async function handleCopyShareLink() {
     const url = buildShareUrl(session);
     setShareUrl(url);
-    const ok = await copyText(url);
+    // Đầu ra của luồng chia sẻ cũng là text tóm tắt §4 kèm link — không
+    // còn copy link trần như một text quyết toán, và tuyệt đối không
+    // kèm chi tiết của ai. Ô copy thủ công khi thất bại vẫn là link.
+    const candidate = previewSeal(session, Date.now());
+    const text = buildSummaryShareText(session, transfers, candidate, url);
+    const ok = await copyText(text);
+    if (ok) {
+      persistSeal(session.id, candidate);
+      setSealState(candidate);
+    }
     setShareState(ok ? 'copied' : 'failed');
     if (ok) window.setTimeout(() => setShareState('idle'), 3000);
   }
@@ -202,6 +270,9 @@ export function SessionView({
     setDeckNotice('');
     setShareState('idle');
     setShareUrl('');
+    // Điểm «bấm Chia sẻ» là một điểm chốt (§1.3): đóng dấu bản ngay.
+    const seal = sealSession(session, Date.now());
+    setSealState(seal);
     setShareOpen(true);
   }
 
@@ -254,6 +325,10 @@ export function SessionView({
     copyFailed: settledCopyFailed,
     onCopy: handleCopySettlement,
     onShare: openShare,
+    slipsEnabled,
+    seal: sealState,
+    fallbackCopyText: lastSummaryText || undefined,
+    qrRequest,
     onEditMember: (m: Member, opts?: { focusBank?: boolean }) =>
       openMember(m, opts?.focusBank ?? false),
   };
@@ -423,6 +498,13 @@ export function SessionView({
         onSessionCopy={() => {
           setSessionActionOpen(false);
           void handleCopySettlement();
+        }}
+        slipsOn={slipsEnabled}
+        slipsStaticForced={staticForced}
+        onToggleSlips={toggleSlips}
+        onSessionCopyDetailed={() => {
+          setSessionActionOpen(false);
+          void handleCopyDetailed();
         }}
         onSessionRename={() => {
           setSessionActionOpen(false);

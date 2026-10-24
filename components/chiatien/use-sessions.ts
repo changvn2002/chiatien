@@ -12,6 +12,7 @@ import {
   trySaveSessions,
 } from '@/lib/storage';
 import type { Session } from '@/lib/types';
+import { ensureImportedSeal, titleForcesStatic, type SealMark } from './phieu';
 
 /**
  * Toàn bộ wiring storage của app — tách khỏi app.tsx theo ARC-11 khoản 2
@@ -36,6 +37,12 @@ export function useSessions() {
   const [importedDropped, setImportedDropped] = useState(0);
   const [importedStrippedBank, setImportedStrippedBank] = useState(false);
   const [importedStep, setImportedStep] = useState<1 | 3 | undefined>(undefined);
+  // Lớp 1 người nhận (v1.8.0, §2): CHỈ bật ở lần import đầu từ link.
+  // Mở lại phiên đã import (từ danh sách / quay lại app) -> workspace
+  // thẳng, không qua lớp 1. Tên phiên trúng bộ lọc tĩnh -> không lớp 1.
+  const [layer1Active, setLayer1Active] = useState(false);
+  const [importedSeal, setImportedSeal] = useState<SealMark | null>(null);
+  const [qrRequest, setQrRequest] = useState<{ index: number; nonce: number } | null>(null);
   const [externalChange, setExternalChange] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [undoToast, setUndoToast] = useState<{ label: string; undo: () => void } | null>(null);
@@ -84,6 +91,12 @@ export function useSessions() {
       // Người nhận link thường đến để xem kết quả: có khoản chi -> bước 3.
       setImportedStep(imported.expenses.length > 0 ? 3 : 1);
       setActiveId(imported.id);
+      // Lớp 1 chặn tại điểm rơi import lần đầu (trừ phiên tĩnh cứng):
+      // dấu bản của link được ghi local từ updatedAt của payload.
+      if (!titleForcesStatic(imported.title)) {
+        setImportedSeal(ensureImportedSeal(imported));
+        setLayer1Active(true);
+      }
     }
     setLoaded(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -184,8 +197,20 @@ export function useSessions() {
     }
   }
 
+  /** Lớp 1 -> workspace (đúng 1 chạm qua nút «Bảng đầy đủ»). */
+  function dismissLayer1() {
+    setLayer1Active(false);
+  }
+
+  /** Lớp 1 -> mở phiếu -> nút QR: rời lớp 1, workspace mở QR của đúng lệnh. */
+  function requestQrFromLayer1(index: number) {
+    setQrRequest({ index, nonce: Date.now() });
+    setLayer1Active(false);
+  }
+
   function goBackToList() {
     setActiveId(null);
+    setLayer1Active(false);
     setImportedStep(undefined);
     // Dọn ?buoc= của phiên vừa đóng khỏi thanh địa chỉ.
     window.history.replaceState(null, '', window.location.pathname);
@@ -202,6 +227,11 @@ export function useSessions() {
     importedDropped,
     importedStrippedBank,
     importedStep,
+    layer1Active,
+    importedSeal,
+    qrRequest,
+    dismissLayer1,
+    requestQrFromLayer1,
     dismissImport: () => setImportedTitle(''),
     externalChange,
     dismissExternalChange: () => setExternalChange(false),

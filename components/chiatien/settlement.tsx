@@ -21,6 +21,8 @@ import type { Member, Session, Transfer } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, GhostButton, PrimaryButton, copyText } from './ui-bits';
 import { CompletionMark } from './completion-mark';
+import { CompletionCard } from './completion-card';
+import type { SealMark } from './phieu';
 import { Sheet } from './sheet';
 import { useSettleLock } from './session-view-hooks';
 
@@ -59,6 +61,22 @@ export type SettlementPanelProps = {
    * đơn), giữ ≤1 cụm kẻ đôi/viewport (LK-22, INTERFACE-SPEC §1).
    */
   doubleRuleYielded?: boolean;
+  /**
+   * Lớp phiếu (v1.8.0): tổ chức đã bật «Đóng phiếu khi chốt» cho phiên
+   * này -> sau CompletionMark hiện THẺ HOÀN TẤT mang phiếu. Tắt/vắng =
+   * panel y hệt v1.7.2 (Test Tắt Game ở tầng trình diễn).
+   */
+  slipsEnabled?: boolean;
+  /** Dấu bản local hiện tại của phiên (SessionView sở hữu + truyền xuống). */
+  seal?: SealMark | null;
+  /**
+   * Text copy thủ công khi copy mặc định thất bại: phải là ĐÚNG text
+   * mặc định vừa thử (tóm tắt §4), không phải bản chi tiết. Vắng (mount
+   * độc lập ngoài SessionView) -> rơi về buildSettlementText như cũ.
+   */
+  fallbackCopyText?: string;
+  /** Yêu cầu mở QR từ lớp 1: {index trong transfers, nonce tăng dần}. */
+  qrRequest?: { index: number; nonce: number } | null;
 };
 
 /**
@@ -80,7 +98,15 @@ export function SettlementPanel({
   onEditMember,
   variant = 'row',
   doubleRuleYielded = false,
+  slipsEnabled = false,
+  seal = null,
+  fallbackCopyText,
+  qrRequest = null,
 }: SettlementPanelProps) {
+  // Thẻ hoàn tất: «Xem bảng chia đầy đủ» rút thẻ, bảng cổ điển của
+  // chính panel này ở nguyên vị trí (bảng vốn luôn đầy đủ ở đây).
+  const [slipsDismissed, setSlipsDismissed] = useState(false);
+  const qrNonceRef = useRef(0);
   // Khoảnh khắc hoàn tất (D2): kích hoạt tối đa 1 lần / session id trong
   // lần panel còn mount — copy thành công (copied false→true) hoặc bấm
   // «Chia sẻ link» (onShare). Không persist (lib/storage đóng băng).
@@ -103,6 +129,13 @@ export function SettlementPanel({
     onShare();
   }
   const [openQr, setOpenQr] = useState<number | null>(null);
+  useEffect(() => {
+    if (!qrRequest || qrRequest.nonce === qrNonceRef.current) return;
+    qrNonceRef.current = qrRequest.nonce;
+    // Yêu cầu QR từ lớp 1 (chạm thứ 2 trong ngân sách link->QR): mở
+    // đúng lệnh được xin; sheet tự giữ điều kiện hasBank như live.
+    setOpenQr(qrRequest.index);
+  }, [qrRequest]);
   const [qrState, setQrState] = useState<QrState>({ status: 'loading' });
   const [askedId, setAskedId] = useState<string | null>(null);
   const [askFailed, setAskFailed] = useState<{ memberId: string; text: string } | null>(null);
@@ -219,7 +252,7 @@ export function SettlementPanel({
             readOnly
             rows={7}
             aria-label="Bản quyết toán dạng chữ để copy thủ công"
-            value={buildSettlementText(session, balances, transfers)}
+            value={fallbackCopyText ?? buildSettlementText(session, balances, transfers)}
             onFocus={(e) => e.target.select()}
             className="mb-3 w-full rounded-lg border border-line-strong bg-card p-3 text-base text-ink outline-none focus:border-brand-deep"
           />
@@ -440,6 +473,35 @@ export function SettlementPanel({
 
       <CompletionMark active={completionActive} />
 
+      {/* THẺ HOÀN TẤT mang phiếu (§1.3): chỉ khi CompletionMark đã kích
+          hoạt (điểm Copy/Chia sẻ), lớp phiếu được bật cho phiên này và
+          đã có dấu bản. Tắt lớp phiếu -> không một nút phiếu nào ở đây,
+          panel trở về đúng v1.7.2. */}
+      {completionActive &&
+        slipsEnabled &&
+        seal &&
+        !slipsDismissed &&
+        (() => {
+          const firstQrIndex = transfers.findIndex((t) => {
+            const r = session.members.find((m) => m.id === t.toId);
+            return r !== undefined && hasBank(r);
+          });
+          return (
+            <CompletionCard
+              session={session}
+              balances={balances}
+              transfers={transfers}
+              seal={seal}
+              qrAvailable={firstQrIndex >= 0}
+              onShowFullTable={() => setSlipsDismissed(true)}
+              onGoToQr={() => {
+                if (firstQrIndex >= 0) setOpenQr(firstQrIndex);
+              }}
+              onOpenSlipQr={(index) => setOpenQr(index)}
+            />
+          );
+        })()}
+
       {/* CTA chân panel: copy là chính; khi đã cân hết, chia sẻ link là
           thứ đáng gửi nên hoán trọng lượng (LAYOUT-SPEC §3). */}
       {/* D4-CT-7 (sửa W3): CTA panel 1 dòng ở 320px — nowrap trên cả
@@ -454,14 +516,14 @@ export function SettlementPanel({
           </PrimaryButton>
           <GhostButton onClick={onCopy} className="whitespace-nowrap">
             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-            {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
+            {copied ? 'Đã copy!' : 'Copy tóm tắt'}
           </GhostButton>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           <PrimaryButton onClick={onCopy} className="flex-1 whitespace-nowrap">
             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-            {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
+            {copied ? 'Đã copy!' : 'Copy tóm tắt'}
           </PrimaryButton>
           <GhostButton onClick={handleShare} className="whitespace-nowrap">
             <IconLink size={16} /> Chia sẻ link

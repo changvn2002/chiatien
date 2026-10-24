@@ -42,6 +42,14 @@ export type SessionSheetsProps = {
   onSessionBack: () => void;
   onSessionShare: () => void;
   onSessionCopy: () => void;
+  /** Lớp phiếu (v1.8.0, §3): trạng thái công tắc hiệu lực (đã qua bộ lọc tĩnh). */
+  slipsOn: boolean;
+  /** Tên phiên khớp bộ lọc bối cảnh -> tĩnh cứng, công tắc khoá tắt + 1 dòng tĩnh. */
+  slipsStaticForced: boolean;
+  /** 1 chạm bật/tắt lớp phiếu cho phiên này (tắt = kill switch, được nhớ). */
+  onToggleSlips: () => void;
+  /** Hành động tường minh «Sao chép chi tiết đầy đủ» (§4). */
+  onSessionCopyDetailed: () => void;
   onSessionRename: () => void;
   onSessionDeleteRequest: () => void;
   onCloseShare: () => void;
@@ -91,6 +99,10 @@ export function SessionSheets(props: SessionSheetsProps) {
     onSessionBack,
     onSessionShare,
     onSessionCopy,
+    slipsOn,
+    slipsStaticForced,
+    onToggleSlips,
+    onSessionCopyDetailed,
     onSessionRename,
     onSessionDeleteRequest,
     onCloseShare,
@@ -204,8 +216,45 @@ export function SessionSheets(props: SessionSheetsProps) {
             onClick={onSessionCopy}
             className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <IconCopy size={16} aria-hidden /> Copy bản quyết toán
+            <IconCopy size={16} aria-hidden /> Copy tóm tắt
           </button>
+          {/* Hành động TƯỜNG MINH duy nhất cho copy toàn văn chi tiết
+              (§4): chuỗi lệnh đầy đủ chỉ rời app qua nút riêng này,
+              không bao giờ qua đường Copy/Chia sẻ mặc định. */}
+          <button
+            type="button"
+            onClick={onSessionCopyDetailed}
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+          >
+            <IconCopy size={16} aria-hidden /> Sao chép chi tiết đầy đủ
+          </button>
+          {/* Công tắc lớp phiếu (§3): nhãn trung tính, opt-in theo
+              phiên, mặc định TẮT; 1 chạm tại đây cũng là kill switch
+              cho mọi thành viên trên máy mình. Khi bộ lọc tên phiên
+              kích hoạt: công tắc hiện tắt + đúng một dòng tĩnh. */}
+          <div className="border-t border-line">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={slipsOn}
+              aria-disabled={slipsStaticForced || undefined}
+              onClick={onToggleSlips}
+              className="flex min-h-[48px] w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            >
+              <span>Đóng phiếu khi chốt</span>
+              <span
+                aria-hidden
+                className={`relative h-6 w-11 shrink-0 rounded-full ${slipsOn ? 'bg-brand-500' : 'bg-grey-300'}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-card ${slipsOn ? 'right-0.5' : 'left-0.5'}`}
+                />
+              </span>
+            </button>
+            {slipsStaticForced && (
+              <p className="px-2 pb-2 text-base text-ink-2">Phiên này giữ dạng tĩnh.</p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onSessionRename}

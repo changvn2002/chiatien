@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconChevronDown, IconChevronLeft, IconAlertTriangle, IconUndo, IconX } from './icons';
 import { FAQ_ITEMS } from '@/lib/site';
+import { RecipientLayer1 } from './recipient-layer1';
 import { SessionList } from './session-list';
 import { SessionView } from './session-view';
 import { useSessions } from './use-sessions';
@@ -26,6 +27,11 @@ export function ChiaTienApp() {
     importedDropped,
     importedStrippedBank,
     importedStep,
+    layer1Active,
+    importedSeal,
+    qrRequest,
+    dismissLayer1,
+    requestQrFromLayer1,
     dismissImport,
     externalChange,
     dismissExternalChange,
@@ -220,10 +226,22 @@ export function ChiaTienApp() {
           >
             Đang mở sổ chia tiền…
           </p>
+        ) : active && layer1Active ? (
+          // LỚP 1 (v1.8.0, §2): chỉ ở lần import đầu từ link — tóm tắt
+          // trung tính + phiếu đóng của mọi thành viên + «Bảng đầy đủ»
+          // 1 chạm về workspace nguyên vẹn. Mở lại từ danh sách không
+          // qua lớp này (layer1Active chỉ set ở bootstrap import).
+          <RecipientLayer1
+            session={active}
+            seal={importedSeal}
+            onShowFullTable={dismissLayer1}
+            onOpenQr={requestQrFromLayer1}
+          />
         ) : active ? (
           <SessionView
             key={active.id}
             session={active}
+            qrRequest={qrRequest}
             // startExpanded: người nhận link đến để xem kết quả — dải
             // quyết toán tự mở rộng khi phiên VỪA ĐƯỢC NHẬP (importedStep
             // đã set) và đã có khoản chi (LAYOUT-SPEC §5.1). importedStep

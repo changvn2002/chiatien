@@ -323,6 +323,27 @@ body {
   animation: ct-fade-out 65ms var(--ease-leave) forwards;
 }
 
+/* PHIẾU GẤP (v1.8.0, spec §5): vệt gấp giấy 240ms KHOÁ CỨNG --ease-lock,
+   tịnh tiến thuần (không xoay, overshoot 0) chạy trên bề mặt phiếu đã mở —
+   nội dung phiếu hiển thị từ frame đầu, vệt này chỉ là lớp trình diễn.
+   Avatar không bao giờ mang animation này (C8). */
+@keyframes ct-phieu-fold {
+  from {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateY(120px);
+    opacity: 0;
+  }
+}
+
+.phieu-fold-band {
+  height: 24px;
+  background: linear-gradient(to bottom, transparent, var(--grey-200), transparent);
+  animation: ct-phieu-fold 240ms var(--ease-lock) forwards;
+}
+
 /* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
 ::selection {
   background: var(--brand-100);
@@ -403,6 +424,10 @@ html {
   }
   .animate-sheet-out {
     animation: ct-fade-out 100ms var(--ease-leave) forwards;
+  }
+  .phieu-fold-band {
+    animation: none;
+    display: none;
   }
   .ct-press {
     transition-duration: 0ms;

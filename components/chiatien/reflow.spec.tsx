@@ -146,7 +146,7 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
     expect(stripSummary?.textContent).not.toContain(FULL_TEXT);
 
     // Bản copy quyết toán (đường copy thật của UI): số ĐẦY ĐỦ.
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy bản quyết toán/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Copy tóm tắt/ })[0]);
     await waitFor(() => expect(writeText).toHaveBeenCalled());
     const copiedText = writeText.mock.calls[0][0] as string;
     expect(copiedText).toContain(FULL_TEXT);
