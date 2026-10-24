@@ -94,11 +94,11 @@ export function ChiaTienApp() {
             KHÔNG còn là span "Đã lưu" opacity thoáng qua ở đây — nó
             sống ở StatusLine tại các bề mặt theo LAYOUT-SPEC §6.3. */}
         {active ? (
-          <p className="font-display text-[32px] leading-tight font-extrabold text-ink">
+          <p className="whitespace-nowrap font-display text-[32px] leading-none font-extrabold text-ink">
             Chia Tiền
           </p>
         ) : (
-          <h1 className="font-display text-[32px] leading-tight font-extrabold text-ink">
+          <h1 className="whitespace-nowrap font-display text-[32px] leading-none font-extrabold text-ink">
             Chia Tiền
           </h1>
         )}
@@ -106,9 +106,11 @@ export function ChiaTienApp() {
           <button
             type="button"
             onClick={goBackToList}
-            className="-mr-2 ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+            className="ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
           >
-            <IconChevronLeft size={16} aria-hidden /> Tất cả cuộc chia
+            <IconChevronLeft size={16} aria-hidden />
+            <span className="hidden min-[391px]:inline">Tất cả cuộc chia</span>
+            <span className="inline min-[391px]:hidden">Tất cả</span>
           </button>
         )}
       </header>
@@ -157,7 +159,7 @@ export function ChiaTienApp() {
         </div>
       )}
       {importedTitle && (
-        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-base font-medium text-brand-deep">
+        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-50 px-4 py-3 text-base font-medium text-brand-deep">
           <div className="min-w-0 flex-1">
             <p>
               Đã nhập cuộc chia “{importedTitle}” — bản sao này nằm trên máy của bạn, cứ sửa thoải
@@ -192,7 +194,7 @@ export function ChiaTienApp() {
       {externalChange && (
         <div
           role="status"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-base font-medium text-brand-deep"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-50 px-4 py-3 text-base font-medium text-brand-deep"
         >
           <p className="min-w-0 flex-1">
             Dữ liệu vừa được thay đổi ở một tab khác — app đã tải lại bản mới nhất để không tab nào

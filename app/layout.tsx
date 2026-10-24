@@ -8,7 +8,6 @@ import '@fontsource/be-vietnam-pro/600.css';
 import '@fontsource/be-vietnam-pro/700.css';
 import '@fontsource/be-vietnam-pro/800.css';
 import '@fontsource/be-vietnam-pro/900.css';
-import '@fontsource-variable/archivo/wdth.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 

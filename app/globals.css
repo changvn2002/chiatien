@@ -8,10 +8,11 @@
 :root {
   color-scheme: light;
   /* Font tự host (Fontsource, import trong app/layout.tsx).
-     Sans/body: Be Vietnam Pro đứng đầu (D6). Display: Archivo variable
-     (trục wdth) + fallback Be Vietnam Pro. Số tiền: Inter qua .font-figure. */
+     Sans/body: Be Vietnam Pro đứng đầu (D6). Display: Be Vietnam Pro
+     (V4-FIX ALIAS — .font-display giữ làm alias BVP).
+     Số tiền: Inter qua .font-figure. */
   --font-sans: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Archivo Variable', 'Archivo', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
 
   /* === CHIATIEN V4 · TOKENS — nguồn duy nhất redesign-v4/chiatien/assets/tokens.json ===
      Neo Google Material LITERAL (NEO-0): seed Deep Orange 500 #FF5722 byte-identical.
@@ -191,7 +192,6 @@ body {
 
 .font-display {
   font-family: var(--font-display);
-  font-stretch: 125%;
   /* Số tiền và mọi con số hiển thị luôn thẳng cột theo từng chữ số. */
   font-variant-numeric: tabular-nums;
 }

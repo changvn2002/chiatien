@@ -1,6 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120">
-  <!-- CHIATIEN V4 · Ke Doi Ngang Yen 480x120 (VISUAL-LAYER §3): ke doi ngang muc + mot khoi vuong nho da dong, stroke seed 3px. -->
-  <rect x="226" y="16" width="28" height="28" fill="#FFFFFF" stroke="#FF5722" stroke-width="3" />
-  <line x1="24" y1="56" x2="456" y2="56" stroke="#212121" stroke-width="3" />
-  <line x1="24" y1="62" x2="456" y2="62" stroke="#212121" stroke-width="3" />
+  <!-- CHIATIEN V4-FIX · hero-settled 480x120 — ĐÃ HOÀ HẾT: 2 NGƯỜI CỤNG LY VUI VẺ.
+       Bàn đã dọn gần xong, một biên lai nhỏ đã gạch xong với accent cam tiết chế.
+       Không chữ, không ảnh, không filter. Nền trắng, mực #212121, xám Material Grey,
+       accent duy nhất #FF5722 ở dấu gạch xong trên biên lai.
+       Không motif mạch: chỉ circle/ellipse/path, đường cong tự nhiên. -->
+  <path d="M0 0 H480 V120 H0 Z" fill="#FFFFFF"/>
+  <ellipse cx="240" cy="112" rx="180" ry="6" fill="#F5F5F5"/>
+
+  <!-- Người trái -->
+  <path d="M118 62 Q150 46 182 62 L188 100 Q150 108 112 100 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="150" cy="38" r="21" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M129 36 Q129 17 150 17 Q171 17 171 36 Q163 25 150 25 Q137 25 129 36 Z" fill="#212121"/>
+  <circle cx="143" cy="40" r="2.4" fill="#212121"/><circle cx="157" cy="40" r="2.4" fill="#212121"/>
+  <path d="M140 49 Q150 56 160 49" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Người phải -->
+  <path d="M298 62 Q330 46 362 62 L368 100 Q330 108 292 100 Z" fill="#BDBDBD" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="330" cy="38" r="21" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <circle cx="330" cy="15" r="8" fill="#212121"/>
+  <path d="M309 36 Q309 17 330 17 Q351 17 351 36 Q343 25 330 25 Q317 25 309 36 Z" fill="#212121"/>
+  <circle cx="323" cy="40" r="2.4" fill="#212121"/><circle cx="337" cy="40" r="2.4" fill="#212121"/>
+  <path d="M320 49 Q330 56 340 49" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Tay giơ cao, đầu tay chạm đáy ly -->
+  <path d="M178 66 Q198 54 212 44 Q218 48 214 54 Q200 62 182 74 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M302 66 Q282 54 268 44 Q262 48 266 54 Q280 62 298 74 Z" fill="#BDBDBD" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Hai chiếc ly chạm nhau, đáy ly đặt đúng đầu tay -->
+  <path d="M208 30 Q212 22 222 24 Q230 26 228 36 Q226 44 218 44 Q210 44 208 30 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M272 30 Q268 22 258 24 Q250 26 252 36 Q254 44 262 44 Q270 44 272 30 Z" fill="#EEEEEE" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Tia vui cong quanh điểm chạm ly -->
+  <path d="M240 16 Q240 12 240 12 M228 18 Q224 14 220 14 M252 18 Q256 14 260 14" fill="none" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Bàn đã dọn gần xong: mặt bàn cong nhỏ + 1 chén úp -->
+  <ellipse cx="240" cy="102" rx="160" ry="10" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M168 100 A12 8 0 0 1 192 100 Z" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <!-- Biên lai đã xong, đặt nghiêng trên mép bàn phải, dấu gạch cam -->
+  <path d="M352 76 L382 70 L388 92 L384 97 L379 92 L374 97 L369 92 L364 97 L359 92 L354 96 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M360 80 Q370 78 378 77 M362 86 Q370 85 376 84" fill="none" stroke="#BDBDBD" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M360 84 L366 90 L378 76" fill="none" stroke="#FF5722" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

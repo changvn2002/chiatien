@@ -1,33 +1,79 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 240">
-  <!-- CHIATIEN V4 · Hero «Phép Chia Dựng Đứng 65:35» — BẢN SỬA V12-09 (lens-12).
-       BẢN CŨ BỊ VETO: cột trái dùng đĩa tròn r16 + thanh rect xám mờ = cú pháp skeleton-loading, vi phạm tinh thần L9-5 của chính lens-09.
-       BẢN NÀY: giữ HÌNH HỌC phép chia (kẻ đôi dọc tại đúng 65% bề rộng: x=514/522 trên 792), đổi CHẤT LIỆU:
-       (1) cột trái = LEDGER THẬT thu nhỏ — kẻ ngang mực chạm mép, khối vuông có biên ở đầu hàng, dấu mực đặc — KHÔNG đĩa tròn, KHÔNG thanh xám mờ, KHÔNG opacity giả loading;
-       (2) cột phải = KHỐI LEDGER CÓ BIÊN chứa bốn khối của mark (65:35) + kẻ đôi ngang ở đáy (module hàng tổng).
-       Accent duy nhất: đoạn giữa của kẻ đôi dọc (seed #FF5722) ≈3–5% nội bộ art, dưới trần accent-trong-art 30%. Không chữ/số/tên trong art (L9-5). Chỉ ở màn chủ/phiên trống/OG — cấm workspace/sheet/VietQR. -->
-  <!-- Kẻ đôi dọc chủ đạo tại 65% — nét mực rõ -->
-  <line x1="514" y1="20" x2="514" y2="220" stroke="#212121" stroke-width="3"/>
-  <line x1="522" y1="20" x2="522" y2="220" stroke="#212121" stroke-width="3"/>
-  <!-- Đoạn accent của kẻ đôi (duy nhất) -->
-  <line x1="514" y1="88" x2="514" y2="152" stroke="#FF5722" stroke-width="3"/>
-  <line x1="522" y1="88" x2="522" y2="152" stroke="#FF5722" stroke-width="3"/>
-  <!-- Cột trái: 3 hàng ledger thật — kẻ ngang chạm mép tới kẻ đôi -->
-  <line x1="0" y1="64" x2="514" y2="64" stroke="#212121" stroke-width="2"/>
-  <line x1="0" y1="112" x2="514" y2="112" stroke="#212121" stroke-width="2"/>
-  <line x1="0" y1="160" x2="514" y2="160" stroke="#212121" stroke-width="2"/>
-  <!-- Khối khoản ở đầu mỗi hàng: vuông, có biên rõ, góc vuông -->
-  <rect x="16" y="50" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
-  <rect x="16" y="98" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
-  <rect x="16" y="146" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
-  <!-- Dấu tổng hàng: khối mực đặc trên kẻ, tại các vị trí nhịp khác nhau (nhịp trừu tượng — không phải số tiền) -->
-  <rect x="446" y="58" width="12" height="12" fill="#212121"/>
-  <rect x="330" y="106" width="12" height="12" fill="#212121"/>
-  <rect x="398" y="154" width="12" height="12" fill="#212121"/>
-  <!-- Cột phải: khối quyết toán có biên -->
-  <rect x="560" y="40" width="192" height="160" fill="#FFFFFF" stroke="#212121" stroke-width="3"/>
-  <!-- Bốn khối của mark (65:35) thu nhỏ bên trong khối -->
-  <g transform="translate(593 52) scale(1.1)"><path fill="#212121" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z"/></g>
-  <!-- Kẻ đôi ngang ở đáy khối = module hàng tổng -->
-  <line x1="576" y1="184" x2="736" y2="184" stroke="#212121" stroke-width="2.5"/>
-  <line x1="576" y1="190" x2="736" y2="190" stroke="#212121" stroke-width="2.5"/>
+  <!-- CHIATIEN V4-FIX · hero-split 792x240 — BẠN BÈ ĂN CHUNG QUANH BÀN TRÒN, CHIA TIỀN.
+       Vẽ tay vector phẳng, không chữ, không ảnh, không filter. Nền trắng, mực #212121,
+       xám Material Grey, accent duy nhất #FF5722 ở món ăn chung giữa bàn + biên lai nhỏ.
+       Không motif mạch: chỉ dùng circle/ellipse/path, mọi đường đều là đường cong tự nhiên
+       (bàn tròn, bát, đầu, tay); không ô vuông, không node, không đường nối thẳng. -->
+  <path d="M0 0 H792 V240 H0 Z" fill="#FFFFFF"/>
+  <ellipse cx="396" cy="222" rx="310" ry="9" fill="#F5F5F5"/>
+
+  <!-- 4 NGƯỜI (thân sau bàn, đầu tròn, tóc mực, áo xám khác nhau) -->
+  <!-- Người 1 (trái, tóc ngắn) -->
+  <path d="M78 108 Q120 88 162 108 L172 172 Q120 184 68 172 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="120" cy="62" r="26" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M94 58 Q94 34 120 34 Q146 34 146 58 Q138 44 120 44 Q102 44 94 58 Z" fill="#212121"/>
+  <circle cx="111" cy="64" r="2.6" fill="#212121"/><circle cx="129" cy="64" r="2.6" fill="#212121"/>
+  <path d="M111 74 Q120 80 129 74" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Người 2 (búi tóc) -->
+  <path d="M248 100 Q290 80 332 100 L342 172 Q290 184 238 172 Z" fill="#BDBDBD" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="290" cy="52" r="26" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <circle cx="290" cy="22" r="10" fill="#212121"/>
+  <path d="M264 50 Q264 26 290 26 Q316 26 316 50 Q308 36 290 36 Q272 36 264 50 Z" fill="#212121"/>
+  <circle cx="281" cy="54" r="2.6" fill="#212121"/><circle cx="299" cy="54" r="2.6" fill="#212121"/>
+  <path d="M281 64 Q290 70 299 64" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Người 3 (tóc ngắn, áo nhạt) -->
+  <path d="M462 100 Q504 80 546 100 L556 172 Q504 184 452 172 Z" fill="#EEEEEE" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="504" cy="52" r="26" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M478 50 Q478 26 504 26 Q530 26 530 50 Q522 38 504 38 Q486 38 478 50 Z" fill="#212121"/>
+  <circle cx="495" cy="54" r="2.6" fill="#212121"/><circle cx="513" cy="54" r="2.6" fill="#212121"/>
+  <path d="M495 64 Q504 70 513 64" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Người 4 (phải, tóc dài) -->
+  <path d="M628 108 Q672 88 716 108 L726 172 Q672 184 618 172 Z" fill="#9E9E9E" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="672" cy="62" r="26" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M646 60 Q644 34 672 34 Q700 34 698 60 L700 92 Q692 78 688 66 Q682 50 672 50 Q662 50 656 66 Q652 78 644 92 Z" fill="#212121"/>
+  <circle cx="663" cy="64" r="2.6" fill="#212121"/><circle cx="681" cy="64" r="2.6" fill="#212121"/>
+  <path d="M663 74 Q672 80 681 74" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- BÀN TRÒN (mặt bàn ellipse + yếm bàn cong) -->
+  <path d="M116 160 Q396 212 676 160 L676 192 Q396 238 116 192 Z" fill="#F5F5F5" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="396" cy="160" rx="280" ry="34" fill="#FFFFFF" stroke="#212121" stroke-width="3"/>
+
+  <!-- Bát phở/cơm trên bàn: bát + vành + hơi nóng cong + đũa gác -->
+  <!-- Bát trái -->
+  <path d="M168 146 A30 22 0 0 0 228 146 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <ellipse cx="198" cy="146" rx="30" ry="7" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <path d="M188 142 Q198 136 208 142" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+  <path d="M186 130 Q192 124 188 118 M206 130 Q212 124 208 118" fill="none" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <!-- Bát giữa-trái -->
+  <path d="M292 142 A28 20 0 0 0 348 142 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <ellipse cx="320" cy="142" rx="28" ry="6" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <path d="M310 138 Q320 132 330 138" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+  <!-- Đĩa món ăn chung giữa bàn — accent cam duy nhất trên bàn -->
+  <ellipse cx="428" cy="150" rx="46" ry="12" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <circle cx="412" cy="148" r="7" fill="#FF5722"/><circle cx="430" cy="146" r="8" fill="#FF5722"/><circle cx="446" cy="149" r="6" fill="#FF5722"/>
+  <path d="M408 144 Q420 138 432 144" fill="none" stroke="#FF5722" stroke-width="2" stroke-linecap="round"/>
+  <!-- Bát phải -->
+  <path d="M486 142 A28 20 0 0 0 542 142 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <ellipse cx="514" cy="142" rx="28" ry="6" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <path d="M504 138 Q514 132 524 138" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+  <!-- Ấm trà -->
+  <path d="M574 138 Q574 122 592 122 Q610 122 610 138 Q610 154 592 154 Q574 154 574 138 Z" fill="#EEEEEE" stroke="#212121" stroke-width="2.5"/>
+  <path d="M610 130 Q624 132 622 142" fill="none" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M574 130 Q562 132 566 142" fill="none" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M586 122 Q592 116 598 122" fill="none" stroke="#212121" stroke-width="2" stroke-linecap="round"/>
+  <!-- Chén trà nhỏ -->
+  <path d="M636 150 A14 10 0 0 0 664 150 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <!-- Đũa gác trên bát phải -->
+  <path d="M524 128 L566 116" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M526 134 L566 124" stroke="#212121" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- TAY TRƯỚC BÀN: tay người 1 vươn tới bát, tay người 4 đưa biên lai -->
+  <path d="M158 122 Q182 134 200 142 Q206 138 200 132 Q182 124 162 114 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M626 118 Q606 106 596 96 Q590 102 596 110 Q610 120 630 128 Z" fill="#9E9E9E" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Bàn tay cầm biên lai -->
+  <path d="M584 92 Q576 86 584 80 Q592 76 598 82 Q604 88 598 96 Q592 100 584 92 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2"/>
+  <!-- Biên lai nhỏ nghiêng, mép dưới răng cưa, accent cam ở dòng tổng nhỏ -->
+  <path d="M560 66 L612 56 L620 102 L614 110 L607 103 L600 111 L593 104 L586 111 L579 104 L572 110 L566 104 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M570 74 Q584 71 602 68 M572 84 Q586 81 600 79" fill="none" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <path d="M576 94 Q590 91 602 90" fill="none" stroke="#FF5722" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

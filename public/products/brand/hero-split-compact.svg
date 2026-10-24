@@ -1,15 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 160">
-  <!-- CHIATIEN V4 · Hero rút gọn 792x160 (VISUAL-LAYER §3): cột trái 2 hàng, khối phải CHƯA có kẻ đôi đáy. -->
-  <line x1="514" y1="20" x2="514" y2="140" stroke="#212121" stroke-width="3" />
-  <line x1="522" y1="20" x2="522" y2="140" stroke="#212121" stroke-width="3" />
-  <line x1="514" y1="64" x2="514" y2="112" stroke="#FF5722" stroke-width="3" />
-  <line x1="522" y1="64" x2="522" y2="112" stroke="#FF5722" stroke-width="3" />
-  <line x1="0" y1="56" x2="514" y2="56" stroke="#212121" stroke-width="2" />
-  <line x1="0" y1="104" x2="514" y2="104" stroke="#212121" stroke-width="2" />
-  <rect x="16" y="42" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" />
-  <rect x="16" y="90" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" />
-  <rect x="398" y="50" width="12" height="12" fill="#212121" />
-  <rect x="330" y="98" width="12" height="12" fill="#212121" />
-  <rect x="560" y="32" width="192" height="96" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
-  <g transform="translate(593 40) scale(1.1)"><path fill="#212121" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z" /></g>
+  <!-- CHIATIEN V4-FIX · hero-split-compact 792x160 — 2 NGƯỜI + BÀN NHỎ + MÓN ĂN CHUNG + BIÊN LAI.
+       Cùng ngôn ngữ với hero-split, ít chi tiết hơn. Không chữ, không ảnh, không filter.
+       Nền trắng, mực #212121, xám Material Grey, accent duy nhất #FF5722 ở món chung + biên lai.
+       Không motif mạch: chỉ circle/ellipse/path, đường cong tự nhiên, không ô vuông/node/nối thẳng. -->
+  <path d="M0 0 H792 V160 H0 Z" fill="#FFFFFF"/>
+  <ellipse cx="396" cy="148" rx="250" ry="7" fill="#F5F5F5"/>
+
+  <!-- Người trái (tóc ngắn) -->
+  <path d="M262 76 Q300 58 338 76 L346 118 Q300 128 254 118 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="300" cy="42" r="24" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M276 40 Q276 18 300 18 Q324 18 324 40 Q316 28 300 28 Q284 28 276 40 Z" fill="#212121"/>
+  <circle cx="292" cy="44" r="2.5" fill="#212121"/><circle cx="308" cy="44" r="2.5" fill="#212121"/>
+  <path d="M292 53 Q300 59 308 53" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Người phải (búi tóc) -->
+  <path d="M454 76 Q492 58 530 76 L538 118 Q492 128 446 118 Z" fill="#BDBDBD" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="492" cy="42" r="24" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <circle cx="492" cy="14" r="9" fill="#212121"/>
+  <path d="M468 40 Q468 18 492 18 Q516 18 516 40 Q508 28 492 28 Q476 28 468 40 Z" fill="#212121"/>
+  <circle cx="484" cy="44" r="2.5" fill="#212121"/><circle cx="500" cy="44" r="2.5" fill="#212121"/>
+  <path d="M484 53 Q492 59 500 53" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Bàn nhỏ -->
+  <path d="M166 104 Q396 142 626 104 L626 128 Q396 160 166 128 Z" fill="#F5F5F5" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="396" cy="104" rx="230" ry="24" fill="#FFFFFF" stroke="#212121" stroke-width="3"/>
+
+  <!-- Bát trái + bát phải -->
+  <path d="M268 100 A26 19 0 0 0 320 100 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <ellipse cx="294" cy="100" rx="26" ry="6" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <path d="M284 96 Q294 91 304 96" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+  <path d="M472 100 A26 19 0 0 0 524 100 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <ellipse cx="498" cy="100" rx="26" ry="6" fill="#F5F5F5" stroke="#212121" stroke-width="2"/>
+  <path d="M488 96 Q498 91 508 96" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
+  <!-- Món ăn chung giữa bàn — accent cam -->
+  <ellipse cx="396" cy="102" rx="40" ry="11" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <circle cx="384" cy="100" r="6" fill="#FF5722"/><circle cx="398" cy="98" r="7" fill="#FF5722"/><circle cx="410" cy="101" r="5" fill="#FF5722"/>
+  <!-- Chén trà -->
+  <path d="M560 106 A13 9 0 0 0 586 106 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+
+  <!-- Tay người phải đưa biên lai nhỏ -->
+  <path d="M540 84 Q566 76 586 68 Q592 74 584 80 Q566 88 542 94 Z" fill="#BDBDBD" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M576 62 Q570 56 578 52 Q586 50 590 56 Q594 62 588 68 Q582 70 576 62 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2"/>
+  <path d="M566 44 L606 36 L612 74 L607 80 L601 74 L595 81 L589 75 L583 81 L577 75 L572 80 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M574 52 Q586 50 598 48 M576 60 Q588 58 598 57" fill="none" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/>
+  <path d="M578 68 Q588 66 598 65" fill="none" stroke="#FF5722" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

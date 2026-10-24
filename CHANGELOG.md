@@ -3,6 +3,39 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.7.1] — 2026-10-24 — V4-FIX: chữ hiển thị về Be Vietnam Pro + hero hình người + M-HDR-1/R2-06-F1
+
+### Fixed
+
+- **Chữ hiển thị theo verdict chủ nhân trên live v1.7.0**: Archivo
+  Expanded làm dấu tiếng Việt trông như lỗi/máy móc → toàn bộ vai
+  hiển thị (wordmark, h1, h2) về **Be Vietnam Pro 700/800**, giữ thang
+  cỡ 16→20→25→32→40 và Inter vai số (<25%). 8 chuỗi khó đo trên render
+  thật đều đạt (chuỗi dấu chồng vừa 1 dòng ở 32px trong khi Archivo
+  cần 2 dòng); gói font BVP nhẹ hơn Archivo nên bundle giảm.
+- **Hero vẽ lại thành hình người**: 4 SVG mới (home 4 người quanh bàn
+  tròn ăn chung + biên lai · rút gọn 2 người · đã hoà hết 2 người cụng
+  tay + biên lai gạch xong · lỗi link 1 người nhún vai + biên lai
+  rách) — kiểm mù 3 người độc lập: 3/3 nói «người», 0/12 câu nói từ
+  mạch/sơ đồ (theo cách đọc HOẶC đã ghi thành văn bản; nguyên văn
+  «ăn chung»/«chia tiền» = 0/12, tín hiệu tiền ở mức tờ hóa đơn).
+- **M-HDR-1 (MAJOR, Panel #06)**: wordmark 1 dòng box 32px top đối
+  xứng trong header 48px ở 320/390; nút back rút nhãn «‹ Tất cả» ở
+  ≤390px; **bỏ `-mr-2` có sẵn từ trước của nút back** — đo trên build
+  thật sau sửa: header active scrollW == clientW ở cả 320 (288/288)
+  và 390 (358/358), nút hiện đầy đủ, không chữ nào bị cắt. Đóng hoàn
+  toàn chỉ khi đo lại live cho cùng kết quả.
+- **R2-06-F1 (MAJOR, Panel #06)**: banner import + banner
+  externalChange (cùng cặp class, cùng lỗi 3,90:1) đều chuyển nền
+  `bg-brand-soft → bg-brand-50` (`#FBE9E7`), giữ chữ `#BF360C`:
+  đo pixel trên build thật 4,71–4,78:1 ở @390 và @1440. Đóng hoàn toàn
+  chỉ khi đo lại live ≥4,5:1 ở cả 2 viewport cho cả 2 banner.
+
+### Removed
+
+- Gói `@fontsource-variable/archivo` (không còn tham chiếu Archivo
+  trong code sau khi gỡ import ở layout).
+
 ## [1.7.0] — 2026-10-24 — REDESIGN-V4: Neutral-First, seed Material nguyên văn
 
 ### Changed

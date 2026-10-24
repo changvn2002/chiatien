@@ -1,7 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">
-  <!-- CHIATIEN V4 · Kenh Cat Dut 240x160 (VISUAL-LAYER §3): hai khoi rect bi kenh doi cat, lech 8px doc, muc thuan, co bien ro. -->
-  <rect x="24" y="48" width="84" height="64" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
-  <rect x="132" y="56" width="84" height="64" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
-  <line x1="116" y1="32" x2="116" y2="128" stroke="#212121" stroke-width="3" />
-  <line x1="124" y1="32" x2="124" y2="128" stroke="#212121" stroke-width="3" />
+  <!-- CHIATIEN V4-FIX · hero-broken 240x160 — LINK LỖI: 1 NGƯỜI NHÚN VAI THÂN THIỆN
+       TRƯỚC BIÊN LAI RÁCH. Không bi kịch: mặt cười nhẹ, vai nhún, tay xòe.
+       Biên lai rách là chi tiết kể chuyện duy nhất. Không chữ, không ảnh, không filter.
+       Nền trắng, mực #212121, xám Material Grey, accent #FF5722 chỉ là một chấm nhỏ
+       trên mảnh biên lai (dấu tổng còn sót lại).
+       Không motif mạch: chỉ circle/ellipse/path, đường cong tự nhiên. -->
+  <path d="M0 0 H240 V160 H0 Z" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="148" rx="80" ry="6" fill="#F5F5F5"/>
+
+  <!-- Người: vai nhún cao, tay xòe hai bên -->
+  <path d="M58 96 Q100 78 142 96 L148 148 Q100 156 52 148 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="100" cy="56" r="25" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <path d="M75 54 Q75 31 100 31 Q125 31 125 54 Q117 40 100 40 Q83 40 75 54 Z" fill="#212121"/>
+  <circle cx="92" cy="58" r="2.5" fill="#212121"/><circle cx="108" cy="58" r="2.5" fill="#212121"/>
+  <path d="M88 48 Q94 45 98 48 M104 46 Q110 43 114 46" fill="none" stroke="#212121" stroke-width="2" stroke-linecap="round"/>
+  <path d="M92 68 Q100 73 108 68" fill="none" stroke="#212121" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Tay trái xòe -->
+  <path d="M60 104 Q40 100 28 90 Q24 96 30 102 Q44 112 64 114 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M26 88 Q20 84 24 80 Q28 77 32 82 Q34 88 26 88 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2"/>
+  <!-- Tay phải xòe về phía biên lai -->
+  <path d="M140 104 Q156 100 166 92 Q170 98 164 104 Q152 112 136 114 Z" fill="#E0E0E0" stroke="#212121" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M166 90 Q172 86 174 92 Q174 98 168 98 Q164 96 166 90 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2"/>
+
+  <!-- Biên lai rách làm hai mảnh, lệch nhau, mép rách răng cưa -->
+  <path d="M182 52 L204 48 L202 78 L197 74 L192 80 L187 75 L182 80 L178 74 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M212 62 L228 66 L226 100 L221 95 L216 101 L211 96 L206 101 L204 94 Z" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M186 58 Q194 57 198 56 M188 66 Q194 65 197 64" fill="none" stroke="#BDBDBD" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="218" cy="76" r="3" fill="#FF5722"/>
+  <!-- Vết cong bối rối nhỏ dưới biên lai (đường cong trang trí, không phải ký tự) -->
+  <path d="M196 106 Q204 100 212 106" fill="none" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round"/>
 </svg>
