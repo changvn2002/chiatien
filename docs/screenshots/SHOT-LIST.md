@@ -1,15 +1,22 @@
 # SHOT-LIST — screenshot pack chiatien (studio-catalog/chiatien/)
 
-> **Trạng thái (2026-10-24): ĐÃ CHỤP LẠI trên bản live v1.7.2 (REDESIGN-V4,
-> Neutral-First, seed Material Deep Orange 500 #FF5722, canvas trắng
-> trung tính; v1.7.1 đổi chữ hiển thị về Be Vietnam Pro + hero hình
-> người, v1.7.2 sửa nhãn nút back quấn 2 dòng — M-HDR-1 đã đóng).**
-> Pack trước chụp ở v1.7.0. Xem SHOT-V172-STATE.md ở repo root để
-> biết sha256 mới + kết quả R2.
-> Lưu ý V4: pack v1.7.0 từng ghi lại hiện tượng wordmark header quấn
-> 2 dòng, dòng đầu cắt ở mép trên (phát hiện M-HDR-1). Pack v1.7.2 này
-> chụp sau khi M-HDR-1 đã đóng: wordmark 1 dòng không cắt, hero là
-> hình người ăn chung (hết hình mạch điện của v1.7.0).
+> **Trạng thái (2026-10-25): ĐÃ CHỤP LẠI trên bản live v1.9.0 «Giấy thật»
+> (REDESIGN-V4 + đợt redesign 2026-10-24/25: panel quyết toán thành
+> sheet trắng có biên trên nền bàn xám, phiếu gấp có dấu xé một ấn
+> bản, nắp phiếu mở họ giấy trắng; panel R11 PASS 5/5 + §6 5/5).
+> Riêng gallery-03 đã chụp lại trên live v1.9.1 sau khi khiếm
+> khuyết TC6 được vá; Checker A-DELTA2 PASS 4/4.**
+> Pack trước chụp ở v1.7.2 (bản này bắt kịp cả phần còn nợ của v1.8.0
+> «MỞ PHIẾU»). Xem SHOT-V190-STATE.md ở repo root để biết sha256 mới
+> + kết quả R2.
+> Lưu ý lịch sử khi đối chiếu: bản gallery-03 đầu tiên chụp trên
+> v1.9.0 từng bị dải chip thành viên (z-30) vẽ đè lên góc trên-trái
+> của hộp thoại VietQR và che một phần tiêu đề «VietQR — An».
+> Parent đã vá ở v1.9.1 bằng cách render Sheet qua portal ra
+> `document.body`; bản gallery-03 hiện tại không còn hiện tượng
+> này — tiêu đề đọc trọn và dải thành viên bị scrim làm mờ như
+> nền. Chi tiết + số đo ở mục Delta v1.9.1 trong
+> SHOT-V190-STATE.md và biên bản SHOT-V190-VERIFY-A-DELTA2.md.
 > File này ghi lại hợp đồng chụp (tên file giữ nguyên như pack cũ để catalog
 > không gãy) và các TRẠNG THÁI nội dung phải đúng sự thật khi chụp — đặc
 > biệt: pack v1 (HEAD 044b960) từng bị grader bắt lỗi DOC-03/DATA-03 vì
