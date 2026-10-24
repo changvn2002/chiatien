@@ -1,12 +1,15 @@
 # SHOT-LIST — screenshot pack chiatien (studio-catalog/chiatien/)
 
-> **Trạng thái (2026-10-24): ĐÃ CHỤP LẠI trên bản live v1.7.0 (REDESIGN-V4,
+> **Trạng thái (2026-10-24): ĐÃ CHỤP LẠI trên bản live v1.7.2 (REDESIGN-V4,
 > Neutral-First, seed Material Deep Orange 500 #FF5722, canvas trắng
-> trung tính).** Pack trước chụp ở v1.6.0 (REDESIGN-V3, #A5482F).
-> Xem SHOT-V4-STATE.md ở repo root để biết sha256 mới + kết quả R2.
-> Lưu ý V4: ảnh mobile 390px ghi lại trung thực hiện tượng wordmark
-> header quấn 2 dòng, dòng đầu cắt ở mép trên (phát hiện M-HDR-1 trong
-> SHOT-V4-STATE.md — lỗi phía app, không phải lỗi chụp).
+> trung tính; v1.7.1 đổi chữ hiển thị về Be Vietnam Pro + hero hình
+> người, v1.7.2 sửa nhãn nút back quấn 2 dòng — M-HDR-1 đã đóng).**
+> Pack trước chụp ở v1.7.0. Xem SHOT-V172-STATE.md ở repo root để
+> biết sha256 mới + kết quả R2.
+> Lưu ý V4: pack v1.7.0 từng ghi lại hiện tượng wordmark header quấn
+> 2 dòng, dòng đầu cắt ở mép trên (phát hiện M-HDR-1). Pack v1.7.2 này
+> chụp sau khi M-HDR-1 đã đóng: wordmark 1 dòng không cắt, hero là
+> hình người ăn chung (hết hình mạch điện của v1.7.0).
 > File này ghi lại hợp đồng chụp (tên file giữ nguyên như pack cũ để catalog
 > không gãy) và các TRẠNG THÁI nội dung phải đúng sự thật khi chụp — đặc
 > biệt: pack v1 (HEAD 044b960) từng bị grader bắt lỗi DOC-03/DATA-03 vì

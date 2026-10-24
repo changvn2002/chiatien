@@ -17,7 +17,7 @@ Repository: https://github.com/changvn2002/chiatien
 <p align="center">
   <img src="docs/screenshots/chiatien-desktop.png" alt="Chia Tiền — cuộc chia “Nhậu cuối tuần” đã quyết toán xong: sổ trực tiếp hiện số dư từng người, cột quyết toán bên phải chốt đúng 3 lần chuyển cần thiết" width="900">
 </p>
-<p align="center"><em>Một cuộc chia đã chốt xong trên không gian làm việc: 4 người, 3 khoản chi, tổng 1.260.000 ₫ — sổ trực tiếp hiện số dư từng người, cột quyết toán bên phải rút gọn thành đúng 3 lần chuyển (Chi → An 240.000 ₫, Dũng → An 180.000 ₫, Bình → An 40.000 ₫). Các lần chuyển tới An có VietQR vì tài khoản của An đã lưu trên chính máy này. Ảnh chụp thật từ bản production v1.4.0 đang chạy.</em></p>
+<p align="center"><em>Một cuộc chia đã chốt xong trên không gian làm việc: 4 người, 3 khoản chi, tổng 1.260.000 ₫ — sổ trực tiếp hiện số dư từng người, cột quyết toán bên phải rút gọn thành đúng 3 lần chuyển (Chi → An 240.000 ₫, Dũng → An 180.000 ₫, Bình → An 40.000 ₫). Các lần chuyển tới An có VietQR vì tài khoản của An đã lưu trên chính máy này. Ảnh chụp thật từ bản production v1.7.2 đang chạy.</em></p>
 
 **Tóm tắt:** Đi chơi chung, ăn nhậu, ở trọ chung… rồi đến màn "để tính sau" là hay
 cãi nhau. **Chia Tiền** ghi lại ai đã trả khoản nào, tự chia cho nhóm, triệt tiêu nợ
