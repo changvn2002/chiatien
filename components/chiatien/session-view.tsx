@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { IconPlus } from './icons';
 import { newId } from '@/lib/id';
 import { assignIdentityColors, normalizeMemberName } from '@/lib/identity';
@@ -94,11 +94,19 @@ export function SessionView({
   // mới, KHÔNG ghi local — chỉ hành động chốt/copy thật mới persist,
   // và khi đó candidate tính ra đúng cùng bản N+1 này). Sửa ngược nội
   // dung về như cũ -> vân tay khớp lại -> dấu cũ trở lại đúng nghĩa.
+  // Giờ hiện tại theo PHÚT đọc qua useSyncExternalStore (mẫu React
+  // khuyến nghị cho đồng hồ): nhãn dấu chỉ hiển thị HH:MM nên độ mịn
+  // phút là đủ, và render giữ thuần (không gọi Date.now trong render).
+  const minuteStamp = useSyncExternalStore(
+    () => () => {},
+    () => Math.floor(Date.now() / 60000),
+    () => 0,
+  );
   const displaySeal = useMemo<SealMark | null>(() => {
     if (!sealState) return null;
     if (sealState.contentKey === sessionContentKey(session)) return sealState;
-    return previewSeal(session, Date.now());
-  }, [sealState, session]);
+    return previewSeal(session, minuteStamp * 60000);
+  }, [sealState, session, minuteStamp]);
   // Text mặc định vừa thử copy — nguồn cho ô copy thủ công khi thất bại.
   const [lastSummaryText, setLastSummaryText] = useState('');
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(false);
