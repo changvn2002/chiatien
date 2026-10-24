@@ -96,16 +96,37 @@ describe('IDENTITY_PALETTE — COLOR-SYSTEM §4 (LK-14) + Identity Palette Rule'
     }
   });
 
-  it('LK-16 một nguồn duy nhất: biến --identity-* trong app/globals.css khớp byte với palette', () => {
+  it('V4 (thay LK-16): --identity-* CHẾT trong app/globals.css; --avatar-* khớp bảng nền V4 của tokens.json', () => {
+    // REDESIGN-V4 (STATE D8): token --identity-01..12 bị xoá khỏi
+    // globals/@theme — nền avatar nay là bậc 100 của 16 họ Material
+    // (tokens.json avatar-backgrounds), khai ở globals.css dạng
+    // --avatar-<key> theo đúng thứ tự key của tokens.json.
     const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
-    const fromCss: string[] = [];
-    for (let i = 1; i <= 12; i++) {
-      const token = `--identity-${String(i).padStart(2, '0')}`;
-      const match = css.match(new RegExp(`${token}:\\s*(#[0-9A-Fa-f]{6})`));
-      expect(match, `globals.css thiếu ${token}`).not.toBeNull();
-      fromCss.push(match![1].toUpperCase());
+    expect(css).not.toMatch(/--identity-\d/);
+    expect(css).not.toMatch(/--color-identity-/);
+    const AVATAR_V4: [string, string][] = [
+      ['amber', '#FFECB3'],
+      ['blue', '#BBDEFB'],
+      ['cyan', '#B2EBF2'],
+      ['deep-orange', '#FFCCBC'],
+      ['deep-purple', '#D1C4E9'],
+      ['green', '#C8E6C9'],
+      ['indigo', '#C5CAE9'],
+      ['light-blue', '#B3E5FC'],
+      ['light-green', '#DCEDC8'],
+      ['lime', '#F0F4C3'],
+      ['orange', '#FFE0B2'],
+      ['pink', '#F8BBD0'],
+      ['purple', '#E1BEE7'],
+      ['red', '#FFCDD2'],
+      ['teal', '#B2DFDB'],
+      ['yellow', '#FFF9C4'],
+    ];
+    for (const [key, hex] of AVATAR_V4) {
+      const match = css.match(new RegExp(`--avatar-${key}:\\s*(#[0-9A-Fa-f]{6})`));
+      expect(match, `globals.css thiếu --avatar-${key}`).not.toBeNull();
+      expect(match![1].toUpperCase()).toBe(hex);
     }
-    expect(fromCss).toEqual(IDENTITY_PALETTE.map((hex) => hex.toUpperCase()));
   });
 });
 

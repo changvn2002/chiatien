@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IDENTITY_PALETTE, assignIdentityColors, initialsOf } from '@/lib/identity';
+import { assignIdentityColors, initialsOf } from '@/lib/identity';
 import type { Session } from '@/lib/types';
 import Page from '../../app/page';
 import { SessionView } from './session-view';
-import { Avatar } from './ui-bits';
+import { AVATAR_BACKGROUNDS_V4, Avatar } from './ui-bits';
 
 /**
  * HỢP ĐỒNG DiceBear (khôi phục theo override của user 2026-10-24, đợt
@@ -16,7 +16,7 @@ import { Avatar } from './ui-bits';
  *
  * BẤT BIẾN M-2 giữ nguyên và là trọng tâm của spec này: màu một người
  * chỉ phụ thuộc nameKey qua assignIdentityColors ở tầng dữ liệu;
- * component truyền backgroundColor đúng 1 phần tử = ô đã gán, seed =
+ * component truyền backgroundColor đúng 1 phần tử = ô V4 đã gán, seed =
  * memberNameKey(name) — DiceBear không tự chọn màu theo seed.
  * Hồi quy Panel #03 (attribution <metadata> RDF nhiễm accessible name)
  * và Panel #04 F-R2-02 (aria-hidden trên <svg> gốc) giữ nguyên.
@@ -42,16 +42,16 @@ function avatarSvgFor(container: HTMLElement, name: string): string {
 }
 
 describe('Avatar DiceBear initials — khôi phục V4 (override 2026-10-24)', () => {
-  it('nền đặc = đúng hex ô palette được truyền, initials trắng Inter 600 trên nền đó', () => {
+  it('nền đặc = đúng hex ô bảng V4 được truyền, initials mực #212121 Be Vietnam Pro 700 trên nền đó (V-11.5)', () => {
     const { container } = render(<Avatar name="Nguyễn Văn An" colorIndex={0} />);
-    const hex = IDENTITY_PALETTE[0];
+    const hex = AVATAR_BACKGROUNDS_V4[0];
     const rect = backgroundRect(container);
     expect(rect).toBeTruthy();
     expect(rect!.getAttribute('fill')).toBe(hex);
     const text = container.querySelector('svg text');
-    expect(text?.getAttribute('fill')).toBe('#ffffff');
-    expect(text?.getAttribute('font-weight')).toBe('600');
-    expect(text?.getAttribute('font-family')).toContain('Inter');
+    expect(text?.getAttribute('fill')).toBe('#212121');
+    expect(text?.getAttribute('font-weight')).toBe('700');
+    expect(text?.getAttribute('font-family')).toContain('Be Vietnam Pro');
     // Cơ chế V3 đã chết: không còn đĩa #FAF3F1 + vòng stroke màu ô.
     expect(container.innerHTML).not.toContain('#FAF3F1');
     expect(container.querySelector('svg circle')).toBeNull();
@@ -117,17 +117,39 @@ describe('Avatar DiceBear initials — khôi phục V4 (override 2026-10-24)', (
           .find((el) => el.querySelector('svg text')?.textContent === glyph)
           ?.querySelector('svg rect:not([fill="#fff"])')
           ?.getAttribute('fill');
-      expect(fillOf('B')).toBe(IDENTITY_PALETTE[5]);
-      expect(fillOf('C')).toBe(IDENTITY_PALETTE[6]);
+      expect(fillOf('B')).toBe(AVATAR_BACKGROUNDS_V4[5]);
+      expect(fillOf('C')).toBe(AVATAR_BACKGROUNDS_V4[6]);
       unmount();
     }
   });
 
-  it('(b) màu nền luôn ∈ ô palette mà M-2 gán: quét mọi colorIndex 0..11', () => {
-    for (let idx = 0; idx < IDENTITY_PALETTE.length; idx++) {
+  it('(b) màu nền luôn ∈ ô bảng V4 mà M-2 gán: quét mọi colorIndex 0..11', () => {
+    for (let idx = 0; idx < 12; idx++) {
       const { container, unmount } = render(<Avatar name="An" colorIndex={idx} />);
-      expect(backgroundRect(container)?.getAttribute('fill')).toBe(IDENTITY_PALETTE[idx]);
+      expect(backgroundRect(container)?.getAttribute('fill')).toBe(AVATAR_BACKGROUNDS_V4[idx]);
       unmount();
+    }
+  });
+
+  it('(b2) đủ 16 ô V4 tới được: quét colorIndex 0..15 ra đúng 16 nền bậc-100', () => {
+    expect(AVATAR_BACKGROUNDS_V4).toHaveLength(16);
+    for (let idx = 0; idx < AVATAR_BACKGROUNDS_V4.length; idx++) {
+      const { container, unmount } = render(<Avatar name="An" colorIndex={idx} />);
+      expect(backgroundRect(container)?.getAttribute('fill')).toBe(AVATAR_BACKGROUNDS_V4[idx]);
+      unmount();
+    }
+  });
+
+  it('(e) contrast V-11.5: mực #212121 trên cả 16 nền V4 đều ≥ 4,5 (công thức WCAG)', () => {
+    const lum = (hex: string) => {
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16) / 255);
+      const f = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const ink = lum('#212121');
+    for (const bg of AVATAR_BACKGROUNDS_V4) {
+      const ratio = (Math.max(lum(bg), ink) + 0.05) / (Math.min(lum(bg), ink) + 0.05);
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -187,9 +209,13 @@ describe('Avatar DiceBear initials — khôi phục V4 (override 2026-10-24)', (
     expect(button!.textContent).toContain('Bình');
   });
 
-  it('colorIndex ngoài palette được gấp về đúng ô (guard runtime)', () => {
-    const { container } = render(<Avatar name="An" colorIndex={12} />);
-    expect(backgroundRect(container)?.getAttribute('fill')).toBe(IDENTITY_PALETTE[0]);
+  it('colorIndex ngoài dải gán được gấp theo modulo bảng V4 (guard runtime)', () => {
+    // 12..15 là ô thật của bảng 16 (không gấp); 16 mới gấp về ô 0.
+    const a = render(<Avatar name="An" colorIndex={12} />);
+    expect(backgroundRect(a.container)?.getAttribute('fill')).toBe(AVATAR_BACKGROUNDS_V4[12]);
+    a.unmount();
+    const { container } = render(<Avatar name="An" colorIndex={16} />);
+    expect(backgroundRect(container)?.getAttribute('fill')).toBe(AVATAR_BACKGROUNDS_V4[0]);
   });
 });
 

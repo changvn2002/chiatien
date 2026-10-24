@@ -198,13 +198,13 @@ export function ExpenseEditor({
     // container, chip mới co lại bằng flex + truncate như thiết kế.
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4" onChange={() => setTouched(true)}>
       {restoredDraft && (
-        <p role="status" className="text-sm font-medium text-brand-deep">
+        <p role="status" className="text-base font-medium text-brand-deep">
           Đã khôi phục nội dung bạn nhập dở từ lần trước — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ để
           bỏ bản nháp này.
         </p>
       )}
       {savedMoreNotice && (
-        <p role="status" aria-live="polite" className="text-sm font-medium text-brand-deep">
+        <p role="status" aria-live="polite" className="text-base font-medium text-brand-deep">
           {savedMoreNotice}
         </p>
       )}
@@ -235,7 +235,7 @@ export function ExpenseEditor({
             ariaLabel="Số tiền khoản chi"
           />
           {capError && (
-            <p role="alert" className="mt-1.5 text-sm font-medium text-debt-ink">
+            <p role="alert" className="mt-1.5 text-base font-medium text-debt-ink">
               {AMOUNT_CAP_MESSAGE}
             </p>
           )}
@@ -255,9 +255,9 @@ export function ExpenseEditor({
               aria-checked={payerId === m.id}
               onClick={() => setPayerId(m.id)}
               className={cn(
-                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
                 payerId === m.id
-                  ? 'border-brand bg-brand text-white'
+                  ? 'border-brand bg-brand text-ink-on-seed'
                   : 'border-line-strong bg-card text-ink hover:border-brand-deep',
               )}
             >
@@ -273,7 +273,7 @@ export function ExpenseEditor({
           <span className={cn(labelClass, 'mb-0')}>Người cùng chia</span>
           <button
             type="button"
-            className="-mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+            className="-mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
             onClick={() => setParticipantIds(allSelected ? [] : members.map((m) => m.id))}
           >
             {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
@@ -289,7 +289,7 @@ export function ExpenseEditor({
                 aria-pressed={active}
                 onClick={() => toggleParticipant(m.id)}
                 className={cn(
-                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
                   active
                     ? 'border-brand bg-brand-soft text-brand-deep'
                     : 'border-line-strong bg-card text-ink hover:border-brand-deep',
@@ -321,7 +321,7 @@ export function ExpenseEditor({
               aria-checked={mode === m}
               onClick={() => setMode(m)}
               className={cn(
-                'inline-flex min-h-11 items-center justify-center rounded-lg px-2 font-display text-sm font-bold transition duration-100 ease-[var(--ease-lock)]',
+                'inline-flex min-h-11 items-center justify-center rounded-lg px-2 text-base font-bold transition duration-100 ease-[var(--ease-lock)]',
                 mode === m ? 'bg-ink text-white' : 'text-ink hover:bg-brand-soft/60',
               )}
             >
@@ -329,7 +329,7 @@ export function ExpenseEditor({
             </button>
           ))}
         </div>
-        <p className="mt-2 text-sm text-ink-2">{MODE_HINTS[mode]}</p>
+        <p className="mt-2 text-base text-ink-2">{MODE_HINTS[mode]}</p>
       </div>
 
       {mode === 'custom' && participantIds.length > 0 && (
@@ -339,7 +339,7 @@ export function ExpenseEditor({
             if (!member) return null;
             return (
               <div key={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                <span className="flex min-w-0 items-center gap-2 text-base font-medium text-ink">
                   <Avatar name={member.name} colorIndex={colorOf(member.id)} size={24} />
                   <span className="line-clamp-2 min-w-0">{member.name}</span>
                 </span>
@@ -357,7 +357,7 @@ export function ExpenseEditor({
             <p
               aria-live="polite"
               className={cn(
-                'text-sm font-semibold',
+                'text-base font-semibold',
                 preview.diff === 0 ? 'text-credit-ink' : 'text-debt-ink',
               )}
             >
@@ -377,7 +377,7 @@ export function ExpenseEditor({
             if (!member) return null;
             return (
               <div key={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                <span className="flex min-w-0 items-center gap-2 text-base font-medium text-ink">
                   <Avatar name={member.name} colorIndex={colorOf(member.id)} size={24} />
                   <span className="line-clamp-2 min-w-0">{member.name}</span>
                 </span>
@@ -399,7 +399,7 @@ export function ExpenseEditor({
                       setWeights((prev) => ({ ...prev, [id]: Number(e.target.value) }))
                     }
                   />
-                  <span className="shrink-0 text-sm text-ink-2">phần</span>
+                  <span className="shrink-0 text-base text-ink-2">phần</span>
                 </span>
               </div>
             );
@@ -408,7 +408,7 @@ export function ExpenseEditor({
       )}
 
       {mode === 'equal' && preview?.kind === 'computed' && (
-        <div className="text-sm text-ink-2">
+        <div className="text-base text-ink-2">
           <p>
             Mỗi người chịu{' '}
             <span className="font-figure font-bold text-ink">{formatVND(equalShare)}</span>
@@ -428,7 +428,7 @@ export function ExpenseEditor({
 
       {/* Tóm tắt validation ngay trên nút Lưu (Mẫu Validation Thống Nhất). */}
       {touched && errors.length > 0 && (
-        <ul role="alert" className="grid gap-1 text-sm font-medium text-debt-ink">
+        <ul role="alert" className="grid gap-1 text-base font-medium text-debt-ink">
           {errors.map((e) => (
             <li key={e}>• {e}</li>
           ))}

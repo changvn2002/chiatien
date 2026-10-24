@@ -88,7 +88,7 @@ export function MoneyInput({
         }}
         className="font-figure h-11 min-w-0 w-full bg-transparent text-right text-base font-semibold text-ink outline-none placeholder:text-placeholder"
       />
-      <span aria-hidden className="shrink-0 text-sm font-medium text-ink-2">
+      <span aria-hidden className="shrink-0 text-base font-medium text-ink-2">
         ₫
       </span>
       {capHit && !onCapError && (

@@ -16,9 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    // Giấy V3 #FDF5F2 (màn hình chờ khi mở app đã cài) + seed brand V3 #A5482F cho theme.
-    background_color: '#FDF5F2',
-    theme_color: '#A5482F',
+    // Canvas trắng V4 #FFFFFF (màn hình chờ khi mở app đã cài) + seed brand V4 #FF5722 cho theme.
+    background_color: '#FFFFFF',
+    theme_color: '#FF5722',
     categories: ['finance', 'utilities'],
     icons: [
       {

@@ -9,3 +9,5 @@ public
 .claude
 .impeccable
 coverage/
+# design/tokens.chiatien-v4.json là bản sao KHOÁ byte-identical với hồ sơ redesign-v4/chiatien/assets/tokens.json — prettier format lại JSON sẽ phá byte-identical và làm tokens:verify FAIL, nên khai ngoại lệ format cho đúng file này.
+design/tokens.chiatien-v4.json

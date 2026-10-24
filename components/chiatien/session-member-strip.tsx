@@ -52,7 +52,7 @@ export function SessionMemberStrip({
               colorIndex={colors[idx] ?? 0}
               size={members.length > 8 ? 24 : 28}
             />
-            <span className="max-w-[96px] truncate text-[15px] leading-5 font-semibold text-ink">
+            <span className="max-w-[96px] truncate text-base leading-5 font-semibold text-ink">
               {m.name}
             </span>
             <span
@@ -69,7 +69,7 @@ export function SessionMemberStrip({
       <button
         type="button"
         onClick={onAddMember}
-        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
       >
         <IconPlus size={16} aria-hidden /> Thêm
       </button>

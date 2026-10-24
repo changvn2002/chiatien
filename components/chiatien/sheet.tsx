@@ -454,7 +454,9 @@ export function Sheet({
         )}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
-          <h2 className="min-w-0 truncate font-display text-[19px] font-bold text-ink">{title}</h2>
+          <h2 className="min-w-0 truncate font-display text-[25px] font-extrabold text-ink">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -506,14 +508,14 @@ export function ConfirmDialog({
       role="alertdialog"
       ariaDescribedBy={messageId}
     >
-      <p id={messageId} className="text-sm leading-relaxed text-ink">
+      <p id={messageId} className="text-base leading-relaxed text-ink">
         {message}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={onConfirm}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-debt-solid px-4 py-2.5 font-display text-sm font-bold text-white transition duration-100 ease-[var(--ease-lock)] hover:brightness-90 active:brightness-75"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-debt-solid px-4 py-2.5 text-base font-bold text-white transition duration-100 ease-[var(--ease-lock)] hover:brightness-90 active:brightness-75"
         >
           {confirmLabel}
         </button>

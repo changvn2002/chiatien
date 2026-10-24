@@ -33,7 +33,7 @@ export function SessionAppBar({
         <input
           aria-label="Tên cuộc chia"
           autoFocus
-          className="min-w-0 flex-1 rounded-lg border border-line-strong bg-card px-2 py-1.5 font-display text-[19px] font-bold text-ink outline-none focus:border-brand-deep"
+          className="min-w-0 flex-1 rounded-lg border border-line-strong bg-card px-2 py-1.5 font-display text-[32px] font-extrabold text-ink outline-none focus:border-brand-deep"
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
           onBlur={onCommit}
@@ -48,7 +48,7 @@ export function SessionAppBar({
           className="flex min-h-11 min-w-0 flex-1 items-center rounded-lg px-1 text-left"
           title="Chạm để sửa tên cuộc chia"
         >
-          <h1 className="truncate font-display text-[19px] leading-tight font-bold text-ink">
+          <h1 className="truncate font-display text-[32px] leading-tight font-extrabold text-ink">
             {title}
           </h1>
         </button>

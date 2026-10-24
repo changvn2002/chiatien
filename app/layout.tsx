@@ -7,14 +7,14 @@ import '@fontsource/be-vietnam-pro/500.css';
 import '@fontsource/be-vietnam-pro/600.css';
 import '@fontsource/be-vietnam-pro/700.css';
 import '@fontsource/be-vietnam-pro/800.css';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
+import '@fontsource/be-vietnam-pro/900.css';
+import '@fontsource-variable/archivo/wdth.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 
 export const viewport: Viewport = {
-  // Màu brand V3 — thanh trạng thái/trình duyệt trên mobile nhuộm theo app.
-  themeColor: '#A5482F',
+  // Màu seed V4 #FF5722 — thanh trạng thái/trình duyệt trên mobile nhuộm theo app.
+  themeColor: '#FF5722',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',

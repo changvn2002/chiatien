@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import {
   IconCheck,
@@ -20,6 +20,7 @@ import { buildVietQrPayload, hasBank } from '@/lib/vietqr';
 import type { Member, Session, Transfer } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, GhostButton, PrimaryButton, copyText } from './ui-bits';
+import { CompletionMark } from './completion-mark';
 import { Sheet } from './sheet';
 import { useSettleLock } from './session-view-hooks';
 
@@ -80,6 +81,27 @@ export function SettlementPanel({
   variant = 'row',
   doubleRuleYielded = false,
 }: SettlementPanelProps) {
+  // Khoảnh khắc hoàn tất (D2): kích hoạt tối đa 1 lần / session id trong
+  // lần panel còn mount — copy thành công (copied false→true) hoặc bấm
+  // «Chia sẻ link» (onShare). Không persist (lib/storage đóng băng).
+  const firedSessionsRef = useRef<Set<string>>(new Set());
+  const [completionActive, setCompletionActive] = useState(false);
+  const prevCopiedRef = useRef(copied);
+  useEffect(() => {
+    const was = prevCopiedRef.current;
+    prevCopiedRef.current = copied;
+    if (copied && !was && !firedSessionsRef.current.has(session.id)) {
+      firedSessionsRef.current.add(session.id);
+      setCompletionActive(true);
+    }
+  }, [copied, session.id]);
+  function handleShare() {
+    if (!firedSessionsRef.current.has(session.id)) {
+      firedSessionsRef.current.add(session.id);
+      setCompletionActive(true);
+    }
+    onShare();
+  }
   const [openQr, setOpenQr] = useState<number | null>(null);
   const [qrState, setQrState] = useState<QrState>({ status: 'loading' });
   const [askedId, setAskedId] = useState<string | null>(null);
@@ -178,7 +200,7 @@ export function SettlementPanel({
       {discrepancy !== 0 && (
         <p
           role="alert"
-          className="flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
+          className="flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
         >
           <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           <span>
@@ -190,7 +212,7 @@ export function SettlementPanel({
       )}
       {copyFailed && (
         <>
-          <p role="alert" className="mb-2 text-sm font-medium text-debt-ink">
+          <p role="alert" className="mb-2 text-base font-medium text-debt-ink">
             Trình duyệt không cho copy tự động — hãy chọn và copy thủ công phần dưới đây.
           </p>
           <textarea
@@ -209,12 +231,12 @@ export function SettlementPanel({
           Ai trả ai
         </h2>
         {allSettled ? (
-          <p className="flex items-center gap-2 py-2 text-sm font-medium text-ink">
+          <p className="flex items-center gap-2 py-2 text-base font-medium text-ink">
             <IconCheck size={16} className="shrink-0 text-credit-solid" aria-hidden />
             Đã cân hết — không ai nợ ai
           </p>
         ) : transfers.length === 0 ? (
-          <p className="py-2 text-sm text-ink-2">Chưa có gì để quyết toán</p>
+          <p className="py-2 text-base text-ink-2">Chưa có gì để quyết toán</p>
         ) : (
           <ul className="divide-y divide-line">
             {transfers.map((t, i) => {
@@ -250,7 +272,7 @@ export function SettlementPanel({
                       type="button"
                       aria-expanded={openQr === i}
                       onClick={() => setOpenQr(i)}
-                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 font-display text-xs font-bold text-white transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-deep active:bg-brand-deep"
+                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
                     >
                       <IconQr size={14} /> VietQR
                     </button>
@@ -286,21 +308,21 @@ export function SettlementPanel({
             hairline trên/dưới, không nền, không bo góc, không hộp lồng. */}
         {missingRecipients.map(({ member, count, total }) => (
           <div key={member.id} className="border-y border-line py-4">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-base font-semibold text-ink">
               Chưa có mã QR trên máy này — {member.name}
             </p>
             {/* Panel #05 R2-F1 (MINOR): text-wrap: pretty (text-pretty)
                 chống từ «này.» mồ côi ở dòng cuối — Impeccable URL-mode
                 đo 2 vị trí (8%/9%) trên đúng đoạn giải thích này. Chỉ áp
                 cho đoạn này, không áp tràn lan. */}
-            <p className="mt-1 text-sm leading-relaxed text-pretty text-ink-2">
+            <p className="mt-1 text-base leading-relaxed text-pretty text-ink-2">
               {count} lệnh chuyển (tổng {formatVNDDisplay(total)}) đang chờ mã QR này.
             </p>
             <div className="mt-2 grid gap-2">
               <button
                 type="button"
                 onClick={() => handleAsk(member, count, total)}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 font-display text-sm font-bold text-white transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-deep active:bg-brand-deep"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
               >
                 {askedId === member.id ? <IconCheck size={15} /> : <IconLink size={15} />}
                 Nhắn xin QR của {member.name}
@@ -311,13 +333,13 @@ export function SettlementPanel({
               </GhostButton>
             </div>
             {askedId === member.id && (
-              <p role="status" className="mt-2 text-sm font-medium text-brand-deep">
+              <p role="status" className="mt-2 text-base font-medium text-brand-deep">
                 Đã copy lời nhắn — dán vào Zalo/Messenger để gửi {member.name}.
               </p>
             )}
             {askFailed?.memberId === member.id && (
               <div className="mt-2">
-                <p role="alert" className="mb-1.5 text-sm font-medium text-debt-ink">
+                <p role="alert" className="mb-1.5 text-base font-medium text-debt-ink">
                   Trình duyệt không cho copy tự động — hãy copy thủ công lời nhắn này:
                 </p>
                 <textarea
@@ -339,7 +361,7 @@ export function SettlementPanel({
           Số dư từng người
         </h2>
         {/* Chú thích dấu THƯỜNG TRỰC ở đầu bảng (R3-F2). */}
-        <p className="mb-2 text-[13px] text-ink-2">Dấu + là được nhận lại, dấu − là trả thêm.</p>
+        <p className="mb-2 text-xs text-ink-2">Dấu + là được nhận lại, dấu − là trả thêm.</p>
         <ul className="divide-y divide-line">
           {session.members.map((m, idx) => {
             const b = balances[m.id] ?? 0;
@@ -352,9 +374,15 @@ export function SettlementPanel({
                   <Avatar name={m.name} colorIndex={colors[idx] ?? 0} size={28} />
                   <div className="min-w-0">
                     <p className="line-clamp-2 font-semibold text-ink">{m.name}</p>
-                    <p className="font-figure text-[13px] text-ink-2">
-                      Đã trả {formatVNDDisplay(paid[m.id] ?? 0)} · Phải chịu{' '}
-                      {formatVNDDisplay(owed[m.id] ?? 0)}
+                    <p className="text-[13px] text-ink-2">
+                      Đã trả{' '}
+                      <span className="font-figure font-bold">
+                        {formatVNDDisplay(paid[m.id] ?? 0)}
+                      </span>
+                      {' · Phải chịu '}
+                      <span className="font-figure font-bold">
+                        {formatVNDDisplay(owed[m.id] ?? 0)}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -401,7 +429,7 @@ export function SettlementPanel({
               (thang TYPE-AND-ICON §1, cổng F-7) + C1 settle-lock. */}
           <span
             className={cn(
-              'font-figure ml-auto text-[30px] leading-none font-bold whitespace-nowrap text-ink',
+              'font-figure ml-auto text-[40px] leading-none font-bold whitespace-nowrap text-ink',
               totalLocking && 'animate-settle-lock',
             )}
           >
@@ -409,6 +437,8 @@ export function SettlementPanel({
           </span>
         </div>
       </div>
+
+      <CompletionMark active={completionActive} />
 
       {/* CTA chân panel: copy là chính; khi đã cân hết, chia sẻ link là
           thứ đáng gửi nên hoán trọng lượng (LAYOUT-SPEC §3). */}
@@ -419,7 +449,7 @@ export function SettlementPanel({
           thay vì chữ trong nút wrap. Nhãn giữ nguyên văn bản đã khoá. */}
       {allSettled ? (
         <div className="flex flex-wrap gap-2">
-          <PrimaryButton onClick={onShare} className="flex-1 whitespace-nowrap">
+          <PrimaryButton onClick={handleShare} className="flex-1 whitespace-nowrap">
             <IconLink size={16} /> Chia sẻ link
           </PrimaryButton>
           <GhostButton onClick={onCopy} className="whitespace-nowrap">
@@ -433,7 +463,7 @@ export function SettlementPanel({
             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
             {copied ? 'Đã copy!' : 'Copy bản quyết toán'}
           </PrimaryButton>
-          <GhostButton onClick={onShare} className="whitespace-nowrap">
+          <GhostButton onClick={handleShare} className="whitespace-nowrap">
             <IconLink size={16} /> Chia sẻ link
           </GhostButton>
         </div>
@@ -462,16 +492,16 @@ export function SettlementPanel({
                   className="h-full w-full"
                 />
               ) : qrState.status === 'error' ? (
-                <p className="px-3 text-center text-sm font-medium text-debt-ink">
+                <p className="px-3 text-center text-base font-medium text-debt-ink">
                   Chưa tạo được mã QR trên máy này — dùng thông tin chuyển khoản bên dưới.
                 </p>
               ) : (
-                <p role="status" className="text-sm text-muted">
+                <p role="status" className="text-base text-muted">
                   Đang tạo mã…
                 </p>
               )}
             </div>
-            <dl className="grid w-full gap-1.5 text-sm">
+            <dl className="grid w-full gap-1.5 text-base">
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="shrink-0 text-muted">Ngân hàng</dt>
                 <dd className="min-w-0 font-medium break-words text-ink">
@@ -503,12 +533,12 @@ export function SettlementPanel({
                 </dd>
               </div>
             </dl>
-            <p className="text-center text-[13px] leading-relaxed text-ink-2">
+            <p className="text-center text-xs leading-relaxed text-ink-2">
               QR từ tài khoản đã lưu trên máy này. Quét bằng app ngân hàng — số tiền và nội dung đã
               điền sẵn.
             </p>
             {/* SEC-12.6: xác nhận khớp danh tính trước khi quét. */}
-            <p className="text-center text-[13px] leading-relaxed font-semibold text-brand-deep">
+            <p className="text-center text-xs leading-relaxed font-semibold text-brand-deep">
               Trước khi quét, hãy kiểm tra tên chủ tài khoản ở trên khớp đúng người bạn định chuyển
               — nếu sai tên, đừng quét, hãy sửa lại tài khoản đã lưu.
             </p>

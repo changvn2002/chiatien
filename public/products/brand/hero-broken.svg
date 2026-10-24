@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">
+  <!-- CHIATIEN V4 · Kenh Cat Dut 240x160 (VISUAL-LAYER §3): hai khoi rect bi kenh doi cat, lech 8px doc, muc thuan, co bien ro. -->
+  <rect x="24" y="48" width="84" height="64" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
+  <rect x="132" y="56" width="84" height="64" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
+  <line x1="116" y1="32" x2="116" y2="128" stroke="#212121" stroke-width="3" />
+  <line x1="124" y1="32" x2="124" y2="128" stroke="#212121" stroke-width="3" />
+</svg>

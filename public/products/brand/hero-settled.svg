@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120">
+  <!-- CHIATIEN V4 · Ke Doi Ngang Yen 480x120 (VISUAL-LAYER §3): ke doi ngang muc + mot khoi vuong nho da dong, stroke seed 3px. -->
+  <rect x="226" y="16" width="28" height="28" fill="#FFFFFF" stroke="#FF5722" stroke-width="3" />
+  <line x1="24" y1="56" x2="456" y2="56" stroke="#212121" stroke-width="3" />
+  <line x1="24" y1="62" x2="456" y2="62" stroke="#212121" stroke-width="3" />
+</svg>

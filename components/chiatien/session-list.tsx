@@ -80,7 +80,7 @@ export function SessionList({
         {/* Card tạo mới — primary CTA DUY NHẤT của Màn A cho hành động
             tạo (D-11): input + nút xếp dọc full-width trong card. */}
         <div className="rounded-2xl border border-line bg-card p-4 sm:p-5">
-          <h2 className="mb-1.5 font-display text-base font-bold text-ink">
+          <h2 className="mb-1.5 font-display text-[25px] font-extrabold text-ink">
             <label htmlFor="new-session">Tạo cuộc chia mới</label>
           </h2>
           <div className="flex flex-col gap-2">
@@ -109,19 +109,25 @@ export function SessionList({
 
         {sessions.length === 0 ? (
           <div className="rounded-2xl border border-line bg-card px-5 py-6 text-center">
-            {/* Lý do (CQ-02): ảnh minh hoạ empty-state là WebP tĩnh đã nén
-                sẵn của chính app trong /public, kích thước hiển thị cố
-                định — next/image không thêm lợi ích ở đây. */}
-            {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
+            {/* Lý do (CQ-02): ảnh minh hoạ là tài sản tĩnh của chính app
+                trong /public, kích thước hiển thị khai trước — next/image
+                không thêm lợi ích ở đây. (V3 dùng empty-state.webp; V4 thay
+                bằng hero-split.svg theo whitelist D3.) */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- hero V4 là SVG tĩnh của app, aspect-ratio khai trước (CLS=0); next/image không thêm lợi ích */}
             <img
-              src="/products/brand/empty-state.webp"
+              src="/products/brand/hero-split.svg"
               alt=""
               aria-hidden
-              className="mx-auto mb-3 max-h-[160px] w-auto"
+              width={792}
+              height={240}
+              style={{ aspectRatio: '792 / 240' }}
+              className="mx-auto mb-3 w-full max-w-[520px]"
               loading="lazy"
             />
-            <h2 className="font-display text-[19px] font-bold text-ink">Chưa có cuộc chia nào</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            <h2 className="font-display text-[25px] font-extrabold text-ink">
+              Chưa có cuộc chia nào
+            </h2>
+            <p className="mx-auto mt-1 max-w-md text-base text-muted">
               Dữ liệu chỉ lưu trên máy của bạn — không cần tài khoản.
             </p>
             {/* Hành động tạo ở trạng thái rỗng chỉ là ghost/link (D-11):
@@ -142,12 +148,15 @@ export function SessionList({
                   onClick={() => onOpen(s.id)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <span className="block truncate font-display text-[19px] font-bold text-ink">
-                    {s.title}
-                  </span>
-                  <span className="font-figure mt-0.5 block truncate text-sm text-ink-2">
-                    {s.members.length} người · {s.expenses.length} khoản ·{' '}
-                    {formatVNDDisplay(totalSpent(s))}
+                  <span className="block truncate text-xl font-bold text-ink">{s.title}</span>
+                  <span className="mt-0.5 block truncate text-sm text-ink-2">
+                    <span className="font-figure font-semibold">{s.members.length}</span>
+                    {' người · '}
+                    <span className="font-figure font-semibold">{s.expenses.length}</span>
+                    {' khoản · '}
+                    <span className="font-figure font-semibold">
+                      {formatVNDDisplay(totalSpent(s))}
+                    </span>
                   </span>
                 </button>
                 <IconButton
@@ -170,8 +179,8 @@ export function SessionList({
         aria-label="Nhập từ link và thông tin dữ liệu"
         className="sticky top-6 hidden lg:block"
       >
-        <h2 className="font-display text-base font-bold text-ink">Nhập từ link</h2>
-        <p className="mt-1 text-sm text-ink-2">
+        <h2 className="font-display text-[25px] font-extrabold text-ink">Nhập từ link</h2>
+        <p className="mt-1 text-base text-ink-2">
           Dán link cuộc chia đã nhận để mở bản sao trên máy này.
         </p>
         <div className="mt-3 flex flex-col gap-2">
@@ -190,11 +199,24 @@ export function SessionList({
           </GhostButton>
         </div>
         {importError && (
-          <p role="alert" className="mt-2 text-sm font-medium text-debt-ink">
-            {importError}
-          </p>
+          <div className="mt-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- art loi link V4 la SVG tinh, aspect-ratio khai truoc */}
+            <img
+              src="/products/brand/hero-broken.svg"
+              alt=""
+              aria-hidden
+              width={240}
+              height={160}
+              style={{ aspectRatio: '240 / 160' }}
+              className="mb-2 max-h-[80px] w-[120px]"
+              loading="lazy"
+            />
+            <p role="alert" className="text-base font-medium text-debt-ink">
+              {importError}
+            </p>
+          </div>
         )}
-        <ul className="mt-5 grid gap-1.5 border-t border-line pt-4 text-sm text-ink-2">
+        <ul className="mt-5 grid gap-1.5 border-t border-line pt-4 text-base text-ink-2">
           <li>Dữ liệu lưu trên máy này — không cần tài khoản.</li>
           <li>Link chia sẻ không chứa thông tin ngân hàng.</li>
           <li>Không có mạng vẫn dùng được.</li>

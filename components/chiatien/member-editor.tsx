@@ -206,20 +206,20 @@ export function MemberEditor({
           }}
         />
         {!initial && (
-          <p className="mt-1 text-[13px] text-ink-2">
+          <p className="mt-1 text-xs text-ink-2">
             Thêm nhiều người một lúc: ngăn cách bằng dấu phẩy.
           </p>
         )}
         {nameError && (
           <div className="mt-1.5">
-            <p role="alert" className="text-sm font-medium text-debt-ink">
+            <p role="alert" className="text-base font-medium text-debt-ink">
               {nameError}
             </p>
             {duplicateForAction && onOpenExisting && (
               <button
                 type="button"
                 onClick={() => onOpenExisting(duplicateForAction)}
-                className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+                className="mt-1 inline-flex min-h-11 items-center text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
               >
                 Mở thành viên “{duplicateForAction.name}” để sửa
               </button>
@@ -228,11 +228,11 @@ export function MemberEditor({
         )}
         {isBulk && (
           <div className="mt-2 grid gap-1">
-            <p role="status" className="text-sm font-medium text-ink">
+            <p role="status" className="text-base font-medium text-ink">
               Sẽ thêm {bulkAnalysis.valid.length} người: {bulkAnalysis.valid.join(' · ')}
             </p>
             {bulkAnalysis.duplicates.map((dup) => (
-              <p key={dup} className="text-sm font-medium text-debt-ink">
+              <p key={dup} className="text-base font-medium text-debt-ink">
                 “{dup}” đã có trong cuộc chia — sẽ bỏ qua
               </p>
             ))}
@@ -242,7 +242,7 @@ export function MemberEditor({
 
       {!isBulk && (
         <div>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-base font-medium text-ink">
             <input
               type="checkbox"
               checked={wantsBank}
@@ -252,11 +252,11 @@ export function MemberEditor({
             <IconBank size={16} className="shrink-0 text-brand-deep" aria-hidden />
             <span>Lưu tài khoản trên máy này để tạo VietQR</span>
           </label>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+          <p className="mt-1 text-xs leading-relaxed text-ink-2">
             Chỉ lưu trên máy này — không đi theo link chia sẻ. Ai nhận tiền qua QR thì lưu tài khoản
             ngay trên máy của mình.
           </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
+          <p className="mt-1 text-xs leading-relaxed text-ink-2">
             Chỉ nhập tài khoản của chính người này, khi họ đồng ý cho lưu trên máy này để nhận tiền
             qua VietQR.
           </p>
@@ -304,7 +304,7 @@ export function MemberEditor({
                 aria-describedby={showAcctError && acctError ? 'member-account-error' : undefined}
               />
               {initialBankInvalid && (
-                <p className="mt-1.5 text-sm font-medium text-debt-ink">
+                <p className="mt-1.5 text-base font-medium text-debt-ink">
                   Số tài khoản chưa hợp lệ — kiểm tra lại
                 </p>
               )}
@@ -312,7 +312,7 @@ export function MemberEditor({
                 <p
                   id="member-account-error"
                   role="alert"
-                  className="mt-1.5 text-sm font-medium text-debt-ink"
+                  className="mt-1.5 text-base font-medium text-debt-ink"
                 >
                   {acctError}
                 </p>
@@ -335,7 +335,7 @@ export function MemberEditor({
       )}
 
       {bankError && bankError !== acctError && (
-        <p role="alert" className="text-sm font-medium text-debt-ink">
+        <p role="alert" className="text-base font-medium text-debt-ink">
           {bankError}
         </p>
       )}
@@ -367,7 +367,7 @@ export function MemberEditor({
           <button
             type="button"
             onClick={() => onDeleteRequest(initial)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-base font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
           >
             <IconTrash size={15} aria-hidden /> Xoá thành viên
           </button>

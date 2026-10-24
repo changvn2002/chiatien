@@ -4,7 +4,7 @@
  * Chiến lược cache:
  * - App shell (cache `shell`): precache các URL ỔN ĐỊNH (không hash)
  *   lúc install — trang gốc, manifest, icon PWA, favicon, logo và
- *   illustration empty-state — để app mở được offline ngay từ lần
+ *   hero chính (hero-split) — để app mở được offline ngay từ lần
  *   tải thứ hai.
  * - Runtime (cache `runtime`): tài nguyên biến thiên theo bản build.
  *   `/_next/static/` dùng cache-first (tên file có hash nội dung,
@@ -22,7 +22,7 @@
  * dọn cache cũ và precache lại shell mới ở lần ghé tiếp theo.
  */
 
-const CACHE_VERSION = 'v4-2026-10-24';
+const CACHE_VERSION = 'v5-2026-10-24';
 const SHELL_CACHE = `chiatien-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `chiatien-runtime-${CACHE_VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, RUNTIME_CACHE];
@@ -37,7 +37,7 @@ const PRECACHE_URLS = [
   '/icons/apple-touch-icon.png',
   '/favicon.ico',
   '/products/brand/chiatien-logo.svg',
-  '/products/brand/empty-state.webp',
+  '/products/brand/hero-split.svg',
 ];
 
 self.addEventListener('install', (event) => {

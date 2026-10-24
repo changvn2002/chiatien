@@ -93,7 +93,7 @@ export function SessionSettlementStrip({
         >
           {formatVNDDisplay(total)}
         </span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-deep">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-base font-semibold text-brand-deep">
           <IconSettleGlyph size={15} className="shrink-0 text-ink" aria-hidden />
           Quyết toán
           {discrepancy !== 0 && (
@@ -112,16 +112,18 @@ export function SessionSettlementStrip({
         </span>
       </span>
       {session.members.length === 0 ? (
-        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có khoản chi nào</span>
+        <span className="w-full min-w-0 truncate text-base text-ink-2">Chưa có khoản chi nào</span>
       ) : session.expenses.length === 0 ? (
-        <span className="w-full min-w-0 truncate text-sm text-ink-2">Chưa có gì để quyết toán</span>
+        <span className="w-full min-w-0 truncate text-base text-ink-2">
+          Chưa có gì để quyết toán
+        </span>
       ) : allSettled ? (
-        <span className="flex w-full min-w-0 items-center gap-1.5 text-sm font-medium text-ink">
+        <span className="flex w-full min-w-0 items-center gap-1.5 text-base font-medium text-ink">
           <IconCheck size={15} className="shrink-0 text-credit-solid" aria-hidden />
           <span className="truncate">Đã cân hết — không ai nợ ai</span>
         </span>
       ) : firstTransfer ? (
-        <span className="grid w-full grid-cols-[minmax(72px,1fr)_auto_minmax(72px,1fr)_auto_auto] items-center gap-x-1.5 text-sm text-ink min-[390px]:grid-cols-[minmax(96px,1fr)_auto_minmax(96px,1fr)_auto_auto]">
+        <span className="grid w-full grid-cols-[minmax(72px,1fr)_auto_minmax(72px,1fr)_auto_auto] items-center gap-x-1.5 text-base text-ink min-[390px]:grid-cols-[minmax(96px,1fr)_auto_minmax(96px,1fr)_auto_auto]">
           <span className="truncate">{nameOf(firstTransfer.fromId)}</span>
           <IconSettleGlyph size={14} className="shrink-0 text-ink" aria-hidden />
           <span className="truncate">{nameOf(firstTransfer.toId)}</span>
@@ -150,11 +152,11 @@ export function SessionSettlementStrip({
       {expanded && (
         <div className="animate-step-in max-h-[70dvh] overflow-y-auto pt-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="font-display text-[19px] font-bold text-ink">Quyết toán</h2>
+            <h2 className="font-display text-[25px] font-extrabold text-ink">Quyết toán</h2>
             <button
               type="button"
               onClick={onCollapse}
-              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
             >
               Thu gọn <IconChevronDown size={15} aria-hidden />
             </button>
@@ -177,7 +179,7 @@ export function SessionSettlementStrip({
           {stripSummaryContent}
         </button>
         {deckNotice && (
-          <p role="status" className="pb-1 text-[13px] text-ink-2">
+          <p role="status" className="pb-1 text-xs text-ink-2">
             {deckNotice}
           </p>
         )}
@@ -189,7 +191,7 @@ export function SessionSettlementStrip({
                 session.members.length === 0 ? 'Thêm ít nhất 1 người để ghi khoản chi' : undefined
               }
               onClick={onAddExpense}
-              className="w-full text-[15px]"
+              className="w-full text-base"
             >
               <IconPlus size={16} aria-hidden /> Thêm khoản
             </PrimaryButton>

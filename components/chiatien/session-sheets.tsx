@@ -160,21 +160,21 @@ export function SessionSheets(props: SessionSheetsProps) {
             <button
               type="button"
               onClick={() => onEditExpenseAction(expenseAction)}
-              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
             >
               <IconPencil size={16} aria-hidden /> Sửa khoản chi
             </button>
             <button
               type="button"
               onClick={() => onExpandExpenseAction(expenseAction.id)}
-              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
             >
               <IconList size={16} aria-hidden /> Xem phần chia từng người
             </button>
             <button
               type="button"
               onClick={() => onDeleteExpenseAction(expenseAction)}
-              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
             >
               <IconTrash size={16} aria-hidden /> Xoá khoản chi
             </button>
@@ -188,35 +188,35 @@ export function SessionSheets(props: SessionSheetsProps) {
           <button
             type="button"
             onClick={onSessionBack}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
             <IconUsers size={16} aria-hidden /> Tất cả cuộc chia
           </button>
           <button
             type="button"
             onClick={onSessionShare}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
             <IconLink size={16} aria-hidden /> Chia sẻ link
           </button>
           <button
             type="button"
             onClick={onSessionCopy}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
             <IconCopy size={16} aria-hidden /> Copy bản quyết toán
           </button>
           <button
             type="button"
             onClick={onSessionRename}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
             <IconPencil size={16} aria-hidden /> Đổi tên cuộc chia
           </button>
           <button
             type="button"
             onClick={onSessionDeleteRequest}
-            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-lg px-2 text-left text-sm font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
+            className="flex min-h-[48px] items-center gap-2 border-t border-line rounded-lg px-2 text-left text-base font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
           >
             <IconTrash size={16} aria-hidden /> Xoá cuộc chia
           </button>
@@ -228,11 +228,11 @@ export function SessionSheets(props: SessionSheetsProps) {
       ngay dưới headline. Link chỉ được tạo + copy SAU khi người dùng
       bấm «Tôi hiểu, tạo link» (handleCopyShareLink). */}
       <Sheet open={shareOpen} onClose={onCloseShare} title="Chia sẻ cuộc chia này">
-        <p className="text-sm leading-relaxed font-medium text-ink">
+        <p className="text-base leading-relaxed font-medium text-ink">
           Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia — và link không thu hồi được
           sau khi gửi.
         </p>
-        <ul className="mt-3 grid list-disc gap-2 pl-5 text-sm leading-relaxed text-ink-2">
+        <ul className="mt-3 grid list-disc gap-2 pl-5 text-base leading-relaxed text-ink-2">
           <li>
             Link chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
             tổng {formatVND(total)} — không chứa thông tin ngân hàng; mã QR chỉ hiện trên máy đã lưu
@@ -256,7 +256,7 @@ export function SessionSheets(props: SessionSheetsProps) {
         </span>
         {shareState === 'failed' && shareUrl && (
           <div className="mt-3">
-            <p className="mb-1.5 text-sm text-muted">
+            <p className="mb-1.5 text-base text-muted">
               Trình duyệt không cho copy tự động — hãy copy thủ công link này:
             </p>
             <textarea

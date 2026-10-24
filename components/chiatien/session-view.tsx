@@ -333,6 +333,7 @@ export function SessionView({
             onAddMember={addMember}
             onAddExpense={addExpense}
             onTotalVisibility={handleTotalVisibility}
+            allSettled={allSettled}
           />
         </div>
 
@@ -341,7 +342,7 @@ export function SessionView({
           aria-label="Quyết toán"
           className="sticky top-6 hidden border-l border-line-strong pl-6 min-[900px]:block"
         >
-          <h2 className="mb-3 font-display text-[19px] font-bold text-ink">Quyết toán</h2>
+          <h2 className="mb-3 font-display text-[25px] font-extrabold text-ink">Quyết toán</h2>
           <SettlementPanel {...panelProps} variant="stacked" />
           <StatusLine status={online} className="mt-4" />
         </aside>

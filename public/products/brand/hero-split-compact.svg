@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 160">
+  <!-- CHIATIEN V4 · Hero rút gọn 792x160 (VISUAL-LAYER §3): cột trái 2 hàng, khối phải CHƯA có kẻ đôi đáy. -->
+  <line x1="514" y1="20" x2="514" y2="140" stroke="#212121" stroke-width="3" />
+  <line x1="522" y1="20" x2="522" y2="140" stroke="#212121" stroke-width="3" />
+  <line x1="514" y1="64" x2="514" y2="112" stroke="#FF5722" stroke-width="3" />
+  <line x1="522" y1="64" x2="522" y2="112" stroke="#FF5722" stroke-width="3" />
+  <line x1="0" y1="56" x2="514" y2="56" stroke="#212121" stroke-width="2" />
+  <line x1="0" y1="104" x2="514" y2="104" stroke="#212121" stroke-width="2" />
+  <rect x="16" y="42" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" />
+  <rect x="16" y="90" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5" />
+  <rect x="398" y="50" width="12" height="12" fill="#212121" />
+  <rect x="330" y="98" width="12" height="12" fill="#212121" />
+  <rect x="560" y="32" width="192" height="96" fill="#FFFFFF" stroke="#212121" stroke-width="3" />
+  <g transform="translate(593 40) scale(1.1)"><path fill="#212121" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z" /></g>
+</svg>

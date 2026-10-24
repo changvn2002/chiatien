@@ -8,101 +8,120 @@
 :root {
   color-scheme: light;
   /* Font tự host (Fontsource, import trong app/layout.tsx).
-     Display + số tiền: Be Vietnam Pro (có subset vietnamese đầy đủ).
-     Body: Inter, fallback Be Vietnam Pro để glyph lạ vẫn đúng dấu. */
-  --font-sans: 'Inter', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
+     Sans/body: Be Vietnam Pro đứng đầu (D6). Display: Archivo variable
+     (trục wdth) + fallback Be Vietnam Pro. Số tiền: Inter qua .font-figure. */
+  --font-sans: 'Be Vietnam Pro', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Archivo Variable', 'Archivo', 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
 
-  /* === CHIATIEN V3 · TOKENS — chép NGUYÊN BYTE từ redesign-v3/chiatien/assets/tokens.css ===
-     100% hex từ color-correction.md §3.3/§9.3 (LK-01/LK-02) + identity 12 ô từ
-     identity-chiatien-recanal.md §3 (LK-14). Seed #A5482F · brand-600 #8C361E ·
-     mono #000000 (LK-11) · đĩa avatar #FAF3F1 ĐÓNG BĂNG (LK-15). */
-  --brand-50: #FFF2EE;
-  --brand-100: #FFE0D7;
-  --brand-200: #FBC6B7;
-  --brand-300: #EBA38F;
-  --brand-400: #D67D65;
-  --brand-500: #A5482F;
-  --brand-600: #8C361E;
-  --brand-700: #702612;
-  --brand-800: #511707;
-  --brand-900: #3A0F04;
-  --brand-950: #1F0401;
-  --paper: #FDF5F2;
-  --neutral-50: #FAF3F1; /* đĩa avatar — ĐÓNG BĂNG, đổi đĩa = chạy lại script identity (LK-15) */
-  --neutral-100: #F1E5E1; /* editor */
-  --neutral-200: #DDD1CE; /* sand / nền disabled */
-  --neutral-300: #C0B4B1;
-  --neutral-400: #A19592;
-  --neutral-500: #7E7370; /* cấm vai chữ */
-  --muted: #685E5B; /* = --placeholder, neutral-600 */
-  --placeholder: #685E5B;
-  --line-control: #534946; /* neutral-700 */
-  --ink: #140F0E; /* neutral-950 — MỌI con số dùng token này (LK-22) */
+  /* === CHIATIEN V4 · TOKENS — nguồn duy nhất redesign-v4/chiatien/assets/tokens.json ===
+     Neo Google Material LITERAL (NEO-0): seed Deep Orange 500 #FF5722 byte-identical.
+     Brand = thang Deep Orange công bố; neutral = thang Grey công bố; canvas trắng
+     (NEUTRAL-FIRST). Semantic = bậc công bố theo họ. 0 token loại C. */
+  --brand-50: #FBE9E7;
+  --brand-100: #FFCCBC;
+  --brand-200: #FFAB91;
+  --brand-300: #FF8A65;
+  --brand-400: #FF7043;
+  --brand-500: #FF5722;
+  --brand-600: #F4511E;
+  --brand-700: #E64A19;
+  --brand-800: #D84315;
+  --brand-900: #BF360C;
+  --brand-a700: #DD2C00;
+  --canvas: #FFFFFF;
+  --grey-50: #FAFAFA;
+  --grey-100: #F5F5F5;
+  --grey-200: #EEEEEE;
+  --grey-300: #E0E0E0;
+  --grey-400: #BDBDBD;
+  --grey-500: #9E9E9E;
+  --grey-600: #757575;
+  --grey-700: #616161;
+  --grey-800: #424242;
+  --grey-900: #212121;
+  --paper: #FFFFFF;
+  --neutral-50: #FAFAFA;
+  --neutral-100: #F5F5F5;
+  --neutral-200: #EEEEEE;
+  --neutral-300: #E0E0E0;
+  --neutral-400: #BDBDBD;
+  --neutral-500: #9E9E9E;
+  --muted: #757575;
+  --placeholder: #757575;
+  --line-control: #E0E0E0;
+  --ink: #212121;
+  --ink-on-seed: #000000;
   --strip: #FFFFFF;
   --mono: #000000;
-  --credit-bg: #E4FDE3; --credit-border: #9CCD9B; --credit-solid: #1D7725; --credit-ink: #004F09;
-  --debt-bg: #FFF2F0; --debt-border: #FFA096; --debt-solid: #A80011; --debt-ink: #6B0006;
-  --warning-bg: #FFF3E9; --warning-border: #F1AD76; --warning-solid: #AB5E00; --warning-ink: #783F00;
-  --info-solid: #255EA6; --info-bg: #E4F0FF;
-  --identity-01: #CF284D;
-  --identity-02: #353C1D;
-  --identity-03: #607200;
-  --identity-04: #4C654C;
-  --identity-05: #00423F;
-  --identity-06: #224A71;
-  --identity-07: #006CD3;
-  --identity-08: #061D9D;
-  --identity-09: #5E56DE;
-  --identity-10: #5637A7;
-  --identity-11: #9F43C3;
-  --identity-12: #8A5673;
-  /* === HẾT khối chép nguyên byte từ assets/tokens.css === */
+  --credit-bg: #E8F5E9; --credit-solid: #2E7D32; --credit-ink: #1B5E20;
+  --debt-bg: #FFEBEE; --debt-solid: #D32F2F; --debt-ink: #B71C1C;
+  --warning-bg: #FFF8E1; --warning-solid: #FF6F00;
+  --info-solid: #1565C0; --info-ink: #0D47A1; --info-bg: #E3F2FD;
+  /* Nền avatar DiceBear initials — bậc 100 của 16 họ Material (tokens.json avatar-backgrounds) */
+  --avatar-amber: #FFECB3;
+  --avatar-blue: #BBDEFB;
+  --avatar-cyan: #B2EBF2;
+  --avatar-deep-orange: #FFCCBC;
+  --avatar-deep-purple: #D1C4E9;
+  --avatar-green: #C8E6C9;
+  --avatar-indigo: #C5CAE9;
+  --avatar-light-blue: #B3E5FC;
+  --avatar-light-green: #DCEDC8;
+  --avatar-lime: #F0F4C3;
+  --avatar-orange: #FFE0B2;
+  --avatar-pink: #F8BBD0;
+  --avatar-purple: #E1BEE7;
+  --avatar-red: #FFCDD2;
+  --avatar-teal: #B2DFDB;
+  --avatar-yellow: #FFF9C4;
+  /* === HẾT khối token V4 === */
 
-  /* Easing token có tên (LK-37/V-M0 — mọi easing trong app phải là token này;
-     giá trị khoá ở INTERFACE-SPEC §3, bộ motion C1–C9 do Worker 2 thi hành). */
+  /* Easing token có tên — GIỮ NGUYÊN BYTE từ V3. */
   --ease-lock: cubic-bezier(0.15, 0, 0, 1);
   --ease-step: cubic-bezier(0.3, 0, 0, 1);
   --ease-leave: cubic-bezier(0.3, 0, 1, 1);
 
-  /* Alias tương thích cho class/token V2 mà components hiện dùng — BẢN ĐỒ
-     (chi tiết ở V3-IMPL-W1-LOG.md): tên cũ giữ nguyên, giá trị trỏ về token V3.
-     Worker 2 có thể dọn dần sang tên V3 trực tiếp. */
-  --ink-2: var(--muted); /* chữ phụ — neutral-600, 5.84:1 trên paper */
-  --line: var(--neutral-200); /* hairline chia hàng */
-  --line-strong: var(--line-control); /* biên control/phân định — 8.10:1 trên paper */
-  --card: var(--strip); /* bề mặt trắng #FFFFFF */
-  --rail: var(--strip); /* alias chuyển tiếp cũ, giữ như V2 */
-  --deck-sand: var(--neutral-200); /* bề mặt duy nhất của trạng thái disabled */
-  --editor: var(--neutral-100); /* nền editor trong sheet */
+  /* Alias tương thích D8 (STATE §1): tên cũ giữ, giá trị trỏ về token V4. */
+  --ink-2: #757575;
+  --line: #EEEEEE;
+  --line-strong: #E0E0E0;
+  --card: #FFFFFF;
+  --rail: #FFFFFF;
+  --deck-sand: #EEEEEE;
+  --editor: #F5F5F5;
   --brand: var(--brand-500);
-  --brand-deep: var(--brand-600); /* hover/pressed + chữ hành động (vai cũ của brand-deep) */
-  --brand-soft: var(--brand-100); /* tint lặng: chip đã chọn, ::selection */
+  --brand-deep: var(--brand-900);
+  --brand-soft: var(--brand-100);
   --credit: var(--credit-solid);
   --debt: var(--debt-solid);
-
-  /* REDESIGN-V3: bóng bề mặt tĩnh = 0 (LK-32) — --shadow-card / --shadow-lift
-     của V2 đã BỊ XOÁ. Nơi còn dùng (bàn giao Worker 2, xem log):
-     components/chiatien/sheet.tsx (shadow-[var(--shadow-lift)]),
-     components/chiatien/app.tsx (shadow-[var(--shadow-lift)] ở toast),
-     components/chiatien/session-list.tsx (shadow-[var(--shadow-card)] ×2). */
 }
 
 @theme inline {
   --color-ink: var(--ink);
+  --color-ink-on-seed: var(--ink-on-seed);
   --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
   --color-placeholder: var(--placeholder);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-line-control: var(--line-control);
+  --color-canvas: var(--canvas);
   --color-paper: var(--paper);
   --color-card: var(--card);
   --color-strip: var(--strip);
-  /* Alias chuyển tiếp: --color-rail trỏ về strip để class cũ (bg-rail…) không vỡ. */
   --color-rail: var(--strip);
   --color-deck-sand: var(--deck-sand);
   --color-editor: var(--editor);
+  --color-grey-50: var(--grey-50);
+  --color-grey-100: var(--grey-100);
+  --color-grey-200: var(--grey-200);
+  --color-grey-300: var(--grey-300);
+  --color-grey-400: var(--grey-400);
+  --color-grey-500: var(--grey-500);
+  --color-grey-600: var(--grey-600);
+  --color-grey-700: var(--grey-700);
+  --color-grey-800: var(--grey-800);
+  --color-grey-900: var(--grey-900);
   --color-neutral-50: var(--neutral-50);
   --color-neutral-100: var(--neutral-100);
   --color-neutral-200: var(--neutral-200);
@@ -122,43 +141,44 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
-  --color-brand-950: var(--brand-950);
+  --color-brand-a700: var(--brand-a700);
   --color-credit: var(--credit);
   --color-credit-bg: var(--credit-bg);
-  --color-credit-border: var(--credit-border);
   --color-credit-solid: var(--credit-solid);
   --color-credit-ink: var(--credit-ink);
   --color-debt: var(--debt);
   --color-debt-bg: var(--debt-bg);
-  --color-debt-border: var(--debt-border);
   --color-debt-solid: var(--debt-solid);
   --color-debt-ink: var(--debt-ink);
   --color-warning-bg: var(--warning-bg);
-  --color-warning-border: var(--warning-border);
   --color-warning-solid: var(--warning-solid);
-  --color-warning-ink: var(--warning-ink);
   --color-info-solid: var(--info-solid);
+  --color-info-ink: var(--info-ink);
   --color-info-bg: var(--info-bg);
   --color-mono: var(--mono);
-  --color-identity-01: var(--identity-01);
-  --color-identity-02: var(--identity-02);
-  --color-identity-03: var(--identity-03);
-  --color-identity-04: var(--identity-04);
-  --color-identity-05: var(--identity-05);
-  --color-identity-06: var(--identity-06);
-  --color-identity-07: var(--identity-07);
-  --color-identity-08: var(--identity-08);
-  --color-identity-09: var(--identity-09);
-  --color-identity-10: var(--identity-10);
-  --color-identity-11: var(--identity-11);
-  --color-identity-12: var(--identity-12);
+  --color-avatar-amber: var(--avatar-amber);
+  --color-avatar-blue: var(--avatar-blue);
+  --color-avatar-cyan: var(--avatar-cyan);
+  --color-avatar-deep-orange: var(--avatar-deep-orange);
+  --color-avatar-deep-purple: var(--avatar-deep-purple);
+  --color-avatar-green: var(--avatar-green);
+  --color-avatar-indigo: var(--avatar-indigo);
+  --color-avatar-light-blue: var(--avatar-light-blue);
+  --color-avatar-light-green: var(--avatar-light-green);
+  --color-avatar-lime: var(--avatar-lime);
+  --color-avatar-orange: var(--avatar-orange);
+  --color-avatar-pink: var(--avatar-pink);
+  --color-avatar-purple: var(--avatar-purple);
+  --color-avatar-red: var(--avatar-red);
+  --color-avatar-teal: var(--avatar-teal);
+  --color-avatar-yellow: var(--avatar-yellow);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
 }
 
 html,
 body {
-  background: var(--paper);
+  background: var(--canvas);
   color: var(--ink);
 }
 
@@ -171,6 +191,7 @@ body {
 
 .font-display {
   font-family: var(--font-display);
+  font-stretch: 125%;
   /* Số tiền và mọi con số hiển thị luôn thẳng cột theo từng chữ số. */
   font-variant-numeric: tabular-nums;
 }
@@ -184,16 +205,16 @@ body {
 }
 
 /* Kẻ đôi tổng kết (dấu chữ ký của hệ — sinh ra từ hình học mark «Kẻ Đôi»):
-   phần tử rỗng cao 5px — hai vệt brand-700 cứng 1px ở y=0 và y=4, cách nhau 3px.
+   phần tử rỗng cao 5px — hai vệt brand-900 cứng 1px ở y=0 và y=4, cách nhau 3px.
    Triển khai bằng hai lớp background-image (mỗi lớp một vệt đặc 100%×1px,
    background-repeat: no-repeat) — các điểm dừng là cứng/tuyệt đối, đây là vệt
    đặc chứ KHÔNG phải gradient trang trí; không dùng border-top: 3px double vì
-   độ dày của nó không kiểm soát được theo token. Màu khoá: brand-700 (LK-22). */
+   độ dày của nó không kiểm soát được theo token. Màu khoá V4: brand-900 (INTERFACE-SPEC V4 §1). */
 .double-rule {
   height: 5px;
   background-image:
-    linear-gradient(var(--brand-700), var(--brand-700)),
-    linear-gradient(var(--brand-700), var(--brand-700));
+    linear-gradient(var(--brand-900), var(--brand-900)),
+    linear-gradient(var(--brand-900), var(--brand-900));
   background-size:
     100% 1px,
     100% 1px;
@@ -305,12 +326,12 @@ body {
 /* Bề mặt trình duyệt cũng mang màu của hệ thống, không để mặc định lạc tông. */
 ::selection {
   background: var(--brand-100);
-  color: var(--brand-700);
+  color: var(--brand-900);
 }
 
-/* Focus bàn phím luôn thấy rõ ở mọi control — vòng brand-700 trên nền sáng (LK-41: focus ring thuộc tập đóng của điểm brand). */
+/* Focus bàn phím luôn thấy rõ ở mọi control — vòng brand-900 trên nền sáng (focus ring thuộc tập đóng của điểm brand; brand-900 là màu focus chính thức V4). */
 :focus-visible {
-  outline: 2px solid var(--brand-700);
+  outline: 2px solid var(--brand-900);
   outline-offset: 2px;
 }
 

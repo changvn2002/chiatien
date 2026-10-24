@@ -37,6 +37,7 @@ export function SessionLedger({
   onAddMember,
   onAddExpense,
   onTotalVisibility,
+  allSettled = false,
 }: {
   session: Session;
   nameOf: (id: string) => string;
@@ -47,6 +48,8 @@ export function SessionLedger({
   onOpenExpenseAction: (expense: Expense) => void;
   onAddMember: () => void;
   onAddExpense: () => void;
+  /** Có khoản + transfers rỗng (SessionView tính) — hiện «Kẻ Đôi Ngang Yên». */
+  allSettled?: boolean;
   /** Báo cho SessionView khi hàng tổng vào/ra khung nhìn (luật nhường kẻ đôi). */
   onTotalVisibility?: (visible: boolean) => void;
 }) {
@@ -88,40 +91,46 @@ export function SessionLedger({
   const emptyLedger =
     session.members.length === 0 ? (
       <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- hero rut gon V4 la SVG tinh, aspect-ratio khai truoc (CLS=0); phan xu parent §5(b): moi phien expenses=0 deu dung hero rut gon, ke ca chua co thanh vien */}
         <img
-          src="/products/brand/empty-state.webp"
+          src="/products/brand/hero-split-compact.svg"
           alt=""
           aria-hidden
-          className="mx-auto mb-3 max-h-[160px] w-auto"
+          width={792}
+          height={160}
+          style={{ aspectRatio: '792 / 160' }}
+          className="mx-auto mb-3 w-full"
           loading="lazy"
         />
-        <p className="text-sm text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
+        <p className="text-base text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
         <button
           type="button"
           onClick={onAddMember}
-          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:border-brand-deep"
+          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-card px-4 text-base font-bold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:border-brand-deep"
         >
           <IconPlus size={16} aria-hidden /> Thêm người
         </button>
       </div>
     ) : session.expenses.length === 0 ? (
       <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ empty-state là WebP tĩnh đã nén sẵn của app, kích thước hiển thị cố định; next/image không thêm lợi ích */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- hero rut gon V4 la SVG tinh, aspect-ratio khai truoc (CLS=0) */}
         <img
-          src="/products/brand/empty-state.webp"
+          src="/products/brand/hero-split-compact.svg"
           alt=""
           aria-hidden
-          className="mx-auto mb-3 max-h-[160px] w-auto"
+          width={792}
+          height={160}
+          style={{ aspectRatio: '792 / 160' }}
+          className="mx-auto mb-3 w-full"
           loading="lazy"
         />
-        <p className="text-sm text-ink">
+        <p className="text-base text-ink">
           Chưa có khoản chi nào. Ghi khoản đầu tiên: ai trả, bao nhiêu, chia cho ai.
         </p>
         <button
           type="button"
           onClick={onAddExpense}
-          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-card px-4 font-display text-sm font-bold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:border-brand-deep"
+          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-card px-4 text-base font-bold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:border-brand-deep"
         >
           <IconPlus size={16} aria-hidden /> Thêm khoản chi
         </button>
@@ -133,13 +142,26 @@ export function SessionLedger({
       {memberNotice && (
         <p
           role="alert"
-          className="mb-3 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
+          className="mb-3 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
         >
           <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           <span>{memberNotice}</span>
         </p>
       )}
       {emptyLedger}
+      {session.expenses.length > 0 && allSettled && (
+        // eslint-disable-next-line @next/next/no-img-element -- art da hoa V4 la SVG tinh, aspect-ratio khai truoc, hien thi <=280x70
+        <img
+          src="/products/brand/hero-settled.svg"
+          alt=""
+          aria-hidden
+          width={480}
+          height={120}
+          style={{ aspectRatio: '480 / 120' }}
+          className="mx-auto mb-3 max-h-[70px] w-[280px]"
+          loading="lazy"
+        />
+      )}
       {session.expenses.length > 0 && (
         <>
           {/* Nhãn cột ledger (desktop, TYPE-AND-ICON §1): Inter 600,
@@ -148,10 +170,10 @@ export function SessionLedger({
             aria-hidden
             className="hidden grid-cols-[minmax(0,1fr)_auto] gap-x-2 pb-1 min-[900px]:grid"
           >
-            <span className="font-figure text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+            <span className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
               Khoản chi
             </span>
-            <span className="font-figure text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+            <span className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
               Số tiền
             </span>
           </div>
@@ -169,10 +191,10 @@ export function SessionLedger({
                     className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-left min-[900px]:min-h-[56px]"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-medium text-ink">
+                      <span className="block truncate text-base font-medium text-ink">
                         {e.title}
                       </span>
-                      <span className="block text-[13px] break-words text-ink-2">
+                      <span className="block text-xs break-words text-ink-2">
                         {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
                         {e.participantIds.length} người
                       </span>
@@ -194,7 +216,7 @@ export function SessionLedger({
                       {e.participantIds.map((id) => (
                         <li
                           key={id}
-                          className="flex min-h-[32px] min-w-0 items-center justify-between gap-3 text-sm"
+                          className="flex min-h-[32px] min-w-0 items-center justify-between gap-3 text-base"
                         >
                           <span className="min-w-0 truncate text-ink-2">{nameOf(id)}</span>
                           <span
@@ -214,10 +236,8 @@ export function SessionLedger({
               <li key={`exiting-${e.id}`} aria-hidden className="animate-row-out">
                 <div className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 min-[900px]:min-h-[56px]">
                   <span className="min-w-0">
-                    <span className="block truncate text-[15px] font-medium text-ink">
-                      {e.title}
-                    </span>
-                    <span className="block text-[13px] break-words text-ink-2">
+                    <span className="block truncate text-base font-medium text-ink">{e.title}</span>
+                    <span className="block text-xs break-words text-ink-2">
                       {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
                       {e.participantIds.length} người
                     </span>

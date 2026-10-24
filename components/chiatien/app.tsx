@@ -94,15 +94,19 @@ export function ChiaTienApp() {
             KHÔNG còn là span "Đã lưu" opacity thoáng qua ở đây — nó
             sống ở StatusLine tại các bề mặt theo LAYOUT-SPEC §6.3. */}
         {active ? (
-          <p className="font-display text-[19px] leading-tight font-bold text-ink">Chia Tiền</p>
+          <p className="font-display text-[32px] leading-tight font-extrabold text-ink">
+            Chia Tiền
+          </p>
         ) : (
-          <h1 className="font-display text-[19px] leading-tight font-bold text-ink">Chia Tiền</h1>
+          <h1 className="font-display text-[32px] leading-tight font-extrabold text-ink">
+            Chia Tiền
+          </h1>
         )}
         {active && (
           <button
             type="button"
             onClick={goBackToList}
-            className="-mr-2 ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-sm font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
+            className="-mr-2 ml-auto inline-flex min-h-11 items-center gap-0.5 rounded-lg px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
           >
             <IconChevronLeft size={16} aria-hidden /> Tất cả cuộc chia
           </button>
@@ -112,7 +116,7 @@ export function ChiaTienApp() {
       {saveFailed && (
         <p
           role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
         >
           <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           <span>
@@ -124,9 +128,20 @@ export function ChiaTienApp() {
       {brokenLink && !active && (
         <div
           role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-sm font-medium text-debt-ink"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
         >
           <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element -- art loi link V4 (Kenh Cat Dut) la SVG tinh, aspect-ratio khai truoc, <=120x80 */}
+          <img
+            src="/products/brand/hero-broken.svg"
+            alt=""
+            aria-hidden
+            width={240}
+            height={160}
+            style={{ aspectRatio: '240 / 160' }}
+            className="max-h-[80px] w-[120px] shrink-0"
+            loading="lazy"
+          />
           <p className="min-w-0 flex-1">
             Link này không mở được — có thể link đã bị cắt ngắn khi gửi, hoặc không còn đúng định
             dạng. Hãy nhờ người gửi copy lại link đầy đủ.
@@ -142,7 +157,7 @@ export function ChiaTienApp() {
         </div>
       )}
       {importedTitle && (
-        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep">
+        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-base font-medium text-brand-deep">
           <div className="min-w-0 flex-1">
             <p>
               Đã nhập cuộc chia “{importedTitle}” — bản sao này nằm trên máy của bạn, cứ sửa thoải
@@ -177,7 +192,7 @@ export function ChiaTienApp() {
       {externalChange && (
         <div
           role="status"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep"
+          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-soft px-4 py-3 text-base font-medium text-brand-deep"
         >
           <p className="min-w-0 flex-1">
             Dữ liệu vừa được thay đổi ở một tab khác — app đã tải lại bản mới nhất để không tab nào
@@ -236,14 +251,16 @@ export function ChiaTienApp() {
           <div className="grid gap-2">
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-base font-bold text-ink">Chia Tiền là gì?</h2>
+                <h2 className="font-display text-[25px] font-extrabold text-ink">
+                  Chia Tiền là gì?
+                </h2>
                 <IconChevronDown
                   size={16}
                   aria-hidden
                   className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
                 />
               </summary>
-              <p className="max-w-[72ch] pb-4 text-sm leading-relaxed text-muted">
+              <p className="max-w-[72ch] pb-4 text-base leading-relaxed text-muted">
                 Chia Tiền là công cụ chia tiền nhóm miễn phí cho người Việt. Mỗi chuyến đi chơi, bữa
                 ăn nhậu hay kỳ ở trọ chung là một “cuộc chia”: bạn ghi lại ai đã trả khoản nào, app
                 tự chia cho đúng những người liên quan, triệt tiêu các khoản nợ chồng chéo và cho ra
@@ -257,7 +274,9 @@ export function ChiaTienApp() {
 
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-base font-bold text-ink">Cách dùng Chia Tiền</h2>
+                <h2 className="font-display text-[25px] font-extrabold text-ink">
+                  Cách dùng Chia Tiền
+                </h2>
                 <IconChevronDown
                   size={16}
                   aria-hidden
@@ -266,28 +285,26 @@ export function ChiaTienApp() {
               </summary>
               <ol className="grid gap-4 pb-4 sm:grid-cols-3">
                 <li>
-                  <h3 className="mb-1 font-display text-base font-bold text-ink">
-                    Thêm người của nhóm
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted">
+                  <h3 className="mb-1 text-xl font-bold text-ink">Thêm người của nhóm</h3>
+                  <p className="text-base leading-relaxed text-muted">
                     Đặt tên cho chuyến đi hay bữa tiệc rồi thêm từng người trong nhóm. Ai muốn nhận
                     tiền qua VietQR thì lưu tài khoản ngay trên máy của họ.
                   </p>
                 </li>
                 <li>
-                  <h3 className="mb-1 font-display text-base font-bold text-ink">
+                  <h3 className="mb-1 text-xl font-bold text-ink">
                     Ghi khoản chi khi có người trả
                   </h3>
-                  <p className="text-sm leading-relaxed text-muted">
+                  <p className="text-base leading-relaxed text-muted">
                     Ai trả, bao nhiêu, chia cho những ai — chọn cách chia đều, tuỳ chỉnh số tiền
                     từng người, hoặc chia theo phần (ở mấy đêm, ăn mấy bữa).
                   </p>
                 </li>
                 <li>
-                  <h3 className="mb-1 font-display text-base font-bold text-ink">
+                  <h3 className="mb-1 text-xl font-bold text-ink">
                     Mở quyết toán, quét VietQR hoặc copy cho Zalo
                   </h3>
-                  <p className="text-sm leading-relaxed text-muted">
+                  <p className="text-base leading-relaxed text-muted">
                     App tính số dư từng người và rút gọn thành ít lần chuyển nhất. Quét VietQR để
                     trả ngay, hoặc copy bản quyết toán gửi thẳng vào nhóm Zalo, Messenger.
                   </p>
@@ -297,7 +314,9 @@ export function ChiaTienApp() {
 
             <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-base font-bold text-ink">Câu hỏi thường gặp</h2>
+                <h2 className="font-display text-[25px] font-extrabold text-ink">
+                  Câu hỏi thường gặp
+                </h2>
                 <IconChevronDown
                   size={16}
                   aria-hidden
@@ -308,14 +327,14 @@ export function ChiaTienApp() {
                 {FAQ_ITEMS.map((item) => (
                   <details key={item.question} className="group/faq rounded-lg bg-paper px-3">
                     <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 [&::-webkit-details-marker]:hidden">
-                      <h3 className="font-display text-sm font-bold text-ink">{item.question}</h3>
+                      <h3 className="text-xl font-bold text-ink">{item.question}</h3>
                       <IconChevronDown
                         size={14}
                         aria-hidden
                         className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open/faq:rotate-180"
                       />
                     </summary>
-                    <p className="max-w-[72ch] pb-3 text-sm leading-relaxed text-muted">
+                    <p className="max-w-[72ch] pb-3 text-base leading-relaxed text-muted">
                       {item.answer}
                     </p>
                   </details>
@@ -343,7 +362,7 @@ export function ChiaTienApp() {
       {undoToast && (
         <div
           role="status"
-          className="animate-fade-in fixed inset-x-4 bottom-24 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-lg bg-ink px-4 py-3 text-sm text-white lg:bottom-6"
+          className="animate-fade-in fixed inset-x-4 bottom-24 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-lg bg-ink px-4 py-3 text-base text-white lg:bottom-6"
         >
           <span className="min-w-0 truncate">{undoToast.label}</span>
           <button
@@ -352,7 +371,7 @@ export function ChiaTienApp() {
               undoToast.undo();
               dismissUndo();
             }}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 font-display font-bold text-brand-soft transition duration-100 ease-[var(--ease-lock)] hover:text-white"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 font-bold text-brand-soft transition duration-100 ease-[var(--ease-lock)] hover:text-white"
           >
             <IconUndo size={15} aria-hidden /> Hoàn tác
           </button>

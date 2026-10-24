@@ -3,6 +3,46 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.7.0] — 2026-10-24 — REDESIGN-V4: Neutral-First, seed Material nguyên văn
+
+### Changed
+
+- **Canvas Neutral-First** theo luật của chủ dự án: trắng / đen / xám
+  trung tính chiếm ưu thế tuyệt đối (đo trên render thật: home 96,2% ·
+  workspace desktop 96,1% trung tính); giấy nhuộm màu bị cấm làm nền
+  chính, màu thương hiệu chỉ còn là accent có ngân sách theo bề mặt
+  (trần accent F-1 đạt ở mọi bề mặt theo vùng panel).
+- **Seed thương hiệu = Material Deep Orange 500 `#FF5722` nguyên văn**
+  (byte-identical với giá trị Google Material công bố — V3 dùng
+  derivation trôi xa khỏi gốc nên vẫn bị chê "màu lạ"); chữ/link/focus
+  dùng bậc 900 `#BF360C`, bậc 800 bị cấm cho text.
+- Thang chữ khoá 16→20→25→32→40: Archivo Expanded cho tiêu đề, Be
+  Vietnam Pro cho nội dung, **Inter chỉ còn vai số** (sau đợt tách
+  span: <25% ký tự render trên mọi bề mặt, đo độc lập hai fixture).
+- Avatar DiceBear `initials`: bảng nền chuyển sang 16 ô bậc-100 của
+  thang Material (mực `#212121`, tương phản đo 9,75–15,03 — 16/16 đạt
+  ≥4,5); seed vẫn là khoá tên M-2 (bất biến 120/120 hoán vị).
+
+### Added
+
+- Lớp hình vẽ tay: hero đầy đủ `hero-split` ở home chưa có phiên +
+  3 biến thể (rút gọn cho phiên chưa có khoản · «Kẻ Đôi Ngang Yên»
+  khi đã hoà hết · «Kênh Cắt Đứt» ở bề mặt lỗi link) — mount đúng
+  whitelist, ngoài whitelist art = 0.
+- **CompletionMark** (canvas-2D) cho khoảnh khắc chốt chia đầu tiên
+  của một phiên, kèm nhãn «Đã chốt chia»; three.js bị veto bằng số
+  (ngân sách bundle không đủ) nên không dùng. Tôn trọng
+  `prefers-reduced-motion` (bản tĩnh), không chặn VietQR.
+- `tokens:verify` (script + bản sao token khoá byte-identical tại
+  `design/tokens.chiatien-v4.json`): mọi hex trong sink phải thuộc
+  tokens.json, hex V3 bị cấm = 0 sau khi strip comment XML (LK4-51).
+
+### Removed
+
+- `empty-state.webp` — không còn bề mặt nào dùng sau khi hero V4
+  thay thế (kể cả nhánh ledger 0 thành viên); đồng thời gỡ khỏi
+  precache của service worker (SW bump lên v5 trong cùng đợt).
+
 ## [1.6.1] — 2026-10-24 — Khôi phục DiceBear + đóng 4 MINOR của Panel #05
 
 ### Changed

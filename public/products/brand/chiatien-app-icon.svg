@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- CHIATIEN V4 · App icon — tile seed Material Deep Orange 500 #FF5722 (loại A), mark «Kẻ Đôi» trắng #FFFFFF, sinh từ cùng path với mark.svg (LK-26: favicon + app-icon cùng một nguồn mark; bump SW cùng commit đổi asset). Bo tile r20 là ỨNG DỤNG (tile), không thuộc mark. Mark trắng trên tile seed là vai ĐỒ HOẠ (3,16 ≥ 3,00 non-text) — không phải chữ, không vi phạm V-11.4. -->
+  <rect width="96" height="96" rx="20" fill="#FF5722"/>
+  <g transform="translate(14.4 14.4) scale(0.7)"><path fill="#FFFFFF" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z"/></g>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 240">
+  <!-- CHIATIEN V4 · Hero «Phép Chia Dựng Đứng 65:35» — BẢN SỬA V12-09 (lens-12).
+       BẢN CŨ BỊ VETO: cột trái dùng đĩa tròn r16 + thanh rect xám mờ = cú pháp skeleton-loading, vi phạm tinh thần L9-5 của chính lens-09.
+       BẢN NÀY: giữ HÌNH HỌC phép chia (kẻ đôi dọc tại đúng 65% bề rộng: x=514/522 trên 792), đổi CHẤT LIỆU:
+       (1) cột trái = LEDGER THẬT thu nhỏ — kẻ ngang mực chạm mép, khối vuông có biên ở đầu hàng, dấu mực đặc — KHÔNG đĩa tròn, KHÔNG thanh xám mờ, KHÔNG opacity giả loading;
+       (2) cột phải = KHỐI LEDGER CÓ BIÊN chứa bốn khối của mark (65:35) + kẻ đôi ngang ở đáy (module hàng tổng).
+       Accent duy nhất: đoạn giữa của kẻ đôi dọc (seed #FF5722) ≈3–5% nội bộ art, dưới trần accent-trong-art 30%. Không chữ/số/tên trong art (L9-5). Chỉ ở màn chủ/phiên trống/OG — cấm workspace/sheet/VietQR. -->
+  <!-- Kẻ đôi dọc chủ đạo tại 65% — nét mực rõ -->
+  <line x1="514" y1="20" x2="514" y2="220" stroke="#212121" stroke-width="3"/>
+  <line x1="522" y1="20" x2="522" y2="220" stroke="#212121" stroke-width="3"/>
+  <!-- Đoạn accent của kẻ đôi (duy nhất) -->
+  <line x1="514" y1="88" x2="514" y2="152" stroke="#FF5722" stroke-width="3"/>
+  <line x1="522" y1="88" x2="522" y2="152" stroke="#FF5722" stroke-width="3"/>
+  <!-- Cột trái: 3 hàng ledger thật — kẻ ngang chạm mép tới kẻ đôi -->
+  <line x1="0" y1="64" x2="514" y2="64" stroke="#212121" stroke-width="2"/>
+  <line x1="0" y1="112" x2="514" y2="112" stroke="#212121" stroke-width="2"/>
+  <line x1="0" y1="160" x2="514" y2="160" stroke="#212121" stroke-width="2"/>
+  <!-- Khối khoản ở đầu mỗi hàng: vuông, có biên rõ, góc vuông -->
+  <rect x="16" y="50" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <rect x="16" y="98" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <rect x="16" y="146" width="28" height="28" fill="#FFFFFF" stroke="#212121" stroke-width="2.5"/>
+  <!-- Dấu tổng hàng: khối mực đặc trên kẻ, tại các vị trí nhịp khác nhau (nhịp trừu tượng — không phải số tiền) -->
+  <rect x="446" y="58" width="12" height="12" fill="#212121"/>
+  <rect x="330" y="106" width="12" height="12" fill="#212121"/>
+  <rect x="398" y="154" width="12" height="12" fill="#212121"/>
+  <!-- Cột phải: khối quyết toán có biên -->
+  <rect x="560" y="40" width="192" height="160" fill="#FFFFFF" stroke="#212121" stroke-width="3"/>
+  <!-- Bốn khối của mark (65:35) thu nhỏ bên trong khối -->
+  <g transform="translate(593 52) scale(1.1)"><path fill="#212121" d="M 10 15 C 10 13.34 11.34 12 13 12 H 50 V 43 H 10 Z M 64 12 H 83 C 84.66 12 86 13.34 86 15 V 43 H 64 Z M 10 53 H 50 V 84 H 13 C 11.34 84 10 82.66 10 81 Z M 64 53 H 86 V 81 C 86 82.66 84.66 84 83 84 H 64 Z"/></g>
+  <!-- Kẻ đôi ngang ở đáy khối = module hàng tổng -->
+  <line x1="576" y1="184" x2="736" y2="184" stroke="#212121" stroke-width="2.5"/>
+  <line x1="576" y1="190" x2="736" y2="190" stroke="#212121" stroke-width="2.5"/>
+</svg>

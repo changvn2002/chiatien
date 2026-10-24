@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <!-- CHIATIEN V3 · Glyph «khía đôi» — di sản của mark B đã chết, giáng xuống GLYPH QUYẾT TOÁN TĨNH trong hệ A (LK-22, verdict §C3). Đúng module của mark: khía đôi = hai rãnh ngắn song song ở đuôi, góc trong vuông tuyệt đối. TĨNH tuyệt đối: cấm animate khía (lens-08 C8). Fill = –ink khi dùng trong ledger; không bao giờ là mark. -->
-  <path fill="#140F0E" d="M 3 9.2 H 13 V 6.4 L 20.4 12 L 13 17.6 V 14.8 H 3 V 13.4 H 5.6 V 10.6 H 3 Z M 7.4 10.6 H 9.8 V 13.4 H 7.4 Z"/>
+  <!-- CHIATIEN V4 · Glyph «khía đôi» — di sản của mark B đã chết, giáng xuống GLYPH QUYẾT TOÁN TĨNH trong hệ A (LK-22, verdict §C3). Đúng module của mark: khía đôi = hai rãnh ngắn song song ở đuôi, góc trong vuông tuyệt đối. TĨNH tuyệt đối: cấm animate khía (lens-08 C8). Fill = –ink khi dùng trong ledger; không bao giờ là mark. -->
+  <path fill="#212121" d="M 3 9.2 H 13 V 6.4 L 20.4 12 L 13 17.6 V 14.8 H 3 V 13.4 H 5.6 V 10.6 H 3 Z M 7.4 10.6 H 9.8 V 13.4 H 7.4 Z"/>
 </svg>
