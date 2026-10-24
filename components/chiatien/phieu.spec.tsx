@@ -304,7 +304,8 @@ describe('§9(a)(b)(d) — lớp 1 người nhận', () => {
       />,
     );
     const layer = document.querySelector('[data-layer1]');
-    expect(layer?.textContent).toContain('chốt lúc 20:42 · bản 2');
+    expect(layer?.textContent).toContain('bản 2 của link này');
+    expect(layer?.textContent).not.toContain('chốt lúc');
     expect(layer?.textContent).toContain('Tổng 1.310.000');
     expect(layer?.textContent).toContain('3 lần chuyển');
     expect(document.querySelectorAll('[data-slip]')).toHaveLength(5);

@@ -150,9 +150,20 @@ export function formatSealTime(epochMs: number): string {
   return `${hh}:${mm}`;
 }
 
-/** Cụm dấu bản dùng thống nhất ở thẻ hoàn tất / lớp 1 / copy text: «chốt lúc 20:42 · bản 2». */
+/** Cụm dấu bản dùng thống nhất ở thẻ hoàn tất / copy text của NGƯỜI GỬI: «chốt lúc 20:42 · bản 2». */
 export function sealLabel(seal: SealMark): string {
   return `chốt lúc ${formatSealTime(seal.sealedAt)} · bản ${seal.version}`;
+}
+
+/**
+ * Dấu bản phía LINK (lớp 1, máy người nhận): payload không mang giờ
+ * chốt của người gửi (§1.7) nên lớp 1 KHÔNG BAO GIỜ nói «chốt lúc» —
+ * mốc giờ duy nhất máy nhận có là giờ import của chính nó, gắn nhãn
+ * giờ chốt là khẳng định sai (Panel #07, S-1 SERIOUS). Lớp 1 chỉ
+ * ghi số bản của bản sao trên máy này.
+ */
+export function linkSealLabel(seal: SealMark): string {
+  return `bản ${seal.version} của link này`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -186,10 +197,11 @@ export function completionStatusLine(
   return `Phiên “${session.title}” đã ${sealLabel(seal)}. Tổng ${formatVND(total)} · ${transfers.length} lần chuyển.`;
 }
 
-/** Dòng tóm tắt lớp 1 của link (§4): cùng cấu trúc với thẻ hoàn tất. */
+/** Dòng tóm tắt lớp 1 của link (§4): cùng cấu trúc với thẻ hoàn tất,
+ * nhưng dấu bản dùng linkSealLabel — không giờ, không «chốt lúc». */
 export function layer1SummaryLine(session: Session, transfers: Transfer[], seal: SealMark): string {
   const total = session.expenses.reduce((s, e) => s + e.amount, 0);
-  return `Phiên “${session.title}” · ${sealLabel(seal)}. Tổng ${formatVND(total)} · ${transfers.length} lần chuyển.`;
+  return `Phiên “${session.title}” · ${linkSealLabel(seal)}. Tổng ${formatVND(total)} · ${transfers.length} lần chuyển.`;
 }
 
 /* ------------------------------------------------------------------ */

@@ -3,6 +3,32 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [1.8.1] — 2026-10-24 — Sửa nóng S-1 của Panel #07: dấu bản lớp 1 hết nói sai giờ chốt
+
+### Fixed
+
+- **Dấu bản phía người nhận (Panel #07 S-1, SERIOUS — chặn rule
+  12):** lớp 1 của link từng mượn nhãn «chốt lúc HH:MM» của người
+  gửi nhưng hiện giờ *import* trên máy nhận — khẳng định sai tái
+  tạo mỗi lần mở link (bản cũ mở muộn còn hiện giờ «chốt» mới hơn
+  bản mới). Lớp 1 nay chỉ ghi **«bản N của link này»** — không giờ,
+  không «chốt lúc» (`linkSealLabel` trong `components/`; payload
+  và `lib/` không đổi). Phía người gửi giữ nguyên «chốt lúc
+  HH:MM · bản N» (giờ chốt thật của chính họ).
+- **Khai phạm vi công tắc phiếu (Panel #07 F2, spec-debt đã phân
+  xử):** dưới công tắc «Đóng phiếu khi chốt» trong Action Sheet
+  thêm đúng một dòng: «Link chia sẻ luôn hiện phiếu cho người
+  nhận.» — công tắc chỉ điều khiển thẻ chốt trên máy người gửi;
+  link luôn mang dạng phiếu theo §9(a). Phiên tĩnh cưỡng bức giữ
+  nguyên dòng «Phiên này giữ dạng tĩnh.».
+
+### Invariants
+
+- `git diff -- lib` vẫn = 0 byte. Suite **252/252** (gồm khẳng
+  định mới: lớp 1 chứa «bản N của link này» và KHÔNG chứa «chốt
+  lúc»). MINOR-1..4 của Panel #07 chuyển cho đợt thiết kế lại
+  đang chạy (đầu vào bắt buộc trong hồ sơ đợt).
+
 ## [1.8.0] — 2026-10-24 — «MỞ PHIẾU»: lớp nghi thức phiếu gấp cho khoảnh khắc chốt chia
 
 Thiết kế: ~/workspace/mini-apps/chiatien-game/ (WINNER-SPEC v2.1 +

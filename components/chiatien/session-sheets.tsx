@@ -251,8 +251,15 @@ export function SessionSheets(props: SessionSheetsProps) {
                 />
               </span>
             </button>
-            {slipsStaticForced && (
+            {slipsStaticForced ? (
               <p className="px-2 pb-2 text-base text-ink-2">Phiên này giữ dạng tĩnh.</p>
+            ) : (
+              /* Khai phạm vi công tắc (Panel #07 F2): công tắc chỉ điều
+                 khiển thẻ chốt trên máy này; link chia sẻ luôn mang
+                 dạng phiếu sang máy người nhận (§9(a)). */
+              <p className="px-2 pb-2 text-base text-ink-2">
+                Link chia sẻ luôn hiện phiếu cho người nhận.
+              </p>
             )}
           </div>
           <button
