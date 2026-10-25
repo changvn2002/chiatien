@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import { formatVNDDisplay } from '@/lib/money';
-import type { Session, Transfer } from '@/lib/types';
+import type { Session } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
   IconCheck,
@@ -20,16 +20,18 @@ import { useSettleLock } from './session-view-hooks';
 
 /**
  * Dải quyết toán mobile của Màn B (ARC-11): phần tóm tắt luôn nhìn
- * thấy (tổng + lệnh chuyển đầu), panel quyết toán mở rộng tại chỗ và
- * DOCK neo đáy (StatusLine + nút tóm tắt + Action Deck). Cột quyết
+ * thấy (tổng + nhãn «Quyết toán»), panel quyết toán mở rộng tại chỗ
+ * và DOCK neo đáy (StatusLine + nút tóm tắt + Action Deck). Cột quyết
  * toán desktop dùng cùng SettlementPanel qua panelProps.
  *
+ * UI-SLIM T1 (2026-10-25): hàng tóm tắt LỆNH CHUYỂN ĐẦU dưới hàng tổng
+ * ĐÃ BỎ — nó trùng đúng lệnh đầu của danh sách «Ai trả ai» trong panel
+ * (mở sheet là thấy cả hai cùng lúc trên một viewport). Dock theo
+ * nguyên tắc gọn: hành động chính + MỘT số tổng; danh sách lệnh đầy đủ
+ * vẫn một chạm qua toggle. Các dòng TRẠNG THÁI (chưa có khoản / chưa có
+ * gì / đã cân hết) không phải tóm tắt danh sách — giữ nguyên.
+ *
  * REDESIGN-V3:
- * - Hàng lệnh đầu theo D4-CT-1: lưới cột tên `minmax(72px, 1fr)` ở
- *   320px / `minmax(96px, 1fr)` từ 390px — CẤM min-width:0 trên ô tên
- *   (bản flex-1 + min-w-0 của Finding A bị thay bởi sàn lưới này);
- *   thứ tự hy sinh D4-CT-2: cụm «+N lệnh» biến mất khỏi hàng dưới
- *   360px trước tiên, số tiền (cột auto, nowrap) không bao giờ co.
  * - Ô số tổng mang C1 settle-lock (useSettleLock, 240ms --ease-lock).
  * - Kẻ đôi ở chân Strip (vị trí 2 của LK-22) CHỈ hiện khi hàng tổng
  *   ledger không cùng khung (doubleRuleYielded do SessionView cấp qua
@@ -45,9 +47,6 @@ export function SessionSettlementStrip({
   total,
   discrepancy,
   allSettled,
-  firstTransfer,
-  transfers,
-  nameOf,
   panelProps,
   online,
   deckNotice,
@@ -64,9 +63,6 @@ export function SessionSettlementStrip({
   total: number;
   discrepancy: number;
   allSettled: boolean;
-  firstTransfer: Transfer | undefined;
-  transfers: Transfer[];
-  nameOf: (id: string) => string;
   panelProps: SettlementPanelProps;
   online: OnlineStatus;
   deckNotice: string;
@@ -122,23 +118,6 @@ export function SessionSettlementStrip({
         <span className="flex w-full min-w-0 items-center gap-1.5 text-base font-medium text-ink">
           <IconCheck size={15} className="shrink-0 text-credit-solid" aria-hidden />
           <span className="truncate">Đã cân hết — không ai nợ ai</span>
-        </span>
-      ) : firstTransfer ? (
-        // R3 (mục 3): cụm «+N lệnh» CẤM quấn 2 dòng — nowrap + chữ phụ
-        // co xuống 13px, khoảng cột và số tiền co nhẹ để tổng bề ngang
-        // vừa 390px với dataset chuẩn (R2: «+2 / lệnh» gãy vụn).
-        <span className="grid w-full grid-cols-[minmax(72px,1fr)_auto_minmax(72px,1fr)_auto_auto] items-center gap-x-1 text-base text-ink min-[390px]:grid-cols-[minmax(96px,1fr)_auto_minmax(96px,1fr)_auto_auto]">
-          <span className="truncate">{nameOf(firstTransfer.fromId)}</span>
-          <IconSettleGlyph size={13} className="shrink-0 text-ink" aria-hidden />
-          <span className="truncate">{nameOf(firstTransfer.toId)}</span>
-          <span className="font-figure shrink-0 text-[15px] font-semibold whitespace-nowrap">
-            {formatVNDDisplay(firstTransfer.amount)}
-          </span>
-          {transfers.length > 1 && (
-            <span className="hidden shrink-0 text-[13px] whitespace-nowrap text-grey-700 min-[360px]:inline">
-              +{transfers.length - 1} lệnh
-            </span>
-          )}
         </span>
       ) : null}
     </>

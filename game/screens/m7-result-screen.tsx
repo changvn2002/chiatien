@@ -562,7 +562,7 @@ export function M7ResultScreen({
         <button
           type="button"
           onClick={onComplete}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
         >
           Hoàn tất
         </button>
@@ -575,7 +575,7 @@ export function M7ResultScreen({
             <button
               type="button"
               onClick={onDiscardToSplitEven}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
             >
               Chia đều
             </button>

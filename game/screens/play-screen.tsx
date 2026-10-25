@@ -25,7 +25,7 @@ import type { GameRecord } from '../store';
 import type { PlayerView } from '../state';
 import { GameStage } from '../phaser/stage';
 import { gameSound } from '../audio/sound';
-import { MuteButton } from './shared';
+import { GameSheet, MuteButton } from './shared';
 import { SPLIT_EVEN_LABEL } from '../copy';
 
 export function PlayScreen({
@@ -139,34 +139,27 @@ export function PlayScreen({
         </div>
       </div>
 
-      {cancelOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Huỷ ván và chia đều"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      {/* UI-SLIM T10: hộp thoại huỷ về GameSheet — game còn đúng MỘT
+          mẫu sheet/modal (portal, scrim, Esc) thay hộp tự chế. */}
+      <GameSheet open={cancelOpen} onClose={() => setCancelOpen(false)} title="Huỷ ván và chia đều">
+        <p className="text-base leading-relaxed text-ink">
+          Huỷ ván {record.code} và chia đều? Việc huỷ hiện công khai cho cả nhóm.
+        </p>
+        <button
+          type="button"
+          onClick={onPublicCancel}
+          className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
         >
-          <div className="w-full max-w-md rounded-lg bg-card px-4 py-4">
-            <p className="text-base leading-relaxed text-ink">
-              Huỷ ván {record.code} và chia đều? Việc huỷ hiện công khai cho cả nhóm.
-            </p>
-            <button
-              type="button"
-              onClick={onPublicCancel}
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
-            >
-              Cả nhóm đồng ý huỷ — chia đều
-            </button>
-            <button
-              type="button"
-              onClick={() => setCancelOpen(false)}
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-            >
-              Chơi tiếp
-            </button>
-          </div>
-        </div>
-      ) : null}
+          Cả nhóm đồng ý huỷ — chia đều
+        </button>
+        <button
+          type="button"
+          onClick={() => setCancelOpen(false)}
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:border-brand hover:text-brand-deep"
+        >
+          Chơi tiếp
+        </button>
+      </GameSheet>
     </div>
   );
 }

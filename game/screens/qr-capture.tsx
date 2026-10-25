@@ -167,7 +167,7 @@ export function QrCaptureBlock({
               <button
                 type="button"
                 onClick={() => void captureFrame()}
-                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
               >
                 Chụp QR trong khung hình
               </button>

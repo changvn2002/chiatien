@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { memberNameKey, normalizeMemberName } from '@/lib/identity';
@@ -257,5 +258,136 @@ export function GroupedTechString({ value, className }: { value: string; classNa
         </span>
       ))}
     </span>
+  );
+}
+
+const SHEET_FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * GameSheet (UI-SLIM BS-1/T9/T10) — MỘT mẫu sheet/modal duy nhất của
+ * game mode, bám đúng mẫu Sheet của app chính (components/chiatien/
+ * sheet.tsx): render qua portal lên document.body (bài học TC6 — không
+ * bị chrome của overlay game hay strip che), scrim bg-ink/45, panel
+ * bottom-sheet trên mobile (bo góc trên 2xl) và giữa màn hình từ sm,
+ * header dính (tiêu đề + nút đóng), thân cuộn riêng max-h 92dvh, Esc
+ * đóng, bấm scrim đóng, khoá cuộn nền, focus vào panel khi mở và trả
+ * focus về nút đã mở khi đóng, Tab vòng trong panel.
+ *
+ * KHÁC Sheet của app ở hai điểm có lý do: (1) lớp phủ phủ TOÀN màn
+ * (không dừng ở --strip-h — trong game không có strip, overlay game đã
+ * phủ kín và sheet phải che được cả header game); (2) z-[60] để đứng
+ * trên overlay game (z-40).
+ *
+ * Dùng cho: «Đổi người chơi», «Đổi nhân vật» (thay panel nhúng trong
+ * màn thiết lập — nội dung phía sau giữ nguyên chiều cao/vị trí cuộn/
+ * trạng thái vì màn thiết lập vẫn mount nguyên vẹn sau sheet), hộp
+ * thoại huỷ ván (play-screen) và thoát ván (entry).
+ */
+export function GameSheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    openerRef.current = (document.activeElement as HTMLElement | null) ?? null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(SHEET_FOCUSABLE)).filter(
+        (el) => el.offsetParent !== null,
+      );
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      document.body.style.overflow = prevOverflow;
+      const opener = openerRef.current;
+      if (opener && opener.isConnected) opener.focus();
+    };
+  }, [open]);
+
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4">
+      <button
+        type="button"
+        aria-label="Đóng"
+        onClick={onClose}
+        className="animate-fade-in absolute inset-0 h-full w-full cursor-default bg-ink/45"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="animate-sheet-in relative flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden rounded-t-2xl bg-card outline-none sm:max-w-lg sm:rounded-2xl"
+      >
+        <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
+          <h2 className="min-w-0 truncate font-display text-[25px] font-extrabold text-ink">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={`Đóng ${title}`}
+            className="-mt-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition duration-100 ease-[var(--ease-lock)] hover:bg-grey-50 hover:text-ink"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="min-h-0 overflow-y-auto px-4 pb-5 sm:px-5">{children}</div>
+      </div>
+    </div>,
+    document.body,
   );
 }

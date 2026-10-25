@@ -182,7 +182,7 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
   });
 });
 
-describe('Panel #03 — Strip tóm tắt 2 hàng (Finding A, cấu trúc)', () => {
+describe('Panel #03 — Strip tóm tắt (Finding A, cấu trúc; UI-SLIM T1: còn 1 hàng)', () => {
   const twoTransferSession: Session = {
     id: 's-two',
     title: 'Ăn trưa nhóm',
@@ -208,30 +208,20 @@ describe('Panel #03 — Strip tóm tắt 2 hàng (Finding A, cấu trúc)', () =
     updatedAt: 2,
   };
 
-  it('(iv) «Quyết toán» + Tổng ở hàng đầu; tên lệnh + tiền + «+N lệnh» ở hàng riêng bên dưới', () => {
+  it('(iv) UI-SLIM T1: nút tóm tắt strip CHỈ còn hàng «Tổng + Quyết toán»; KHÔNG còn hàng tóm tắt lệnh chuyển (tên/tiền/«+N lệnh») — danh sách lệnh đầy đủ nằm trong panel', () => {
     renderView(twoTransferSession);
     const summary = document.querySelector('[data-strip-summary]');
     expect(summary).toBeTruthy();
     const rows = [...(summary?.children ?? [])];
-    expect(rows.length).toBeGreaterThanOrEqual(2);
-    const headerRow = rows.find((r) => r.textContent?.includes('Quyết toán'));
-    expect(headerRow).toBeTruthy();
+    // Phiên có lệnh chuyển, chưa cân: nút tóm tắt đúng MỘT hàng.
+    expect(rows.length).toBe(1);
+    const headerRow = rows[0];
+    expect(headerRow?.textContent).toContain('Quyết toán');
     expect(headerRow?.textContent).toContain('Tổng');
-    // Cụm «+N lệnh» KHÔNG còn chung hàng với nhãn Quyết toán (gốc chồng glyph).
-    expect(headerRow?.textContent).not.toContain('lệnh');
-    const transferRow = rows.find(
-      (r) => r !== headerRow && r.querySelector('.truncate') && r.textContent?.includes('lệnh'),
-    );
-    expect(transferRow).toBeTruthy();
-    // Tên người gửi/nhận theo HỢP ĐỒNG MỚI D4-CT-1 (REDESIGN-V3):
-    // ô lưới minmax(72px,1fr)/minmax(96px,1fr) + truncate, CẤM min-w-0
-    // trên ô tên — sàn lưới thay cơ chế flex-1 + min-w-0 của Finding A.
-    expect(transferRow?.className).toContain('minmax(72px,1fr)');
-    const nameSpans = [...(transferRow?.querySelectorAll('.truncate') ?? [])];
-    expect(nameSpans.length).toBeGreaterThanOrEqual(2);
-    for (const s of nameSpans) {
-      expect(s.className).not.toContain('min-w-0');
-    }
+    // Không tóm tắt lệnh nào trong dock: không «lệnh», không tên cặp
+    // người chuyển (lệnh đầu của twoTransferSession là Bình -> An).
+    expect(summary?.textContent).not.toContain('lệnh');
+    expect(summary?.textContent).not.toContain('Bình');
   });
 });
 

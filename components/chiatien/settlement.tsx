@@ -358,7 +358,10 @@ export function SettlementPanel({
         {/* Khối thiếu-QR gom theo NGƯỜI NHẬN (D-1): hàng phẳng cùng bảng —
             hairline trên/dưới, không nền, không bo góc, không hộp lồng. */}
         {missingRecipients.map(({ member, count, total }) => (
-          <div key={member.id} className="snap-start border-y border-line py-4">
+          // UI-SLIM T6: đệm dọc py-4 -> py-3 — khối lặp theo người nhận,
+          // thắt lại để phiên nhiều người nhận thiếu QR đỡ tốn chiều cao;
+          // chữ + 2 đường thao tác giữ nguyên từng ký tự.
+          <div key={member.id} className="snap-start border-y border-line py-3">
             <p className="text-base font-semibold text-ink">
               Chưa có mã QR trên máy này — {member.name}
             </p>

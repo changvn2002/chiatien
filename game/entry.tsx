@@ -20,6 +20,7 @@ import type { GameSessionInput } from './adapter';
 import { buildIdentityMapCovering, buildIdentityMapFromSessionMembers } from './assets/identity';
 import { loadAvatarPhotos } from './assets/avatar-store';
 import { FALLBACK_SET } from './screens/character-sets';
+import { GameSheet } from './screens/shared';
 import {
   isGameMuted,
   setGameMuted,
@@ -419,17 +420,19 @@ export function GameEntry({
           screen === 'm6' || screen === 'm7' || screen === 'm8' ? 'max-w-6xl' : 'max-w-2xl'
         }`}
       >
-        {/* Header: tiêu đề chiếm trọn một hàng riêng để không bị hai nút
-            hai bên ép ngắt vụn («Chơi game / đãi» ở pack v2); hàng nút ở
-            dưới, căn phải, mọi nút giữ vùng chạm ≥44px (min-h-11).
+        {/* Header MỘT HÀNG DUY NHẤT: tiêu đề trái, cụm nút phải cùng
+            hàng (bản hai hàng cũ — tiêu đề một hàng, nút một hàng căn
+            phải — bị user chê là lỗi vị trí trên mobile 2026-10-25:
+            hàng nút trống gần hết chiều ngang, trông như vỡ layout).
+            Tiêu đề truncate khi hẹp, nút shrink-0, vùng chạm ≥44px.
             FIX-V3 P1.5: nút tiếng KHÔNG còn ở chrome này — toàn mode
             chỉ còn ĐÚNG MỘT nút tiếng, nằm trong cụm điều khiển của
             màn chơi / màn xem lại (play-screen / m8). */}
-        <div>
-          <h1 className="font-display text-[20px] font-extrabold whitespace-nowrap text-ink">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 truncate font-display text-[20px] font-extrabold whitespace-nowrap text-ink">
             Chơi game đãi
           </h1>
-          <div className="mt-2 flex items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {/* UIUX-GAME-V2: nút «?» là CỔNG DUY NHẤT vào mọi giải thích
                 dài của game mode (sheet «Luật chơi & chi tiết») — các
                 màn không còn đoạn văn dài hiển thị mặc định nữa. */}
@@ -533,36 +536,28 @@ export function GameEntry({
         </div>
 
         {/* Hộp xác nhận thoát ván cho phím Back giữa ván (F1) — cùng
-            kiểu hộp thoại huỷ công khai sẵn có ở màn chơi
-            (play-screen.tsx), cùng một đường huỷ publicCancelMatch;
-            KHÔNG tự chế cơ chế xác nhận mới. */}
+            một đường huỷ publicCancelMatch; UI-SLIM T10: render bằng
+            GameSheet (mẫu sheet duy nhất của game) thay hộp tự chế. */}
         {exitMatchOpen && record ? (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Thoát ván đang chơi"
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-          >
-            <div className="w-full max-w-md rounded-lg bg-card px-4 py-4">
-              <p className="text-base leading-relaxed text-ink">
-                Thoát ván {record.code} đang chơi? Ván huỷ công khai, cả nhóm chia đều.
-              </p>
-              <button
-                type="button"
-                onClick={publicCancelMatch}
-                className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
-              >
-                Thoát ván — chia đều cho lành
-              </button>
-              <button
-                type="button"
-                onClick={() => setExitMatchOpen(false)}
-                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-              >
-                Chơi tiếp
-              </button>
-            </div>
-          </div>
+          <GameSheet open onClose={() => setExitMatchOpen(false)} title="Thoát ván đang chơi">
+            <p className="text-base leading-relaxed text-ink">
+              Thoát ván {record.code} đang chơi? Ván huỷ công khai, cả nhóm chia đều.
+            </p>
+            <button
+              type="button"
+              onClick={publicCancelMatch}
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
+            >
+              Thoát ván — chia đều cho lành
+            </button>
+            <button
+              type="button"
+              onClick={() => setExitMatchOpen(false)}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:border-brand hover:text-brand-deep"
+            >
+              Chơi tiếp
+            </button>
+          </GameSheet>
         ) : null}
 
         {/* UIUX-GAME-V2: dòng chú thích lối thoát ở chân màn thiết lập

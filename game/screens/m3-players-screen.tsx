@@ -123,7 +123,7 @@ export function M3PlayersScreen({
             type="button"
             disabled={!valid}
             onClick={onNext}
-            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink"
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
           >
             Tiếp tục
           </button>

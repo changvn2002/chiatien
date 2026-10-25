@@ -41,7 +41,6 @@ import {
   defaultAssignments,
   ensureAssignments,
   loadCharacterSetsDetailed,
-  modelAssignmentCount,
   setById,
   takenByOther,
 } from './character-sets';
@@ -597,11 +596,16 @@ export function M3BCharacterScreen({
                 !mine && !taken && active
                   ? !canAssignCharacter(assignments, active.id, c.characterKey, set)
                   : false;
-              const modelCount =
-                modelBlocked && active
-                  ? modelAssignmentCount(assignments, c.characterKey, set, active.id)
-                  : 0;
               const blocked = taken || modelBlocked;
+              // F7 (VERIFY-2026-10-25 C-06, phần chữ): ô bị chặn phải
+              // nói TRẠNG THÁI trực tiếp trên chính ô (mờ + nhãn ngắn)
+              // — người đã chọn thì ghi TÊN người đó; mẫu đã đủ người
+              // thì ghi đúng thế. Câu giải thích dài bắt user đoán
+              // («Mẫu này đã có N người chọn — chọn mẫu khác…») đã bỏ.
+              const takerName = taken
+                ? players.find((p) => p.id !== active?.id && assignments[p.id] === c.characterKey)
+                    ?.displayName
+                : undefined;
               return (
                 <button
                   key={c.characterKey}
@@ -627,12 +631,12 @@ export function M3BCharacterScreen({
                     <span className="text-xs font-semibold text-brand-deep">Đang chọn</span>
                   ) : null}
                   {taken ? (
-                    <span className="text-xs font-semibold text-ink-2">Đã có người chọn</span>
+                    <span className="text-xs font-semibold text-ink-2">
+                      {takerName ? `${takerName} đã chọn` : 'Đã có người chọn'}
+                    </span>
                   ) : null}
                   {modelBlocked ? (
-                    <span className="text-xs font-semibold text-ink-2">
-                      Mẫu này đã có {modelCount} người chọn — chọn mẫu khác để dễ phân biệt
-                    </span>
+                    <span className="text-xs font-semibold text-ink-2">Mẫu này đã đủ người</span>
                   ) : null}
                 </button>
               );
@@ -679,7 +683,7 @@ export function M3BCharacterScreen({
                     <button
                       type="button"
                       onClick={capturePhoto}
-                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
                     >
                       Chụp ảnh
                     </button>
@@ -697,7 +701,7 @@ export function M3BCharacterScreen({
                   <button
                     type="button"
                     onClick={() => void startCamera()}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
                   >
                     Chụp ảnh làm avatar
                   </button>
@@ -776,7 +780,7 @@ export function M3BCharacterScreen({
                   });
                   onNext();
                 }}
-                className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+                className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
               >
                 Tiếp tục
               </button>

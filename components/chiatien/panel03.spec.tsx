@@ -144,44 +144,27 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('Panel #03 A — Strip thu gọn: nhãn «Quyết toán» tách hàng khỏi tên lệnh (§9.1)', () => {
+describe('Panel #03 A — Strip thu gọn: chỉ hàng «Tổng + Quyết toán», không tóm tắt lệnh (UI-SLIM T1)', () => {
   function expectStripStructure(container: HTMLElement, longName: boolean) {
     const summary = container.querySelector('[data-strip-summary]');
     expect(summary).toBeTruthy();
     const rows = [...(summary?.children ?? [])];
-    expect(rows.length).toBeGreaterThanOrEqual(2);
-    // Hàng 1: «Tổng» + tổng tiền + «Quyết toán» — KHÔNG chứa tên thành
-    // viên, KHÔNG chứa cụm «+N lệnh» (gốc lỗi chồng glyph của Finding A).
-    const headerRow = rows.find((r) =>
-      [...r.querySelectorAll('span')].some((s) => s.textContent?.trim() === 'Quyết toán'),
-    );
-    expect(headerRow).toBeTruthy();
+    // UI-SLIM T1 (2026-10-25): hàng tóm tắt LỆNH ĐẦU đã BỎ khỏi dock —
+    // nó trùng lệnh đầu của danh sách «Ai trả ai» trong panel (một
+    // thông tin một chỗ). Nút tóm tắt còn đúng MỘT hàng: «Tổng» + tổng
+    // tiền + nhãn «Quyết toán» là span riêng (giữ phần §9.1 về hàng
+    // đầu). Hệ quả phụ: lớp lỗi chồng glyph của Finding A (tên dài ép
+    // hàng lệnh) không còn bề mặt để xảy ra trong strip.
+    expect(rows.length).toBe(1);
+    const headerRow = rows[0];
+    expect(
+      [...(headerRow?.querySelectorAll('span') ?? [])].some(
+        (s) => s.textContent?.trim() === 'Quyết toán',
+      ),
+    ).toBe(true);
     expect(headerRow?.textContent).toContain('Tổng');
-    expect(headerRow?.textContent).not.toContain('lệnh');
-    if (longName) expect(headerRow?.textContent).not.toContain(LONG_NAME);
-    // Hàng 2 (lệnh đầu) — HỢP ĐỒNG MỚI (REDESIGN-V3, D4-CT-1 thay cơ
-    // chế flex của Finding A): lưới cột tên minmax(72px,1fr) @320 /
-    // minmax(96px,1fr) @≥390, CẤM min-width:0 trên ô tên (sàn lưới giữ
-    // tên không bị ép về 0–2px như SERIOUS của Panel #03); số tiền
-    // shrink-0 + whitespace-nowrap, cụm «+1 lệnh» có mặt trong hàng.
-    const transferRow = rows.find((r) => r !== headerRow && /lệnh/.test(r.textContent ?? ''));
-    expect(transferRow).toBeTruthy();
-    expect(transferRow?.textContent).toContain('+1 lệnh');
-    expect(transferRow?.className).toContain('minmax(72px,1fr)');
-    expect(transferRow?.className).toContain('minmax(96px,1fr)');
-    const nameSpans = [...(transferRow?.querySelectorAll('span.truncate') ?? [])];
-    expect(nameSpans).toHaveLength(2);
-    for (const s of nameSpans) {
-      expect(s.className).not.toContain('min-w-0');
-    }
-    if (longName) {
-      expect(nameSpans.some((s) => s.textContent === LONG_NAME)).toBe(true);
-    }
-    const amountSpan = [...(transferRow?.querySelectorAll('span') ?? [])].find((s) =>
-      s.className.includes('font-figure'),
-    );
-    expect(amountSpan?.className).toContain('shrink-0');
-    expect(amountSpan?.className).toContain('whitespace-nowrap');
+    expect(summary?.textContent).not.toContain('lệnh');
+    if (longName) expect(summary?.textContent).not.toContain(LONG_NAME);
   }
 
   it('ca tên 45 ký tự + ≥2 lệnh', () => {

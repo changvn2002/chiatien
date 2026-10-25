@@ -144,7 +144,6 @@ export function SessionView({
   const colors = useMemo(() => assignIdentityColors(session.members), [session.members]);
   const nameOf = (id: string) => session.members.find((m) => m.id === id)?.name ?? 'Thành viên';
   const allSettled = session.expenses.length > 0 && transfers.length === 0;
-  const firstTransfer = transfers[0];
   // Bộ lọc từ khoá tên phiên (§3): khớp -> tĩnh cứng, công tắc bị khoá tắt.
   const staticForced = titleForcesStatic(session.title);
   const slipsEnabled = slipsOn && !staticForced;
@@ -546,9 +545,11 @@ export function SessionView({
         </aside>
       </div>
 
+      {/* UI-SLIM T7: ba gợi ý N / M / ⌘K đã có ngay trong Command Bar
+          cùng viewport desktop — chân trang chỉ giữ hai phím CHƯA có
+          mặt ở nơi khác (C copy + Esc). */}
       <p className="mt-2 hidden h-8 shrink-0 items-center text-xs text-ink-2 min-[900px]:flex">
-        N thêm khoản · M thêm người · ⌘K hành động của hàng · C copy quyết toán khi dải mở · Esc lùi
-        lớp
+        C copy quyết toán khi dải mở · Esc lùi lớp
       </p>
 
       {/* Điểm chạm của game mode «Ai Đãi» (ARCH §2.3) trên MOBILE
@@ -590,9 +591,6 @@ export function SessionView({
         total={total}
         discrepancy={discrepancy}
         allSettled={allSettled}
-        firstTransfer={firstTransfer}
-        transfers={transfers}
-        nameOf={nameOf}
         panelProps={panelProps}
         online={online}
         deckNotice={deckNotice}
