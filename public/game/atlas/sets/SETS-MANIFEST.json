@@ -1,0 +1,1008 @@
+{
+  "generatedBy": "chiatien game/tools (render-set.mjs + build-sets.py) — lane A3 FIX-V3",
+  "contract": "Mỗi bộ: public/game/atlas/sets/<setId>/<modelKey>.webp + <modelKey>.json (Phaser 3 hash, key frame '<action>_<idx>') + anchors.json của bộ. Tải lười: chỉ tải bộ đã chọn.",
+  "sets": [
+    {
+      "setId": "adventurers",
+      "displayName": "Phiêu Lưu",
+      "theme": "Hiệp sĩ, chiến binh, pháp sư và thích khách dũng cảm",
+      "license": "CC0 1.0",
+      "licenseSource": "LICENSE.txt trong repo chính chủ github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0 (đọc trực tiếp đợt REBUILD-C, bản sao scratch-a/LICENSE-kaykit.txt) + trang itch.io kaylousberg.itch.io/kaykit-adventurers ghi CC0",
+      "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "dir": "public/game/atlas/sets/adventurers/",
+      "cell": 96,
+      "cols": 5,
+      "rows": 10,
+      "sheetSize": {
+        "w": 480,
+        "h": 960
+      },
+      "actions": [
+        {
+          "action": "idle",
+          "clip": "Idle",
+          "frames": 3,
+          "segment": [
+            0,
+            0.92
+          ],
+          "normalized": false
+        },
+        {
+          "action": "run",
+          "clip": "Running_A",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "punchA",
+          "clip": "Unarmed_Melee_Attack_Punch_A",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "punchB",
+          "clip": "Unarmed_Melee_Attack_Punch_B",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "kick",
+          "clip": "Unarmed_Melee_Attack_Kick",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "hitA",
+          "clip": "Hit_A",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "hitB",
+          "clip": "Hit_B",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "dodge",
+          "clip": "Dodge_Backward",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "fall",
+          "clip": "Death_A",
+          "frames": 4,
+          "segment": [
+            0.04,
+            0.97
+          ],
+          "normalized": true
+        },
+        {
+          "action": "victory",
+          "clip": "Cheer",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        }
+      ],
+      "anchorsFile": "sets/adventurers/anchors.json",
+      "anchorsGzipBytes": 1394,
+      "characters": [
+        {
+          "modelKey": "barbarian",
+          "displayName": "Chiến Binh",
+          "baseModel": "Barbarian",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, mũ sừng + râu, màu nguyên bản",
+          "webp": "sets/adventurers/barbarian.webp",
+          "webpBytes": 32614,
+          "jsonGzipBytes": 491,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "barbarian-ice",
+          "displayName": "Chiến Binh Băng",
+          "baseModel": "Barbarian",
+          "variantOf": "Barbarian",
+          "variant": {
+            "hide": "Barbarian_Hat",
+            "tintBody": "1565C0",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Barbarian bỏ mũ sừng + trang phục nhuộm xanh băng 1565C0",
+          "webp": "sets/adventurers/barbarian-ice.webp",
+          "webpBytes": 23820,
+          "jsonGzipBytes": 494,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "hooded-teal",
+          "displayName": "Trùm Đầu Ngọc",
+          "baseModel": "Rogue_Hooded",
+          "variantOf": "Rogue_Hooded",
+          "variant": {
+            "hide": "Rogue_Cape",
+            "tintBody": "00695C",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Rogue_Hooded bỏ áo choàng + trang phục nhuộm ngọc 00695C, giữ hood",
+          "webp": "sets/adventurers/hooded-teal.webp",
+          "webpBytes": 20620,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "knight",
+          "displayName": "Hiệp Sĩ",
+          "baseModel": "Knight",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, mũ giáp + áo choàng đỏ, màu nguyên bản",
+          "webp": "sets/adventurers/knight.webp",
+          "webpBytes": 31660,
+          "jsonGzipBytes": 489,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "knight-night",
+          "displayName": "Hiệp Sĩ Đêm",
+          "baseModel": "Knight",
+          "variantOf": "Knight",
+          "variant": {
+            "hide": "Knight_Cape",
+            "tintBody": "263238",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Knight giữ mũ giáp, bỏ áo choàng + trang phục nhuộm thép tối 263238",
+          "webp": "sets/adventurers/knight-night.webp",
+          "webpBytes": 22540,
+          "jsonGzipBytes": 493,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "knight-red",
+          "displayName": "Hiệp Sĩ Đỏ",
+          "baseModel": "Knight",
+          "variantOf": "Knight",
+          "variant": {
+            "hide": "Knight_Helmet",
+            "tintBody": "C62828",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Knight bỏ mũ giáp (thấy đầu/tóc) + trang phục nhuộm đỏ C62828",
+          "webp": "sets/adventurers/knight-red.webp",
+          "webpBytes": 23868,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "mage",
+          "displayName": "Pháp Sư",
+          "baseModel": "Mage",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, mũ chóp nhọn + áo choàng, màu nguyên bản",
+          "webp": "sets/adventurers/mage.webp",
+          "webpBytes": 30488,
+          "jsonGzipBytes": 487,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "mage-leaf",
+          "displayName": "Pháp Sư Lá",
+          "baseModel": "Mage",
+          "variantOf": "Mage",
+          "variant": {
+            "hide": "Mage_Cape",
+            "tintBody": "2E7D32",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Mage giữ mũ chóp, bỏ áo choàng + trang phục nhuộm xanh lá 2E7D32",
+          "webp": "sets/adventurers/mage-leaf.webp",
+          "webpBytes": 24358,
+          "jsonGzipBytes": 491,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "mage-purple",
+          "displayName": "Pháp Sư Tím",
+          "baseModel": "Mage",
+          "variantOf": "Mage",
+          "variant": {
+            "hide": "Mage_Hat",
+            "tintBody": "6A1B9A",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Mage bỏ mũ chóp + trang phục nhuộm tím 6A1B9A",
+          "webp": "sets/adventurers/mage-purple.webp",
+          "webpBytes": 17846,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "rogue",
+          "displayName": "Thích Khách",
+          "baseModel": "Rogue",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, tóc + áo choàng, màu nguyên bản",
+          "webp": "sets/adventurers/rogue.webp",
+          "webpBytes": 29706,
+          "jsonGzipBytes": 487,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "rogue-orange",
+          "displayName": "Thích Khách Cam",
+          "baseModel": "Rogue",
+          "variantOf": "Rogue",
+          "variant": {
+            "hide": "Rogue_Cape",
+            "tintBody": "E65100",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "Rogue bỏ áo choàng + trang phục nhuộm cam E65100",
+          "webp": "sets/adventurers/rogue-orange.webp",
+          "webpBytes": 24292,
+          "jsonGzipBytes": 494,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "roguehooded",
+          "displayName": "Thích Khách Trùm Đầu",
+          "baseModel": "Rogue_Hooded",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, đầu trùm mũ hood, màu nguyên bản",
+          "webp": "sets/adventurers/roguehooded.webp",
+          "webpBytes": 29754,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        }
+      ],
+      "totalWebpBytes": 311566,
+      "totalJsonGzipBytes": 5894,
+      "totalBytes": 317460,
+      "preview": {
+        "webp": "sets/adventurers-preview.webp",
+        "cell": 192,
+        "cols": 4
+      }
+    },
+    {
+      "setId": "skeletons",
+      "displayName": "Xương Khô",
+      "theme": "Bộ xương ngộ nghĩnh — hù nhau cho vui",
+      "license": "CC0 1.0",
+      "licenseSource": "LICENSE.txt trong repo chính chủ github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0, dòng 'License: (Creative Commons Zero, CC0)' (đọc trực tiếp 2026-10-25, bản sao scratch-a3/LICENSE-kaykit-skeletons.txt) + trang itch.io kaylousberg.itch.io/kaykit-skeletons ghi CC0",
+      "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0",
+      "dir": "public/game/atlas/sets/skeletons/",
+      "cell": 96,
+      "cols": 5,
+      "rows": 10,
+      "sheetSize": {
+        "w": 480,
+        "h": 960
+      },
+      "actions": [
+        {
+          "action": "idle",
+          "clip": "Idle",
+          "frames": 3,
+          "segment": [
+            0,
+            0.92
+          ],
+          "normalized": false
+        },
+        {
+          "action": "run",
+          "clip": "Running_A",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "punchA",
+          "clip": "Unarmed_Melee_Attack_Punch_A",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "punchB",
+          "clip": "Unarmed_Melee_Attack_Punch_B",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "kick",
+          "clip": "Unarmed_Melee_Attack_Kick",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "hitA",
+          "clip": "Hit_A",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "hitB",
+          "clip": "Hit_B",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "dodge",
+          "clip": "Dodge_Backward",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "fall",
+          "clip": "Death_A",
+          "frames": 4,
+          "segment": [
+            0.04,
+            0.97
+          ],
+          "normalized": true
+        },
+        {
+          "action": "victory",
+          "clip": "Cheer",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        }
+      ],
+      "anchorsFile": "sets/skeletons/anchors.json",
+      "anchorsGzipBytes": 1191,
+      "characters": [
+        {
+          "modelKey": "skel-mage",
+          "displayName": "Xương Pháp Sư",
+          "baseModel": "Skeleton_Mage",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, mũ chóp, xương nguyên bản",
+          "webp": "sets/skeletons/skel-mage.webp",
+          "webpBytes": 31870,
+          "jsonGzipBytes": 490,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-mage-gold",
+          "displayName": "Xương Sư Vàng",
+          "baseModel": "Skeleton_Mage",
+          "variantOf": "Skeleton_Mage",
+          "variant": {
+            "hide": "Skeleton_Mage_Hat",
+            "tintBody": "",
+            "tintAll": "FFD94D",
+            "tintHead": ""
+          },
+          "distinguish": "Mage tint toàn thân vàng FFD94D + bỏ mũ chóp (lộ sọ)",
+          "webp": "sets/skeletons/skel-mage-gold.webp",
+          "webpBytes": 24234,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-mage-violet",
+          "displayName": "Xương Sư Tím",
+          "baseModel": "Skeleton_Mage",
+          "variantOf": "Skeleton_Mage",
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "C79BFF",
+            "tintHead": ""
+          },
+          "distinguish": "Mage tint toàn thân tím C79BFF, giữ mũ chóp",
+          "webp": "sets/skeletons/skel-mage-violet.webp",
+          "webpBytes": 27938,
+          "jsonGzipBytes": 496,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-minion",
+          "displayName": "Xương Lính",
+          "baseModel": "Skeleton_Minion",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, áo choàng rách, xương nguyên bản",
+          "webp": "sets/skeletons/skel-minion.webp",
+          "webpBytes": 31652,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-minion-ember",
+          "displayName": "Xương Lính Lửa",
+          "baseModel": "Skeleton_Minion",
+          "variantOf": "Skeleton_Minion",
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "FF9A5C",
+            "tintHead": ""
+          },
+          "distinguish": "Minion tint toàn thân cam lửa FF9A5C",
+          "webp": "sets/skeletons/skel-minion-ember.webp",
+          "webpBytes": 33576,
+          "jsonGzipBytes": 497,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-minion-rose",
+          "displayName": "Xương Lính Hồng",
+          "baseModel": "Skeleton_Minion",
+          "variantOf": "Skeleton_Minion",
+          "variant": {
+            "hide": "Skeleton_Minion_Cloak",
+            "tintBody": "",
+            "tintAll": "FF9FB0",
+            "tintHead": ""
+          },
+          "distinguish": "Minion tint toàn thân hồng FF9FB0 + bỏ áo choàng",
+          "webp": "sets/skeletons/skel-minion-rose.webp",
+          "webpBytes": 31408,
+          "jsonGzipBytes": 497,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-rogue",
+          "displayName": "Xương Thích Khách",
+          "baseModel": "Skeleton_Rogue",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, hood + áo choàng, xương nguyên bản",
+          "webp": "sets/skeletons/skel-rogue.webp",
+          "webpBytes": 28780,
+          "jsonGzipBytes": 492,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-rogue-frost",
+          "displayName": "Xương Khách Băng",
+          "baseModel": "Skeleton_Rogue",
+          "variantOf": "Skeleton_Rogue",
+          "variant": {
+            "hide": "Skeleton_Rogue_Hood",
+            "tintBody": "",
+            "tintAll": "8FD0FF",
+            "tintHead": ""
+          },
+          "distinguish": "Rogue tint toàn thân xanh băng 8FD0FF + bỏ hood (lộ sọ)",
+          "webp": "sets/skeletons/skel-rogue-frost.webp",
+          "webpBytes": 26276,
+          "jsonGzipBytes": 497,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-rogue-mint",
+          "displayName": "Xương Khách Ngọc",
+          "baseModel": "Skeleton_Rogue",
+          "variantOf": "Skeleton_Rogue",
+          "variant": {
+            "hide": "Skeleton_Rogue_Cape",
+            "tintBody": "",
+            "tintAll": "5CE8C8",
+            "tintHead": ""
+          },
+          "distinguish": "Rogue tint toàn thân ngọc bạc hà 5CE8C8 + bỏ áo choàng, giữ hood",
+          "webp": "sets/skeletons/skel-rogue-mint.webp",
+          "webpBytes": 23616,
+          "jsonGzipBytes": 496,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-warrior",
+          "displayName": "Xương Chiến Binh",
+          "baseModel": "Skeleton_Warrior",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model gốc, mũ gai + giáp, xương nguyên bản",
+          "webp": "sets/skeletons/skel-warrior.webp",
+          "webpBytes": 30834,
+          "jsonGzipBytes": 494,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-warrior-ash",
+          "displayName": "Xương Chiến Tro",
+          "baseModel": "Skeleton_Warrior",
+          "variantOf": "Skeleton_Warrior",
+          "variant": {
+            "hide": "Skeleton_Warrior_Helmet",
+            "tintBody": "",
+            "tintAll": "9AA3AD",
+            "tintHead": ""
+          },
+          "distinguish": "Warrior tint toàn thân xám tro 9AA3AD + bỏ mũ (lộ sọ)",
+          "webp": "sets/skeletons/skel-warrior-ash.webp",
+          "webpBytes": 18628,
+          "jsonGzipBytes": 497,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "skel-warrior-ghost",
+          "displayName": "Xương Chiến Ma",
+          "baseModel": "Skeleton_Warrior",
+          "variantOf": "Skeleton_Warrior",
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "7FE0B2",
+            "tintHead": ""
+          },
+          "distinguish": "Warrior tint toàn thân xanh ma 7FE0B2, giữ mũ gai",
+          "webp": "sets/skeletons/skel-warrior-ghost.webp",
+          "webpBytes": 29258,
+          "jsonGzipBytes": 498,
+          "headNodeFound": true
+        }
+      ],
+      "totalWebpBytes": 338070,
+      "totalJsonGzipBytes": 5941,
+      "totalBytes": 344011,
+      "preview": {
+        "webp": "sets/skeletons-preview.webp",
+        "cell": 192,
+        "cols": 4
+      }
+    },
+    {
+      "setId": "blocky",
+      "displayName": "Bạn Khối",
+      "theme": "Người khối vuông, mỗi bạn một bộ đồ riêng",
+      "license": "CC0 1.0",
+      "licenseSource": "License.txt trong zip tải từ kenney.nl chính chủ (kenney_blocky-characters_20.zip), dòng 'License: (Creative Commons Zero, CC0)' (đọc trực tiếp 2026-10-25) + trang kenney.nl/assets/blocky-characters ghi Creative Commons CC0",
+      "source": "https://kenney.nl/assets/blocky-characters",
+      "dir": "public/game/atlas/sets/blocky/",
+      "cell": 128,
+      "cols": 5,
+      "rows": 10,
+      "sheetSize": {
+        "w": 640,
+        "h": 1280
+      },
+      "actions": [
+        {
+          "action": "idle",
+          "clip": "idle",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "run",
+          "clip": "sprint",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "punchA",
+          "clip": "attack-melee-right",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "punchB",
+          "clip": "attack-melee-left",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "kick",
+          "clip": "attack-kick-right",
+          "frames": 5,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "hitA",
+          "clip": "die",
+          "frames": 3,
+          "segment": [
+            0,
+            0.3
+          ],
+          "normalized": true
+        },
+        {
+          "action": "hitB",
+          "clip": "emote-no",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        },
+        {
+          "action": "dodge",
+          "clip": "pick-up",
+          "frames": 3,
+          "segment": [
+            0,
+            0.55
+          ],
+          "normalized": true
+        },
+        {
+          "action": "fall",
+          "clip": "die",
+          "frames": 4,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": true
+        },
+        {
+          "action": "victory",
+          "clip": "emote-yes",
+          "frames": 3,
+          "segment": [
+            0,
+            1
+          ],
+          "normalized": false
+        }
+      ],
+      "anchorsFile": "sets/blocky/anchors.json",
+      "anchorsGzipBytes": 707,
+      "characters": [
+        {
+          "modelKey": "blocky-a",
+          "displayName": "Khối Cam",
+          "baseModel": "character-a",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-a của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-a.webp",
+          "webpBytes": 32222,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-b",
+          "displayName": "Khối Đỏ",
+          "baseModel": "character-b",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-b của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-b.webp",
+          "webpBytes": 26962,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-c",
+          "displayName": "Khối Xanh Lá",
+          "baseModel": "character-c",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-c của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-c.webp",
+          "webpBytes": 26228,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-d",
+          "displayName": "Khối Vàng",
+          "baseModel": "character-d",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-d của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-d.webp",
+          "webpBytes": 39904,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-e",
+          "displayName": "Khối Tím",
+          "baseModel": "character-e",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-e của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-e.webp",
+          "webpBytes": 29588,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-f",
+          "displayName": "Khối Rêu",
+          "baseModel": "character-f",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-f của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-f.webp",
+          "webpBytes": 29654,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-g",
+          "displayName": "Khối Robot",
+          "baseModel": "character-g",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-g của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-g.webp",
+          "webpBytes": 32054,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-h",
+          "displayName": "Khối Quái Tím",
+          "baseModel": "character-h",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-h của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-h.webp",
+          "webpBytes": 28538,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-i",
+          "displayName": "Khối Trắng",
+          "baseModel": "character-i",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-i của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-i.webp",
+          "webpBytes": 30672,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-j",
+          "displayName": "Khối Đêm",
+          "baseModel": "character-j",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-j của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-j.webp",
+          "webpBytes": 34618,
+          "jsonGzipBytes": 496,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-k",
+          "displayName": "Khối Nâu Đỏ",
+          "baseModel": "character-k",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-k của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-k.webp",
+          "webpBytes": 31432,
+          "jsonGzipBytes": 496,
+          "headNodeFound": true
+        },
+        {
+          "modelKey": "blocky-l",
+          "displayName": "Khối Zombie",
+          "baseModel": "character-l",
+          "variantOf": null,
+          "variant": {
+            "hide": "",
+            "tintBody": "",
+            "tintAll": "",
+            "tintHead": ""
+          },
+          "distinguish": "model character-l của pack, texture trang phục/tóc riêng (không tint, không biến thể nhân tạo)",
+          "webp": "sets/blocky/blocky-l.webp",
+          "webpBytes": 34840,
+          "jsonGzipBytes": 495,
+          "headNodeFound": true
+        }
+      ],
+      "totalWebpBytes": 376712,
+      "totalJsonGzipBytes": 5942,
+      "totalBytes": 382654,
+      "preview": {
+        "webp": "sets/blocky-preview.webp",
+        "cell": 192,
+        "cols": 4
+      }
+    }
+  ]
+}

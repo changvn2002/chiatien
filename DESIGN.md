@@ -454,3 +454,28 @@ Một bề mặt workspace-có-dữ-kiện «trong ngân sách» khi số từ t
 **Avatar.** DiceBear `initials` (khôi phục theo lệnh user, cơ chế seed M-2 giữ nguyên — `lib/identity.ts` không đổi một byte): nền = bậc 100 của 16 họ Material công bố, chữ initials = mực Grey 900 `#212121` trên mọi nền (V-11.5, đo 9,75–15,03, đạt 16/16) bằng Be Vietnam Pro 700; bảng nền sống ở tầng component (`AVATAR_BACKGROUNDS_V4` trong `ui-bits.tsx`) theo thứ tự key của tokens.json, chỉ số gán 0..11 vẫn do `assignIdentityColors` đóng băng cấp.
 
 **Mark + asset.** Mark «Kẻ Đôi Kết Toán» giữ nguyên hình học byte từ V3, chỉ đổi fill sang seed V4; asset trong `public/products/brand/` chép byte từ `redesign-v4/chiatien/assets/` (mark → `chiatien-logo.svg`, mark-micro → `chiatien-logo-micro.svg`, mono → `chiatien-logo-mono.svg`, lockup → `chiatien-lockup.svg`, app-icon → `chiatien-app-icon.svg`, hero → `hero-split.svg`); favicon + app-icon cùng một nguồn mark (F-10) và service worker bump version cùng đợt đổi asset. Cấm mark seed trần trên nền đen/tối — chỉ dùng tile trắng chứa mark hoặc mono trắng.
+
+## Khai báo bề mặt game mode «Ai Đãi» (2026-10-25 — đợt sửa PRES vòng 2, mục 14)
+
+**Phạm vi.** Mục này là khai báo riêng cho bề mặt game mode «Ai Đãi» (thư mục `game/` — vỏ React M1–M8 và canvas Phaser G1/G2), lập để đóng 17 advisory của Impeccable detector source-mode trên `game/` (hồ sơ: `chiatien-game-v2/panels-v2/impeccable-source-mode.txt` — 14 advisory font-size + 3 advisory màu trên 2 hex). Các cỡ/màu dưới đây CHỈ có hiệu lực trên bề mặt game/canvas; thang chữ đo thật của app chính ở mục Typography ({12, 13, 14, 15, 16, 19}px) không đổi, và không cỡ nào ở đây được dùng làm tiền lệ cho bề mặt app chính.
+
+**Bậc chữ phụ của game mode (khai mới).**
+
+| Token khai báo | Cỡ | Vai trò — nơi dùng thật trong `game/` |
+|---|---:|---|
+| `game-type-10` | 10px | Chữ initials trong badge fallback trên nameplate canvas G1 (`scenes-g1.ts`) — bề mặt canvas nhỏ cố định, không phải chữ HTML |
+| `game-type-20` | 20px | Tiêu đề H1 của game mode (`game/entry.tsx`) · tiêu đề card chọn game ở M4 · số sát thương bay (floatText) trên canvas G1 |
+| `game-type-22` | 22px | Tiêu đề màn game (`ScreenTitle` ở `game/screens/shared.tsx`) · tiêu đề màn chơi M6 (`play-screen.tsx`) · dòng «Cùng đãi ván này» ở M7 · số sát thương thường trên canvas G1 |
+| `game-type-26` | 26px | Tuyên bố người đãi ở M7 (`m7-result-screen.tsx`) · banner hiệp phụ/hoà trên canvas G1 |
+| `game-type-28` | 28px | Tên chủ tài khoản đọc từ QR ở M2 (`m2-qr-screen.tsx`) · số sát thương CHÍ MẠNG trên canvas G1 (đi cùng màu `game-crit` ở dưới) |
+
+**Cỡ đã thuộc ramp đo thật — KHÔNG khai trùng.** Hai cỡ trong advisory đã nằm trong thang đo thật của app chính ở mục Typography nên không khai lại ở đây: **13px** (bậc Meta — nhãn choáng «@ @» trên canvas G1) và **15px** (bậc Figure/Body — chữ initials + tên ghế trên canvas G2). Advisory nhắc các cỡ này chỉ vì detector đối chiếu với tuyên bố thang cũ; về hệ thống, chúng đã có nhà.
+
+**Màu của bề mặt canvas/game (khai mới).**
+
+| Token khai báo | Hex | Vai trò |
+|---|---|---|
+| `game-ink` | `#212121` | Mực chữ initials trên badge trong canvas — DiceBear `textColor` của badge G1/G2 (`game/phaser/textures.ts`) và chữ initials fallback ở nameplate G1 / ghế G2 (`scenes-g1.ts`, `scenes-g2.ts`). Đây là Material Grey 900 — cùng hex với mực Grey 900 của hệ V4; khai riêng ở đây vì nó sống trong canvas Phaser, ngoài tầm token CSS của app chính |
+| `game-crit` | `#DC2626` | Số sát thương CHÍ MẠNG trên canvas G1 (`scenes-g1.ts`) — chỉ dùng cho con số crit bay lên rồi mờ dần; không dùng cho chữ tĩnh, nút, hay trạng thái nợ của app chính (debt có semantic riêng). Khai dạng chuẩn hoá `#DC2626`; trong source Phaser hiện ghi thường `#dc2626` — cùng một màu |
+
+**Kỷ luật.** Ngoài hai hex trên và palette màu áo người chơi đã khai ở `game/assets/palette.ts`, bề mặt game không tự thêm màu literal mới: màu literal tiếp theo trong `game/` phải được khai vào mục này trước (hoặc đưa về token/palette đã có) thì mới qua detector mà không thành advisory mới.

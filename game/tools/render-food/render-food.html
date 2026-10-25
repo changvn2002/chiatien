@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>render món ăn Kenney Food Kit thành sprite sheet</title>
+<style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{
+  "three":"/three/build/three.module.js",
+  "three/addons/":"/three/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// Sheet sản xuất: 6 món dùng trong scenes-g2.ts (thứ tự = thứ tự frame
+// trong atlas JSON do render-food.mjs sinh). Cell render 256 rồi hạ xuống
+// 128 bằng PIL (Lanczos) khi đóng gói WebP — xem render-food.mjs.
+// Chọn bằng mắt qua 2 vòng render kiểm (2026-10-25, lane C): tiêu chí là
+// NHÌN RA MÓN ĂN ngay ở cỡ hiển thị trên mâm — bowl-broth/bowl-soup (bát
+// canh có topping), salad (bát rau xanh), plate-dinner + plate-sauerkraut
+// (đĩa tròn có đồ ăn thật), pot-stew (nồi hầm — món chung giữa mâm).
+// Loại: dim-sum/steamer (nắp xửng đóng, không thấy thức ăn), egg-cooked
+// (lòng trắng trắng trên mâm trắng), pizza/pancakes/sandwich (lệch mâm cơm
+// Việt), plate-deep/pan/tajine/cup-saucer (dụng cụ rỗng), rice-ball (render
+// hỏng ở góc từ trên), chinese/styrofoam (hộp mang đi).
+// FIX-V3 lane A2 (2026-10-25): +2 món chống trùng cho mâm 12 ghế, chọn
+// bằng mắt từ vòng render kiểm 8 ứng viên Kenney: turkey (gà quay nguyên
+// con — silhouette mạnh, đọc ngay ở cỡ nhỏ), corn (bắp vàng — khác hẳn
+// gam nâu/xanh của 6 món cũ). Loại: maki-* (hộp lục giác — đúng điểm yếu
+// panel v3 chê), watermelon (khối xanh khổng lồ lấn cell), skewer (quá
+// mảnh), fish (từ trên xuống đọc yếu). meat-ribs đạt mắt nhưng không vừa
+// trần dòng B — xem handoff REBUILD-C2-A2-ASSETS (bảng phương án).
+const PROD_ITEMS = ['bowl-broth', 'bowl-soup', 'salad', 'plate-dinner', 'plate-sauerkraut', 'pot-stew', 'turkey', 'corn'];
+// Chế độ kiểm (?inspect=1): render chính các món sản xuất ở lưới lớn kèm
+// nhãn để đối chiếu góc máy/màu trước khi đóng gói.
+const INSPECT_ITEMS = PROD_ITEMS;
+const qs = new URLSearchParams(location.search);
+const INSPECT = qs.get('inspect') === '1';
+// ?items=a,b,c ghi đè danh sách (dùng khi render kiểm ứng viên — đợt
+// FIX-V3 lane A2); không truyền thì giữ nguyên hành vi sản xuất cũ.
+const ITEMS = qs.get('items') ? qs.get('items').split(',') : (INSPECT ? INSPECT_ITEMS : PROD_ITEMS);
+const CELL = 256;
+const COLS = INSPECT ? 3 : 4;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(CELL, CELL);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+if (INSPECT) scene.background = new THREE.Color(0xeceae8);
+// Camera nhìn chếch từ trên xuống: CHỐT 58° — bát có thành/khối đọc thành
+// bát thật (ở 68° bát lục giác low-poly đọc như ô gạch), đĩa/nồi vẫn đủ
+// tròn (ở 48° bị bẹt hẳn). Ghi đè bằng ?angle=<độ> khi cần đối chiếu lại.
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 60);
+const angleDeg = Number(qs.get('angle') || 58);
+const elev = THREE.MathUtils.degToRad(angleDeg);
+const dist = 4.1;
+camera.position.set(0, Math.sin(elev) * dist, Math.cos(elev) * dist);
+camera.lookAt(0, 0.1, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x4a4238, 1.3));
+const key = new THREE.DirectionalLight(0xffffff, 2.1);
+key.position.set(2.2, 4.5, 2.4);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.left = -2; key.shadow.camera.right = 2;
+key.shadow.camera.top = 2; key.shadow.camera.bottom = -2;
+key.shadow.radius = 5;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xfff1dd, 0.7);
+rim.position.set(-3, 2.5, -2);
+scene.add(rim);
+
+// Đĩa hứng bóng dưới món: bóng nướng sẵn vào sprite, nền vẫn trong suốt.
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(1.45, 40),
+  new THREE.ShadowMaterial({ opacity: 0.2 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const loader = new GLTFLoader();
+async function loadNormalized(name) {
+  const gltf = await loader.loadAsync(`/models/${name}.glb`);
+  const model = gltf.scene;
+  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const s = 1.7 / Math.max(size.x, size.z);
+  model.scale.setScalar(s);
+  const box2 = new THREE.Box3().setFromObject(model);
+  model.position.x -= (box2.min.x + box2.max.x) / 2;
+  model.position.z -= (box2.min.z + box2.max.z) / 2;
+  model.position.y -= box2.min.y;
+  return model;
+}
+
+const rows = Math.ceil(ITEMS.length / COLS);
+const cv = document.createElement('canvas');
+cv.width = COLS * CELL; cv.height = rows * CELL;
+const ctx = cv.getContext('2d');
+for (let i = 0; i < ITEMS.length; i++) {
+  const model = await loadNormalized(ITEMS[i]);
+  scene.add(model);
+  renderer.render(scene, camera);
+  const cx = (i % COLS) * CELL;
+  const cy = Math.floor(i / COLS) * CELL;
+  ctx.drawImage(renderer.domElement, cx, cy);
+  scene.remove(model);
+  if (INSPECT) {
+    ctx.fillStyle = '#1c1917';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(ITEMS[i], cx + 10, cy + 26);
+  }
+}
+window.__items = ITEMS;
+document.body.innerHTML = '';
+document.body.appendChild(cv);
+await new Promise((r) => setTimeout(r, 150));
+document.title = 'FOOD_DONE ' + JSON.stringify({ items: ITEMS, cell: CELL, cols: COLS, rows });
+</script>
+</body>
+</html>

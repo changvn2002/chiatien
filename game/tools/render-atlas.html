@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>render atlas G1 — KayKit → sprite</title>
+<style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{
+  "three":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/build/three.module.js",
+  "three/addons/":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// Pipeline G1 hướng C (REBUILD-C): render model KayKit Adventurers (CC0) thành
+// sprite sheet PNG trong suốt, mỗi model một sheet. Nhân bản công thức demo C
+// (visual-demos/c-3d-prerender): camera profile ngang mặt hướng PHẢI, bóng đổ
+// nướng bằng ShadowMaterial, trích alpha qua canvas.toDataURL (extract-atlas.mjs).
+//
+// Query: ?model=Knight&cell=224&frames=5
+//        ?model=Knight&mode=tint&cell=224&frames=4  → sheet test tint: 3 hàng
+//          idle × 3 màu palette đầu (đỏ / xanh dương / xanh lá) bằng material.color.
+// Trang được phục vụ từ gốc ~/workspace/mini-apps/ (xem run-pipeline.mjs) để
+// đường dẫn three (demo C) + GLB (demo B) khớp importmap/URL dưới đây.
+
+const qs = new URLSearchParams(location.search);
+const MODEL = qs.get('model') || 'Knight';
+const CELL = parseInt(qs.get('cell') || '224', 10);
+const FRAMES = parseInt(qs.get('frames') || '5', 10);
+const MODE = qs.get('mode') || 'atlas';
+
+// Ánh xạ hành động → clip THẬT trong GLB KayKit (đọc từ GLB, 76 clip/model —
+// danh sách đầy đủ nằm trong ASSET-MANIFEST + handoff lane A).
+// t0..t1 = đoạn clip được lấy mẫu; normalize = chuẩn hoá bbox (root-motion).
+const ACTIONS = [
+  ['idle',    'Idle',                             0.00, 0.92, false],
+  ['punchA',  'Unarmed_Melee_Attack_Punch_A',     0.00, 1.00, false],
+  ['punchB',  'Unarmed_Melee_Attack_Punch_B',     0.00, 1.00, false],
+  ['kick',    'Unarmed_Melee_Attack_Kick',        0.00, 1.00, false],
+  ['hitA',    'Hit_A',                            0.00, 1.00, false],
+  ['hitB',    'Hit_B',                            0.00, 1.00, false],
+  ['dodge',   'Dodge_Backward',                   0.00, 1.00, true ],
+  ['fall',    'Death_A',                          0.04, 0.97, true ],
+  ['victory', 'Cheer',                            0.00, 1.00, false],
+];
+const TINTS = [
+  ['do',  0xd32f2f],   // palette.ts #D32F2F đỏ
+  ['lam', 0x1976d2],   // palette.ts #1976D2 xanh dương
+  ['luc', 0x388e3c],   // palette.ts #388E3C xanh lá
+];
+// Node vũ khí/khiên/phụ kiện cầm tay → ẩn (đánh tay không, như demo B).
+const WEAPON = /sword|shield|axe|spellbook|wand|staff|crossbow|knife|mug|throwable/i;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(CELL, CELL);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 60);
+camera.position.set(0, 1.22, 4.55);
+camera.lookAt(0, 0.82, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3f4a, 1.35));
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
+key.position.set(2.4, 4.2, 3.0);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.left = -2; key.shadow.camera.right = 2;
+key.shadow.camera.top = 3; key.shadow.camera.bottom = -1;
+key.shadow.radius = 4;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd4ff, 0.8);
+rim.position.set(-3, 2, -2.5);
+scene.add(rim);
+
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(3.2, 40),
+  new THREE.ShadowMaterial({ opacity: 0.22 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const SRC = qs.get('src') ||
+  '/chiatien-game-v2/visual-demos/b-3d-realtime/assets/' + MODEL + '.glb';
+const gltf = await new GLTFLoader().loadAsync(SRC);
+const model = gltf.scene;
+model.traverse(o => {
+  if (WEAPON.test(o.name || '')) o.visible = false;
+  if (o.isMesh) { o.castShadow = true; o.material = o.material.clone(); }
+});
+// chuẩn hoá: cao 1,8 đơn vị, chân chạm y=0, tâm x/z về 0 (như demo C)
+const box = new THREE.Box3().setFromObject(model);
+const size = box.getSize(new THREE.Vector3());
+model.scale.setScalar(1.8 / size.y);
+const box2 = new THREE.Box3().setFromObject(model);
+model.position.x -= (box2.min.x + box2.max.x) / 2;
+model.position.z -= (box2.min.z + box2.max.z) / 2;
+model.position.y -= box2.min.y;
+const group = new THREE.Group();
+group.add(model);
+group.rotation.y = Math.PI / 2; // mặt hướng +Z → hướng sang phải màn hình (+X)
+scene.add(group);
+
+const clips = {};
+for (const c of gltf.animations) clips[c.name] = c;
+const mixer = new THREE.AnimationMixer(model);
+
+function skinnedBBox() {
+  scene.updateMatrixWorld(true);
+  const b = new THREE.Box3();
+  const v = new THREE.Vector3();
+  model.traverse(o => {
+    if (o.isSkinnedMesh) {
+      const pos = o.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i);
+        o.applyBoneTransform(i, v);
+        v.applyMatrix4(o.matrixWorld);
+        b.expandByPoint(v);
+      }
+    }
+  });
+  return b;
+}
+
+function renderActionAt(clipName, t01, normalize) {
+  const clip = clips[clipName];
+  if (!clip) throw new Error('thieu clip ' + clipName);
+  mixer.stopAllAction();
+  const a = mixer.clipAction(clip);
+  a.reset().setLoop(THREE.LoopOnce, 1).play();
+  mixer.setTime(clip.duration * t01);
+  group.position.set(0, 0, 0);
+  if (normalize) {
+    // Clip có root-motion (Death/Dodge): kéo bbox đã skinning về giữa khung,
+    // đáy chạm đất — Box3.setFromObject sai với skinned mesh (bẫy demo C #3/#4).
+    const b = skinnedBBox();
+    group.position.x -= (b.min.x + b.max.x) / 2;
+    group.position.z -= (b.min.z + b.max.z) / 2;
+    group.position.y -= b.min.y;
+  }
+  renderer.render(scene, camera);
+}
+
+function setTint(hex) {
+  model.traverse(o => {
+    if (o.isMesh) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach(m => { if (m) m.color.setHex(hex); });
+    }
+  });
+}
+
+let rowsDef; // [{key, clip, t0, t1, normalize, tint?}]
+if (MODE === 'tint') {
+  rowsDef = TINTS.map(([name, hex]) => ({
+    key: 'idle_' + name, clip: 'Idle', t0: 0, t1: 0.92, normalize: false, tint: hex,
+  }));
+} else {
+  rowsDef = ACTIONS.map(([k, clip, t0, t1, n]) => ({ key: k, clip, t0, t1, normalize: n }));
+}
+
+const cv = document.createElement('canvas');
+cv.width = FRAMES * CELL;
+cv.height = rowsDef.length * CELL;
+const ctx = cv.getContext('2d');
+rowsDef.forEach((row, r) => {
+  if (row.tint !== undefined) setTint(row.tint);
+  for (let f = 0; f < FRAMES; f++) {
+    const t = FRAMES === 1 ? row.t0 : row.t0 + (row.t1 - row.t0) * (f / (FRAMES - 1));
+    renderActionAt(row.clip, t, row.normalize);
+    ctx.drawImage(renderer.domElement, f * CELL, r * CELL);
+  }
+});
+
+const meta = {
+  model: MODEL, mode: MODE, cell: CELL, framesPerAction: FRAMES,
+  cols: FRAMES, rows: rowsDef.length,
+  sheetWidth: cv.width, sheetHeight: cv.height,
+  actions: rowsDef.map(r => r.key),
+  actionClips: rowsDef.map(r => r.clip),
+  allClips: gltf.animations.map(c => c.name),
+};
+window.__meta = meta;
+document.body.innerHTML = '';
+document.body.appendChild(cv);
+await new Promise(r => setTimeout(r, 150));
+document.title = 'SHEET_DONE ' + JSON.stringify({ model: MODEL, mode: MODE, cell: CELL, frames: FRAMES, rows: rowsDef.length });
+</script>
+</body>
+</html>

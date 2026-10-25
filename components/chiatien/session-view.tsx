@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import dynamic from 'next/dynamic';
 import { IconPlus } from './icons';
 import { newId } from '@/lib/id';
 import { assignIdentityColors, normalizeMemberName } from '@/lib/identity';
@@ -34,6 +35,12 @@ import {
   useStripExpansion,
   useStripHeightPublisher,
 } from './session-view-hooks';
+import { buildGameSessionInput } from '@/game/adapter';
+
+// Game mode «Ai Đãi» (opt-in, tách hẳn): cổng game chỉ được nạp khi người
+// dùng bấm «Chơi game đãi» — dynamic ssr:false để Phaser/Howler/jsQR nằm
+// trong lazy chunk riêng của game, không vào bundle route đầu (ARCH §1.1).
+const GameEntry = dynamic(() => import('@/game/entry'), { ssr: false });
 
 /**
  * Màn làm việc MỘT MÀN HÌNH (REDESIGN-V2, "Settlement in Sight"): bỏ
@@ -121,6 +128,9 @@ export function SessionView({
     setLedgerTotalVisible(visible);
   }, []);
   const [deckNotice, setDeckNotice] = useState('');
+  // Game mode «Ai Đãi»: chỉ là cờ mở lớp phủ — dữ liệu truyền vào game qua
+  // adapter chỉ-đọc (buildGameSessionInput), game không ghi gì vào phiên.
+  const [gameOpen, setGameOpen] = useState(false);
   const [focusedExpenseId, setFocusedExpenseId] = useState<string | null>(null);
   const online = useOnlineStatus();
   const memberStripRef = useRef<HTMLDivElement>(null);
@@ -494,6 +504,29 @@ export function SessionView({
         N thêm khoản · M thêm người · ⌘K hành động của hàng · C copy quyết toán khi dải mở · Esc lùi
         lớp
       </p>
+
+      {/* Điểm chạm DUY NHẤT của game mode «Ai Đãi» (ARCH §2.3): một nút mở
+          lớp phủ game trong cùng route của phiên. Cần ≥ 2 thành viên
+          (điều kiện vào game, SPEC §3.2). Không đổi hành vi/flow hiện hữu. */}
+      <div className="mt-1 flex shrink-0 items-center gap-2">
+        <GhostButton
+          disabled={session.members.length < 2}
+          onClick={() => setGameOpen(true)}
+          title={
+            session.members.length < 2
+              ? 'Cần ít nhất 2 thành viên để chơi game đãi'
+              : 'Chơi game để chọn người đãi'
+          }
+        >
+          Chơi game đãi
+        </GhostButton>
+        {session.members.length < 2 ? (
+          <span className="text-xs text-ink-2">Cần ít nhất 2 thành viên để chơi.</span>
+        ) : null}
+      </div>
+      {gameOpen ? (
+        <GameEntry input={buildGameSessionInput(session)} onExit={() => setGameOpen(false)} />
+      ) : null}
 
       <SessionSettlementStrip
         session={session}

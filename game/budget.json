@@ -1,0 +1,48 @@
+{
+ "build": "next build (Turbopack) — Compiled successfully",
+ "comment": "Ngân sách bốn dòng A–D của game mode (ARCHITECTURE §4). Trần là hằng số cứng — KHÔNG nới trần nào. Số đo: lane E3 vòng vá FIX-V4.1 (REBUILD-C3) — đo lại sau B3+A5; lịch sử: lane E2 đợt FIX-V4 trên production build mới (Next 16.4.2 Turbopack, phaser 3.90.0) — phương pháp marker chunk như các đợt trước: nhận diện chunk game bằng marker nội dung (Phaser / Howler / aidai / SETS-MANIFEST / mulberry32 / BitMatrix của jsQR) và đối chiếu 9 chunk đầu của HTML prerender route '/' (không chunk game nào nằm trong 9 chunk đầu; chunk 3sex6_0bv_put.js chứa 'BitMatrix' nhưng thuộc 9 chunk đầu của route '/' — thư viện tạo QR của app chính — không tính, như các đợt trước). Gzip bằng `gzip -c` mặc định. Dòng B tính theo ruling N2c (parent ĐÃ DUYỆT 2026-10-25 ~11:56): phần một ván thực tải theo bộ đã chọn. Dòng D theo công thức đợt FIX-V4 = A + B ván nặng nhất + C(ii) + 3 sheet preview (người dùng thấy thẻ 3 bộ trước khi chọn nên preview tính vào lần mở đầu).",
+ "lines": {
+  "A_js_gzip": {
+   "capBytes": 500000,
+   "measuredBytes": 419369,
+   "scope": "Chunk Phaser + game code + Howler + jsQR (gzip)",
+   "status": "ĐẠT (đo lại vòng vá FIX-V4.1 vì code B3 đổi) — chi tiết gzip theo marker (gzip -c): chunk Phaser 315.473 B (0r0vsruy07lmu.js, raw 1.191.645 — khớp byte các đợt trước); chunk jsQR 45.789 B (0q68wfebr72w-.js, raw 129.980 — khớp byte); chunk engine 2.422 B (28n-nzclxg_80.js, raw 5.784, marker mulberry32; đợt FIX-V4 tên 17-di6xa8kytn.js cùng raw); chunk screens/stage/Howler + scene glue + M3B/avatar-store/character-sets 35.137 B (3c0rw3l-cwtyf.js, raw 134.740 — không đổi); chunk scenes G1+G2 + textures + set-atlas loader 20.548 B (41uv5b4q3iuz-.js, raw 68.121 — marker aidai/G1Scene/G2Scene/g1-floor; đợt FIX-V4: 19.579 B trên chunk 1jmjj8rib64g5.js raw 65.045). Tổng 419.369 B (đợt FIX-V4: 418.400 B; tăng 969 B do code vá B3), dư trần 80.631 B. Chunk 12s0dht54r_52.js (raw 5.712) là web-vitals, không tính."
+  },
+  "B_atlas_texture": {
+   "capBytes": 400000,
+   "measuredBytes": 388583,
+   "scope": "Phần atlas một ván G1 thực tải theo bộ đã chọn (N2c) = WebP của bộ + JSON gzip + anchors gzip + g1-floor 5.222 B; ván G2 tính riêng",
+   "status": "ĐẠT theo N2c (parent duyệt 2026-10-25 ~11:56) — đo lại từ đĩa vòng vá FIX-V4.1 (JSON/anchors gzip mức 9 như pipeline build-sets): adventurers 324.076 B (WebP 311.566 + JSON gzip 5.894 + anchors gzip 1.394 + floor 5.222 — không đổi) · skeletons 350.424 B (WebP 338.070 + JSON gzip 5.941 + anchors gzip 1.191 + floor 5.222 — không đổi) · blocky 388.583 B (WebP 376.712 + JSON gzip 5.942 + anchors gzip 707 + floor 5.222) — BỘ NẶNG NHẤT MỚI sau khi lane A5 render lại atlas blocky ở góc 3/4 và nén WebP q45 (số đo khớp hệt handoff A5: 388.583, dư trần 11.417 B). Cả ba ≤ 400.000 B. Ván G2 thực tải = g2-food 26.128 + JSON gzip 345 + g2-tray 5.080 = 31.553 B. measuredBytes = ván nặng nhất (blocky)."
+  },
+  "C_audio_per_user": {
+   "capBytes": 600000,
+   "measuredBytes": 295615,
+   "scope": "(ii) thực tải của một user, chỉ định dạng trình duyệt chọn (đường WebM/Opus)",
+   "status": "ĐẠT (đo lại vòng vá FIX-V4.1 trên đĩa, không đổi) — tổng 8 file .webm trong public/game/audio: BGM 273.883 B + 7 SFX 21.732 B = 295.615 B."
+  },
+  "C_audio_ship": {
+   "capBytes": 1500000,
+   "measuredBytes": 719782,
+   "scope": "(i) ship trong build, cả 2 định dạng WebM/Opus + MP3",
+   "status": "ĐẠT (đo lại vòng vá FIX-V4.1 trên đĩa, không đổi) — WebM 295.615 B + MP3 424.167 B = 719.782 B."
+  },
+  "D_first_open_total": {
+   "capBytes": 1500000,
+   "measuredBytes": 1244385,
+   "scope": "Tổng tải lần mở game đầu tiên (cache lạnh, đường WebM/Opus) = A + B ván nặng nhất (N2c) + C(ii) + 3 sheet preview",
+   "status": "ĐẠT — công thức đợt FIX-V4: A 419.369 + B nặng nhất MỚI (blocky) 388.583 + C(ii) 295.615 + preview 3 sheet 140.818 = 1.244.385 B ≤ 1.500.000 B, dư 255.615 B. Theo từng bộ: adventurers 1.179.878 B · skeletons 1.206.226 B · blocky 1.244.385 B · ván G2 887.355 B. (Lane A5 dự tính D = 1.243.416 B với A cũ 418.400; chênh +969 B đúng bằng phần tăng của dòng A do code B3.) Đây là tổng tĩnh từ artifact build/đĩa; chưa gồm overhead HTTP/TLS."
+  },
+  "preview_sheets": {
+   "capBytes": null,
+   "measuredBytes": 140818,
+   "scope": "3 sheet preview M3B (public/game/atlas/sets/<setId>-preview.webp, lưới 4×3, ô 192×192) — tính vào dòng D",
+   "status": "Đo lại từ đĩa vòng vá FIX-V4.1, không đổi: adventurers-preview 52.534 B · skeletons-preview 58.448 B · blocky-preview 29.836 B = 140.818 B tổng."
+  }
+ },
+ "measuredAt": "2026-10-25 (vòng vá FIX-V4.1 / REBUILD-C3, lane E3)",
+ "warmOpenBytes": {
+  "capBytes": 0,
+  "measuredBytes": null,
+  "status": "UNKNOWN — chưa có bản ghi mạng cold/warm; bằng chứng tĩnh: public/sw.js có họ cache chiatien-game-v1 tách riêng, nhánh fetch '/game/' đặt trước nhánh static chung và route mọi asset /game/* (gồm /game/atlas/*) vào gameCacheFirst. Offline trên https thật vẫn UNKNOWN."
+ }
+}

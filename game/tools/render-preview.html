@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>render preview 3/4 — chiatien game (lane A4 FIX-V4)</title>
+<style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{
+  "three":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/build/three.module.js",
+  "three/addons/":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// render-preview.html — lane A4 (FIX-V4): render DUY NHẤT 1 frame idle của 1
+// nhân vật ở góc 3/4 HƯỚNG MẶT về camera, làm nguyên liệu cho sheet xem trước
+// <setId>-preview.webp (ghép + chuẩn hoá kích thước ở build-previews.py).
+// Khác render-set.html (atlas hành động, mặt hướng PHẢI dạng profile):
+//   - group.rotation.y lấy từ ?yawDeg= (mặc định -35): model gốc có mặt ở +Z
+//     (bằng chứng: rotation.y = PI/2 ở pipeline cũ cho profile mặt hướng +X
+//     màn hình), nên yaw 0 = chính diện camera, ±35° = 3/4 vẫn thấy rõ mặt.
+//     Với blocky, chính diện cũng là phía có texture mặt/trang phục — góc
+//     profile cũ làm trục vai trùng hướng camera nên hình chiếu sụp thành
+//     lát dọc mỏng; góc 3/4 này khôi phục chiều ngang vai/thân.
+//   - KHÔNG bóng đổ mặt đất: preview nền trong suốt sạch, để bước ghép sheet
+//     đo bbox alpha đúng thân nhân vật (bóng sẽ phá tỉ lệ 80%/88%).
+// Query: ?src=<url glb>&family=adv|blocky&cell=384&yawDeg=-35
+//        &hide=...&tintBody=...&tintAll=...&tintHead=...  (như render-set)
+
+const qs = new URLSearchParams(location.search);
+const CELL = parseInt(qs.get('cell') || '384', 10);
+const FAMILY = qs.get('family') || 'adv';
+const YAW = (parseFloat(qs.get('yawDeg') || '-35') * Math.PI) / 180;
+const IDLE_CLIP = FAMILY === 'blocky' ? 'idle' : 'Idle';
+const IDLE_T = 0.18; // điểm đầu chu kỳ idle: đứng thẳng, chưa lệch nhịp thở mạnh
+
+const WEAPON = /sword|shield|axe|spellbook|wand|staff|crossbow|knife|mug|throwable|blade|quiver|arrow/i;
+const hideRes = (qs.get('hide') || '').split(';').filter(Boolean).map(s => new RegExp(s, 'i'));
+const BODY_RE = /body|arm|leg|torso|chest/i;
+const HEAD_RE = /head/i;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(CELL, CELL);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 60);
+camera.position.set(0, 1.18, 4.55);
+camera.lookAt(0, 0.86, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3f4a, 1.35));
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
+key.position.set(2.4, 4.2, 3.0);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd4ff, 0.8);
+rim.position.set(-3, 2, -2.5);
+scene.add(rim);
+
+const SRC = qs.get('src');
+if (!SRC) throw new Error('thieu ?src=');
+const gltf = await new GLTFLoader().loadAsync(SRC);
+const model = gltf.scene;
+const tintAll = qs.get('tintAll'), tintBody = qs.get('tintBody'), tintHead = qs.get('tintHead');
+model.traverse(o => {
+  const nm = o.name || '';
+  if (WEAPON.test(nm) || hideRes.some(r => r.test(nm))) o.visible = false;
+  if (o.isMesh) {
+    o.material = o.material.clone();
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    let hex = null;
+    if (tintAll) hex = tintAll;
+    else if (HEAD_RE.test(nm) && tintHead) hex = tintHead;
+    else if (BODY_RE.test(nm) && tintBody) hex = tintBody;
+    if (hex) mats.forEach(m => { if (m) m.color.set('#' + hex); });
+  }
+});
+// chuẩn hoá chiều cao 1,8, chân chạm y=0, tâm x/z về 0 (như pipeline cũ)
+const box = new THREE.Box3().setFromObject(model);
+const size = box.getSize(new THREE.Vector3());
+model.scale.setScalar(1.8 / size.y);
+const box2 = new THREE.Box3().setFromObject(model);
+model.position.x -= (box2.min.x + box2.max.x) / 2;
+model.position.z -= (box2.min.z + box2.max.z) / 2;
+model.position.y -= box2.min.y;
+const group = new THREE.Group();
+group.add(model);
+group.rotation.y = YAW; // 3/4 hướng mặt về camera (xem ghi chú đầu file)
+scene.add(group);
+
+const clips = {};
+for (const c of gltf.animations) clips[c.name] = c;
+const clip = clips[IDLE_CLIP];
+if (!clip) throw new Error('thieu clip idle: ' + IDLE_CLIP);
+const mixer = new THREE.AnimationMixer(model);
+const a = mixer.clipAction(clip);
+a.reset().setLoop(THREE.LoopOnce, 1).play();
+const segEnd = FAMILY === 'blocky' ? 1.0 : 0.92;
+mixer.setTime(clip.duration * segEnd * IDLE_T);
+renderer.render(scene, camera);
+
+const cv = document.createElement('canvas');
+cv.width = CELL; cv.height = CELL;
+cv.getContext('2d').drawImage(renderer.domElement, 0, 0);
+window.__meta = {
+  family: FAMILY, cell: CELL, yawDeg: (YAW * 180) / Math.PI,
+  clip: IDLE_CLIP, t: segEnd * IDLE_T,
+  variant: { hide: qs.get('hide') || '', tintBody: tintBody || '', tintAll: tintAll || '', tintHead: tintHead || '' },
+};
+document.body.innerHTML = '';
+document.body.appendChild(cv);
+await new Promise(r => setTimeout(r, 150));
+document.title = 'SHEET_DONE ' + JSON.stringify({ cell: CELL, family: FAMILY, yawDeg: (YAW * 180) / Math.PI });
+</script>
+</body>
+</html>

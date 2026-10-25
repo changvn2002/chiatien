@@ -22,10 +22,20 @@
  * dọn cache cũ và precache lại shell mới ở lần ghé tiếp theo.
  */
 
-const CACHE_VERSION = 'v7-2026-10-25';
+const CACHE_VERSION = 'v8-2026-10-25';
 const SHELL_CACHE = `chiatien-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `chiatien-runtime-${CACHE_VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, RUNTIME_CACHE];
+
+/* Họ cache GAME — tách riêng, version ĐỘC LẬP (ARCHITECTURE §7, T5):
+ * gameVersion không suy ra từ CACHE_VERSION. Asset của game (chunk JS,
+ * atlas, audio) sống trong họ `chiatien-game-v<gameVersion>`; game KHÔNG
+ * được precache cùng app shell — chỉ cache-first khi fetch lần đầu lúc
+ * người dùng mở game. Bump CACHE_VERSION của app KHÔNG được xoá cache
+ * game còn tương thích; lỗi họ game không bao giờ chặn activate của shell. */
+const GAME_VERSION = '1';
+const GAME_CACHE_PREFIX = 'chiatien-game-v';
+const GAME_CACHE = `${GAME_CACHE_PREFIX}${GAME_VERSION}`;
 
 // URL ổn định (không hash) — precache lúc install.
 const PRECACHE_URLS = [
@@ -53,13 +63,28 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => !CURRENT_CACHES.includes(key))
-            .map((key) => caches.delete(key)),
-        ),
-      )
+      .then((keys) => {
+        // Họ game: giữ tối đa 2 cache mới nhất (đang hoạt động + version
+        // ngay trước), dọn chỉ trong họ game — việc dọn này bọc try/catch
+        // riêng để lỗi họ game không bao giờ chặn activate của shell.
+        const gameKeys = keys
+          .filter((key) => key.startsWith(GAME_CACHE_PREFIX))
+          .sort((a, b) => {
+            const va = Number.parseInt(a.slice(GAME_CACHE_PREFIX.length), 10) || 0;
+            const vb = Number.parseInt(b.slice(GAME_CACHE_PREFIX.length), 10) || 0;
+            return vb - va;
+          });
+        const staleGameKeys = gameKeys.slice(2);
+        const shellKeysToDelete = keys.filter(
+          (key) => !CURRENT_CACHES.includes(key) && !key.startsWith(GAME_CACHE_PREFIX),
+        );
+        return Promise.all([
+          ...shellKeysToDelete.map((key) => caches.delete(key)),
+          ...staleGameKeys.map((key) =>
+            caches.delete(key).catch(() => false),
+          ),
+        ]);
+      })
       .then(() => self.clients.claim()),
   );
 });
@@ -82,6 +107,20 @@ function staleWhileRevalidate(request) {
 /** cache-first: dùng cho tài nguyên tên file có hash (/_next/static/). */
 function cacheFirst(request) {
   return caches.open(RUNTIME_CACHE).then((cache) =>
+    cache.match(request).then(
+      (cached) =>
+        cached ||
+        fetch(request).then((response) => {
+          if (response && response.ok) cache.put(request, response.clone());
+          return response;
+        }),
+    ),
+  );
+}
+
+/** cache-first trong HỌ GAME (ARCH §7): miss thì fetch + put vào cache game hiện tại. */
+function gameCacheFirst(request) {
+  return caches.open(GAME_CACHE).then((cache) =>
     cache.match(request).then(
       (cached) =>
         cached ||
@@ -128,6 +167,14 @@ self.addEventListener('fetch', (event) => {
   // Điều hướng trang: network-first, offline thì trả app shell '/'.
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, '/'));
+    return;
+  }
+
+  // Asset tĩnh của game (public/game/): cache-first trong HỌ GAME riêng.
+  // Đặt TRƯỚC nhánh static chung để audio/atlas của game không rơi vào
+  // runtime cache của shell. Không precache — chỉ cache khi fetch lần đầu.
+  if (url.pathname.startsWith('/game/')) {
+    event.respondWith(gameCacheFirst(request));
     return;
   }
 
