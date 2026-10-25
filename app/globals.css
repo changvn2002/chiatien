@@ -186,6 +186,11 @@ html,
 body {
   background: var(--canvas);
   color: var(--ink);
+  /* F4 (audit PWA, chuẩn PWA-08): chặn pull-to-refresh / rubber-band
+     ở cấp TOÀN APP — kéo-quá-đầu ở trang chính không tự reload làm
+     mất trạng thái. Overlay game giữ riêng overscroll-behavior: none
+     ở gốc của nó (game/entry.tsx). Mẫu sodam v1.4.0 (PWA-FIX). */
+  overscroll-behavior-y: none;
 }
 
 body {

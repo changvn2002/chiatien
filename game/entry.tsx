@@ -392,7 +392,7 @@ export function GameEntry({
 
   return (
     <div
-      className="fixed inset-0 z-40 overflow-y-auto bg-canvas"
+      className="fixed inset-0 z-40 overflow-y-auto bg-canvas pt-[max(0.75rem,env(safe-area-inset-top))]"
       role="dialog"
       aria-modal="true"
       aria-label="Chơi game đãi"
@@ -402,12 +402,19 @@ export function GameEntry({
       // scroller là chính gốc này — các màn game không có scroller lồng
       // nhau, đã rà game/screens/* — nên không có bề mặt nội bộ nào cần
       // mức contain riêng.)
-      // F5: đệm safe-area cho header (trên) và đuôi overlay (dưới) qua
-      // env(safe-area-inset-*): máy không tai thỏ inset = 0 thì padding
-      // bằng 0, layout y hệt trước.
+      // F5: đệm safe-area cho header (trên) và đuôi overlay (dưới).
+      // Trên: class pt-[max(0.75rem, env(safe-area-inset-top))] ở gốc
+      // overlay — 0.75rem là ĐỆM CỨNG HIỆN TẠI (trước đây là py-3 của
+      // wrapper trong, đã bỏ pt ở wrapper để không cộng đôi): máy
+      // không tai thỏ inset = 0 thì đệm = 0.75rem, layout y hệt
+      // trước; máy có tai thỏ thì inset lớn hơn thắng, header + nút
+      // trên cùng không bị che. Khai báo dạng utility để nằm trong
+      // CSS đã biên dịch (đo lại được bằng grep, như các thanh dính
+      // đáy pb-[max(0.75rem, env(safe-area-inset-bottom))] sẵn có ở
+      // game/screens/setup-screen.tsx). Dưới: giữ env() inline ở
+      // gốc + pb-6 cứng của wrapper trong như hiện tại.
       style={{
         overscrollBehavior: 'none',
-        paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
@@ -416,7 +423,7 @@ export function GameEntry({
           dàn NGANG thật ở desktop, không còn cột mobile giữa biển
           trắng. */}
       <div
-        className={`mx-auto w-full px-4 py-3 pb-6 ${
+        className={`mx-auto w-full px-4 pb-6 ${
           screen === 'm6' || screen === 'm7' || screen === 'm8' ? 'max-w-6xl' : 'max-w-2xl'
         }`}
       >
