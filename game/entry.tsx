@@ -28,7 +28,6 @@ import {
   stopBgm,
   unlockAudio,
 } from './audio/sound';
-import { SPLIT_EVEN_LABEL } from './copy';
 import type { GameDraft, PlayerView, ScreenId } from './state';
 import { EMPTY_DRAFT } from './state';
 import {
@@ -416,7 +415,7 @@ export function GameEntry({
           dàn NGANG thật ở desktop, không còn cột mobile giữa biển
           trắng. */}
       <div
-        className={`mx-auto w-full px-4 py-4 pb-10 ${
+        className={`mx-auto w-full px-4 py-3 pb-6 ${
           screen === 'm6' || screen === 'm7' || screen === 'm8' ? 'max-w-6xl' : 'max-w-2xl'
         }`}
       >
@@ -431,6 +430,19 @@ export function GameEntry({
             Chơi game đãi
           </h1>
           <div className="mt-2 flex items-center justify-end gap-2">
+            {/* UIUX-GAME-V2: nút «?» là CỔNG DUY NHẤT vào mọi giải thích
+                dài của game mode (sheet «Luật chơi & chi tiết») — các
+                màn không còn đoạn văn dài hiển thị mặc định nữa. */}
+            {screen !== 'rules' ? (
+              <button
+                type="button"
+                aria-label="Luật chơi & chi tiết"
+                onClick={() => goRules(screen)}
+                className="inline-flex min-h-11 w-11 items-center justify-center rounded-lg border border-line bg-card text-base font-bold text-ink"
+              >
+                ?
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -445,18 +457,12 @@ export function GameEntry({
             </button>
           </div>
         </div>
-        {/* FIX-V3 P1.5 (panel v3 ghế 1/2/3/4/5): đoạn boilerplate
-            offline CHỈ hiện ở lần vào mode đầu tiên (M1) — không lặp
-            nguyên văn ở đầu mọi màn, không chiếm vị trí vàng trên sân
-            chơi. */}
-        {screen === 'setup' ? (
-          <p className="mt-1 text-sm text-ink-2">
-            Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không
-            có mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
-          </p>
-        ) : null}
+        {/* UIUX-GAME-V2: đoạn boilerplate offline KHÔNG còn ở đầu màn
+            thiết lập — bản đầy đủ sống trong sheet «Luật chơi & chi
+            tiết» (mục «Chạy offline»), màn thiết lập chỉ giữ 1 dòng
+            ngắn trong «Chi tiết ván». */}
 
-        <div className="mt-4">
+        <div className="mt-3">
           {screen === 'setup' && (
             <SetupScreen
               input={input}
@@ -467,7 +473,6 @@ export function GameEntry({
                 unlockAudio(); // preload/decode audio từ thao tác bắt đầu (SPEC §9).
                 handleStart(ready);
               }}
-              onOpenRules={() => goRules('setup')}
               onSplitEven={splitEvenAtConsent}
               photos={photos}
               onPhotosChanged={setPhotos}
@@ -540,8 +545,7 @@ export function GameEntry({
           >
             <div className="w-full max-w-md rounded-lg bg-card px-4 py-4">
               <p className="text-base leading-relaxed text-ink">
-                Thoát ván {record.code} đang chơi? Ván sẽ bị huỷ công khai và cả nhóm quay về chia
-                đều cho lành — việc huỷ này hiện cho cả nhóm và được ghi vào nhật ký phiên.
+                Thoát ván {record.code} đang chơi? Ván huỷ công khai, cả nhóm chia đều.
               </p>
               <button
                 type="button"
@@ -561,15 +565,9 @@ export function GameEntry({
           </div>
         ) : null}
 
-        {/* Dòng chú thích lối thoát cũng là chrome lặp (cùng finding
-            boilerplate P1.5): chỉ hiện ở màn thiết lập; các màn sau tự
-            có nút «Chia đều cho lành» thật trong khu hành động. */}
-        {screen === 'setup' ? (
-          <p className="mt-6 text-xs text-ink-2">
-            Lối thoát luôn mở: bấm «{SPLIT_EVEN_LABEL}» ở bất kỳ màn nào để về quyết toán chia đều
-            bình thường của phiên.
-          </p>
-        ) : null}
+        {/* UIUX-GAME-V2: dòng chú thích lối thoát ở chân màn thiết lập
+            đã bỏ — nút «Chia đều cho lành» thật nằm ngay trong thanh
+            Bắt đầu của màn thiết lập, không cần chú thích nữa. */}
       </div>
     </div>
   );

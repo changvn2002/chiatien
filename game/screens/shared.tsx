@@ -147,7 +147,7 @@ export function SplitEvenButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink transition hover:border-brand hover:text-brand-deep"
+      className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink transition hover:border-brand hover:text-brand-deep"
     >
       {SPLIT_EVEN_LABEL}
     </button>

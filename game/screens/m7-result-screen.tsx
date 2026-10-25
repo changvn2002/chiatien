@@ -29,12 +29,12 @@ import type { Highlight } from '../engine/types';
 import { formatMoney } from '../adapter';
 import type { GameSessionInput } from '../adapter';
 import { buildIdentityMapCovering } from '../assets/identity';
-import { QR_FINAL_CHECK_LINE, QR_NO_NAME_WARNING, QR_RESPONSIBILITY_SHORT } from '../copy';
+import { QR_FINAL_CHECK_LINE, QR_NO_NAME_WARNING } from '../copy';
 import type { GameRecord } from '../store';
 import type { GameDraft } from '../state';
 import { playSfx } from '../audio/sound';
 import type { AvatarPhotoMap } from '../assets/avatar-store';
-import { InfoBox, PlayerAvatar, ScreenTitle, YellowAlert } from './shared';
+import { PlayerAvatar, ScreenTitle, YellowAlert } from './shared';
 
 /**
  * Badge người đãi ở M7 — PlayerAvatar dùng chung toàn game (FIX-V3
@@ -185,6 +185,9 @@ export function M7ResultScreen({
 
   const [seedOpen, setSeedOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  // UIUX-GAME-V2: «Diễn biến đáng nhớ» THU GỌN mặc định — hiện 1 dòng
+  // đầu, bấm «Xem thêm» mới mở hết.
+  const [hlOpen, setHlOpen] = useState(false);
 
   // Kèn kết quả chỉ phát ở M7 (SPEC §7.5/§9) — một lần khi màn kết quả mở.
   useEffect(() => {
@@ -237,7 +240,6 @@ export function M7ResultScreen({
                 <p className="font-display text-[20px] leading-tight font-extrabold break-words text-ink">
                   {shopName}
                 </p>
-                <p className="text-sm leading-snug text-ink-2">bằng mã QR của quán ở khung dưới</p>
               </div>
             </div>
             <p className="mt-2 text-base text-ink lg:mt-3">
@@ -270,7 +272,6 @@ export function M7ResultScreen({
                 <p className="font-display text-[20px] leading-tight font-extrabold break-words text-ink">
                   {shopName}
                 </p>
-                <p className="text-sm leading-snug text-ink-2">bằng mã QR của quán ở khung dưới</p>
               </div>
             </div>
             <p className="mt-2 text-base text-ink lg:mt-3">
@@ -341,9 +342,7 @@ export function M7ResultScreen({
           </p>
         ) : (
           <>
-            <p className="text-base text-ink">
-              Kết quả này chưa tự ghi vào sổ — quyết toán của phiên vẫn như trước ván.
-            </p>
+            <p className="text-base text-ink">Kết quả này chưa ghi vào sổ.</p>
             {onRecordToLedger ? (
               <button
                 type="button"
@@ -411,8 +410,7 @@ export function M7ResultScreen({
           ) : (
             <div className="mt-3">
               <p className="text-base text-ink">
-                App đã mở lại nên mã QR không còn trong bộ nhớ. Hãy dán lại nội dung QR của quán —
-                app chỉ hiển thị khi nội dung khớp đúng mã đã khoá vào ván này.
+                App đã mở lại — dán lại QR của quán để đối chiếu.
               </p>
               <textarea
                 rows={3}
@@ -438,8 +436,7 @@ export function M7ResultScreen({
               </button>
               {reenteredOk === false ? (
                 <p className="mt-1.5 text-base text-debt-ink">
-                  Nội dung vừa nhập không khớp mã QR đã khoá vào ván. Hãy dùng đúng QR của quán,
-                  hoặc quét QR gốc tại quầy.
+                  Không khớp mã đã khoá — dùng đúng QR của quán.
                 </p>
               ) : null}
             </div>
@@ -456,35 +453,41 @@ export function M7ResultScreen({
               .
             </p>
           ) : null}
-          <div className="mt-3">
-            <InfoBox>{QR_RESPONSIBILITY_SHORT}</InfoBox>
-          </div>
+          {/* UIUX-GAME-V2: InfoBox trách nhiệm QR rút gọn KHÔNG còn ở
+              M7 — bản đầy đủ sống ở sheet «Luật chơi & chi tiết». */}
         </div>
       ) : (
         <div className="mt-5 lg:col-start-2 lg:row-start-2 lg:mt-4">
           <YellowAlert>
-            {/* FIX-UX-GAME: phân biệt «chơi không cần QR» (qrHash null)
-                với «QR nhập vào nhưng không giải mã được» — luồng gộp
-                không còn «bước đối chiếu» riêng để nhắc tới. */}
+            {/* UIUX-GAME-V2: cảnh báo QR đúng 1 dòng — phân biệt «chơi
+                không cần QR» (qrHash null) với «QR chưa giải mã được». */}
             {record.qrHash === null
-              ? 'Ván này chơi không kèm QR của quán. Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.'
-              : 'Ván này không hiển thị QR làm đích thanh toán vì QR chưa giải mã được khi nhập. Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.'}
+              ? 'Không có QR — người đãi quét QR gốc tại quầy.'
+              : 'QR chưa đọc được — người đãi quét QR gốc tại quầy.'}
           </YellowAlert>
-          <div className="mt-3">
-            <InfoBox>{QR_RESPONSIBILITY_SHORT}</InfoBox>
-          </div>
         </div>
       )}
 
-      {/* Tường thuật ván */}
+      {/* Tường thuật ván — thu gọn mặc định (UIUX-GAME-V2): tối đa 1
+          dòng + «Xem thêm». */}
       {log.params.game === 'g1' && highlights.length > 0 ? (
         <div className="mt-4 lg:col-span-2">
           <h3 className="text-base font-semibold text-ink">Diễn biến đáng nhớ</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-ink">
-            {highlights.map((h, i) => (
+            {(hlOpen ? highlights : highlights.slice(0, 1)).map((h, i) => (
               <li key={i}>{highlightText(h, nameOf)}</li>
             ))}
           </ul>
+          {highlights.length > 1 ? (
+            <button
+              type="button"
+              aria-expanded={hlOpen}
+              onClick={() => setHlOpen(!hlOpen)}
+              className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand-deep underline underline-offset-2"
+            >
+              {hlOpen ? 'Thu gọn' : 'Xem thêm'}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {/* Frame kết ván (PRES vòng 2, mục 5): SPEC §M7 áp cho CẢ HAI
@@ -493,6 +496,8 @@ export function M7ResultScreen({
           không có frame (vd khôi phục ván) giữ đoạn chữ cũ. */}
       {finalFrameUrl ? (
         <figure className="mt-4 lg:col-span-2">
+          {/* UIUX-GAME-V2: frame kết ván thành THUMBNAIL ≤180px — bằng
+              chứng ván vẫn có, không còn chiếm khung đầu của M7. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- Frame cuối là data-URL PNG sinh tại client từ canvas Phaser; next/image không áp dụng cho data-URL động */}
           <img
             src={finalFrameUrl}
@@ -501,18 +506,17 @@ export function M7ResultScreen({
                 ? 'Mâm cơm lúc dừng — ô của người được chọn đã được đánh dấu'
                 : 'Khung hình cuối của đấu trường, chụp đúng lúc ván dừng ở màn chơi'
             }
-            className="mx-auto w-full max-w-sm rounded-lg border border-line-strong lg:max-w-3xl"
+            className="mx-auto h-[180px] w-[180px] rounded-lg border border-line-strong object-cover"
           />
-          <figcaption className="mt-2 text-base text-ink">
+          <figcaption className="mt-2 text-center text-sm text-ink-2">
             {log.params.game === 'g2'
-              ? `Mâm đã dừng ở vị trí của ${nameOf(result.kind === 'single' ? result.payerId : '')} — hình chụp đúng lúc mâm dừng ở màn chơi.`
-              : 'Hình chụp đúng lúc ván dừng ở màn chơi.'}
+              ? `Mâm dừng ở phần của ${nameOf(result.kind === 'single' ? result.payerId : '')}.`
+              : 'Khung hình cuối của ván.'}
           </figcaption>
         </figure>
       ) : log.params.game === 'g2' && spinEvent && spinEvent.type === 'spin' ? (
         <p className="mt-4 text-base text-ink lg:col-span-2">
-          Mâm đã dừng ở vị trí của {nameOf(result.kind === 'single' ? result.payerId : '')} — giữ
-          nguyên hình ảnh lúc mâm dừng ở màn chơi.
+          Mâm đã dừng ở vị trí của {nameOf(result.kind === 'single' ? result.payerId : '')}.
         </p>
       ) : null}
 
@@ -538,10 +542,8 @@ export function M7ResultScreen({
             <div>C1: {record.c1}</div>
             <div>logHash: {log.logHash}</div>
           </dl>
-          <p className="mt-3 text-sm text-ink">
-            Luật hoà: đấu trường hoà đến cùng (sau đột tử 10 giây và tối đa một ván phụ) thì những
-            người đồng hạng cùng đãi, mỗi người một phần bằng nhau; mâm cơm xoay không có hoà.
-          </p>
+          {/* UIUX-GAME-V2: đoạn luật hoà KHÔNG còn lặp ở đây — luật
+              đầy đủ ở sheet «Luật chơi & chi tiết» (nút dưới mở sheet). */}
           {onOpenRules ? (
             <button
               type="button"

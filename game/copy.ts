@@ -24,13 +24,22 @@ export const QR_RESPONSIBILITY_SHORT =
 export const RNG_HONESTY_LINE =
   'Mã ván và seed được công khai để cả nhóm nhận diện ván, xem lại đúng ván đó, và kiểm tra kết quả khớp với seed đã cam kết trước khi ván chạy. Game chạy trên máy của một thành viên và dựa trên sự cùng chứng kiến của cả nhóm — app không chứng minh được seed không bị chọn trước, nên ván chỉ nên dùng khi cả nhóm tin nhau và cùng có mặt từ lúc bắt đầu.';
 
-/** Cảnh báo thường trực của nhánh 2b (QR không có tên) — SPEC §M2, lặp lại ở M7. */
-export const QR_NO_NAME_WARNING =
-  'QR này không cho biết tên người nhận trong app. Khi quét bằng app ngân hàng, hãy đối chiếu tên người nhận hiện trong app ngân hàng với quán trước khi chuyển.';
+/**
+ * Cảnh báo thường trực của nhánh 2b (QR không có tên) — SPEC §M2, lặp lại
+ * ở M7. UIUX-GAME-V2 (2026-10-25, lệnh user «mô tả còn quá nhiều»): rút
+ * còn ĐÚNG 1 dòng hiển thị cạnh QR — giữ nguyên hành động bắt buộc (đối
+ * chiếu tên người nhận trong app ngân hàng); bản chữ đầy đủ về trách
+ * nhiệm QR là QR_RESPONSIBILITY_LINE, sống ở sheet «Luật chơi & chi tiết».
+ */
+export const QR_NO_NAME_WARNING = 'QR không có tên — đối chiếu tên người nhận trong app ngân hàng.';
 
-/** Câu nhắc đối chiếu cuối cạnh QR ở M7 — ý nguyên văn SPEC §M7 (R2-3 Bước 4). */
+/**
+ * Câu nhắc đối chiếu cuối cạnh QR ở M7 — ý nguyên văn SPEC §M7 (R2-3
+ * Bước 4). UIUX-GAME-V2: rút còn 1 dòng như trên (giữ nguyên mệnh lệnh
+ * đối chiếu tên trước khi chuyển).
+ */
 export const QR_FINAL_CHECK_LINE =
-  'Trước khi chuyển tiền, hãy dừng lại và kiểm tra: nếu tên người nhận hiện trong app ngân hàng khác với tên đã xác nhận ở bước đối chiếu QR, hãy dừng lại và kiểm tra với quán trước.';
+  'Trước khi chuyển: đối chiếu tên người nhận trong app ngân hàng với quán.';
 
 /** Nhãn lối thoát dùng ở MỌI màn — đúng nguyên cụm (luật chung cuối §4). */
 export const SPLIT_EVEN_LABEL = 'Chia đều cho lành';

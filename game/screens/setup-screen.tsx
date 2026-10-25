@@ -16,6 +16,11 @@
 //   Bắt đầu; nút mờ thì có dòng lý do NGAY CẠNH nút (bẫy F4).
 // - Mỗi khối tối đa 1 dòng mô tả; C1/seed/kỹ thuật vào mục «Chi tiết
 //   ván» thu gọn mặc định.
+// UIUX-GAME-V2 (2026-10-25): nén trình bày để toàn màn lọt ≤1,2× khung
+// 390×844 — tổng tiền thành hàng gọn 1 dòng (Sửa mới mở ô nhập), chọn
+// trò thành 2 chip ngang, người chơi + nhân vật gộp 1 khối tóm tắt,
+// cảnh báo rút ≤1 dòng; giải thích dài chỉ còn ở sheet «Luật chơi &
+// chi tiết» (nút «?» ở entry).
 
 'use client';
 
@@ -31,7 +36,7 @@ import {
 } from '../adapter';
 import type { GameSessionInput } from '../adapter';
 import { unlockAudio } from '../audio/sound';
-import { QR_RESPONSIBILITY_SHORT, QR_SOURCES } from '../copy';
+import { QR_SOURCES } from '../copy';
 import type { QrSourceId } from '../copy';
 import { EMPTY_QR_DRAFT } from '../state';
 import type { GameDraft } from '../state';
@@ -49,7 +54,6 @@ export function SetupScreen({
   onDraft,
   abandonedCount,
   onStart,
-  onOpenRules,
   onSplitEven,
   photos,
   onPhotosChanged,
@@ -60,7 +64,6 @@ export function SetupScreen({
   /** Số cam kết đã bị bỏ trong phiên — hiện tối thiểu khi > 0 (SPEC §M6). */
   abandonedCount: number;
   onStart: (ready: ConsentReady) => void;
-  onOpenRules: () => void;
   onSplitEven: () => void;
   photos: AvatarPhotoMap;
   onPhotosChanged: (next: Map<string, string>) => void;
@@ -74,6 +77,9 @@ export function SetupScreen({
   const [showCharacters, setShowCharacters] = useState(false);
   const [showQr, setShowQr] = useState(() => Boolean(draft.qr.payload));
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // UIUX-GAME-V2: tổng tiền mặc định là HÀNG GỌN 1 dòng (nhãn + số +
+  // nút «Sửa»); ô nhập chỉ mở khi sửa hoặc khi chưa có tổng hợp lệ.
+  const [totalOpen, setTotalOpen] = useState(false);
 
   const totalVnd = parseMoneyInput(totalText);
   const players = useMemo(
@@ -170,12 +176,12 @@ export function SetupScreen({
             ? 'Cần ít nhất 2 người chơi — mở «Đổi người chơi» để chọn thêm.'
             : 'Một ván tối đa 12 người chơi — mở «Đổi người chơi» để bỏ bớt.'
           : amountMismatch
-            ? 'QR ghi sẵn số tiền khác tổng hoá đơn — kiểm lại QR hoặc tổng tiền.'
+            ? 'Số tiền trong QR khác tổng — kiểm lại.'
             : !qrConfirmOk
-              ? 'Hãy đối chiếu QR ở mục QR phía trên: chọn người đưa QR, người đối chiếu và nguồn của quán.'
+              ? 'Đối chiếu QR ở mục phía trên để bắt đầu.'
               : !chungValid
-                ? 'Nhập số chung (ít nhất 6 chữ số) ở ô ngay phía trên để bắt đầu.'
-                : 'Nhóm 2 người: tích ô xác nhận trong khối đồng thuận để bắt đầu.';
+                ? 'Nhập số chung ở ô phía trên để bắt đầu.'
+                : 'Nhóm 2 người: tích ô xác nhận phía trên.';
 
   const totalChangedVsSession =
     input.sessionTotalVnd > 0 && totalVnd > 0 && totalVnd !== input.sessionTotalVnd;
@@ -183,26 +189,48 @@ export function SetupScreen({
   return (
     <div>
       <ScreenTitle>Thiết lập ván</ScreenTitle>
-      <p className="mt-1 text-base text-ink-2">
-        Một người đãi cả bàn — app chọn ngẫu nhiên, cả nhóm cùng xem.
-      </p>
+      <p className="mt-1 text-base text-ink-2">Một người đãi cả bàn.</p>
 
-      {/* --- Tổng tiền: tự điền từ phiên, sửa được --- */}
-      <label className="mt-5 mb-1.5 block text-base font-semibold text-ink" htmlFor="setup-total">
-        Tổng hoá đơn hôm nay (VND)
-      </label>
-      <input
-        id="setup-total"
-        inputMode="decimal"
-        className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 text-base text-ink outline-none placeholder:text-placeholder focus:border-brand-deep"
-        placeholder="Ví dụ: 450.000"
-        value={totalText}
-        onChange={(e) => {
-          const v = parseMoneyInput(e.target.value);
-          setTotalText(v > 0 ? formatMoneyGrouped(v) : '');
-          onDraft({ ...draft, totalVnd: v });
-        }}
-      />
+      {/* --- Tổng tiền: HÀNG GỌN 1 dòng (UIUX-GAME-V2) — nhãn + số +
+          nút «Sửa»; ô nhập chỉ mở khi bấm Sửa hoặc chưa có tổng. --- */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="min-w-0 text-base text-ink">
+          <span className="font-semibold text-ink-2">Tổng hoá đơn: </span>
+          <strong className="font-display text-[20px] font-extrabold whitespace-nowrap">
+            {formatMoney(totalVnd)}
+          </strong>
+        </p>
+        <button
+          type="button"
+          aria-expanded={totalOpen || totalVnd <= 0}
+          onClick={() => setTotalOpen(!totalOpen)}
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-line-strong bg-card px-3 py-2 text-sm font-semibold text-ink"
+        >
+          {totalOpen ? 'Xong' : 'Sửa'}
+        </button>
+      </div>
+      {totalOpen || totalVnd <= 0 ? (
+        <>
+          <label
+            className="mt-3 mb-1.5 block text-base font-semibold text-ink"
+            htmlFor="setup-total"
+          >
+            Tổng hoá đơn hôm nay (VND)
+          </label>
+          <input
+            id="setup-total"
+            inputMode="decimal"
+            className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 text-base text-ink outline-none placeholder:text-placeholder focus:border-brand-deep"
+            placeholder="Ví dụ: 450.000"
+            value={totalText}
+            onChange={(e) => {
+              const v = parseMoneyInput(e.target.value);
+              setTotalText(v > 0 ? formatMoneyGrouped(v) : '');
+              onDraft({ ...draft, totalVnd: v });
+            }}
+          />
+        </>
+      ) : null}
       {totalChangedVsSession ? (
         <p className="mt-1.5 text-sm text-ink-2">
           Đang dùng tổng khác tổng phiên ({formatMoney(input.sessionTotalVnd)}).
@@ -221,59 +249,50 @@ export function SetupScreen({
         </div>
       ) : null}
 
-      {/* --- Chọn trò: ngay tại màn, G2 mặc định đã chọn --- */}
-      <h3 className="mt-6 text-base font-semibold text-ink">Chọn trò</h3>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {/* --- Chọn trò: 2 chip segmented NGANG gọn (UIUX-GAME-V2),
+          G2 mặc định đã chọn; trạng thái chọn đọc bằng viền + nền +
+          aria-pressed, không còn dòng chữ «Đã chọn». Nhãn mục chỉ còn
+          sr-only — hai chip tự nói rõ tên trò. --- */}
+      <h3 className="sr-only">Chọn trò</h3>
+      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Chọn trò">
         <button
           type="button"
           aria-pressed={game === 'g2'}
           onClick={() => onDraft({ ...draft, game: 'g2' })}
-          className={`min-h-11 rounded-lg border-2 px-3 py-2.5 text-left ${
+          className={`min-h-11 rounded-lg border-2 px-2.5 py-2 text-left ${
             game === 'g2' ? 'border-brand bg-brand-50' : 'border-line-strong bg-card'
           }`}
         >
-          <span className="flex items-center gap-2">
-            <span className="font-display text-base font-extrabold text-ink">Mâm cơm xoay</span>
-            <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-ink-on-seed">
-              VÁN NHANH
-            </span>
-            {game === 'g2' ? (
-              <span className="text-sm font-semibold text-brand-deep">Đã chọn</span>
-            ) : null}
-          </span>
-          <span className="mt-0.5 block text-sm text-ink-2">
-            Đũa dừng ở ai, người đó đãi · 8–12 giây
+          <span className="font-display text-sm font-extrabold text-ink">Mâm cơm xoay</span>
+          <span className="mt-0.5 block text-[13px] leading-snug text-ink-2">
+            Ván nhanh — đũa dừng ở ai, người đó đãi · 8–12 giây
           </span>
         </button>
         <button
           type="button"
           aria-pressed={game === 'g1'}
           onClick={() => onDraft({ ...draft, game: 'g1' })}
-          className={`min-h-11 rounded-lg border-2 px-3 py-2.5 text-left ${
+          className={`min-h-11 rounded-lg border-2 px-2.5 py-2 text-left ${
             game === 'g1' ? 'border-brand bg-brand-50' : 'border-line-strong bg-card'
           }`}
         >
-          <span className="flex items-center gap-2">
-            <span className="font-display text-base font-extrabold text-ink">
-              Đấu trường tự động
-            </span>
-            {game === 'g1' ? (
-              <span className="text-sm font-semibold text-brand-deep">Đã chọn</span>
-            ) : null}
-          </span>
-          <span className="mt-0.5 block text-sm text-ink-2">
-            Nhân vật tự đánh nhau, người đứng cuối đãi · {n === 2 ? '~20 giây' : '30–40 giây'}
+          <span className="font-display text-sm font-extrabold text-ink">Đấu trường tự động</span>
+          <span className="mt-0.5 block text-[13px] leading-snug text-ink-2">
+            Tự đánh nhau · người cuối đãi · {n === 2 ? '~20 giây' : '30–40 giây'}
           </span>
         </button>
       </div>
 
-      {/* --- Người chơi + nhân vật: mặc định sẵn, đổi khi cần --- */}
-      <div className="mt-4 rounded-lg border border-line bg-card px-3 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="min-w-0 flex-1 text-base text-ink">
-            Người chơi: <strong>{n} người</strong>
-            <span className="text-ink-2"> — {players.map((p) => p.name).join(', ')}</span>
-          </p>
+      {/* --- Người chơi + nhân vật: GỘP 1 khối gọn (UIUX-GAME-V2) —
+          1 dòng tóm tắt + 1 dòng nhân vật + 1 hàng 2 nút «Đổi» nhỏ;
+          panel nhúng chỉ mở khi bấm đổi. --- */}
+      <div className="mt-3 rounded-lg border border-line bg-card px-3 py-2.5">
+        <p className="text-base text-ink">
+          <strong>{n} người chơi</strong>
+          <span className="text-ink-2"> — {players.map((p) => p.name).join(', ')}</span>
+        </p>
+        <p className="mt-0.5 text-sm text-ink-2">Nhân vật đã gán sẵn cho từng người.</p>
+        <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
             aria-expanded={showPlayers}
@@ -281,6 +300,14 @@ export function SetupScreen({
             className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-3 py-2 text-sm font-semibold text-ink"
           >
             Đổi người chơi
+          </button>
+          <button
+            type="button"
+            aria-expanded={showCharacters}
+            onClick={() => setShowCharacters(!showCharacters)}
+            className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-3 py-2 text-sm font-semibold text-ink"
+          >
+            Đổi nhân vật
           </button>
         </div>
         {showPlayers ? (
@@ -297,19 +324,6 @@ export function SetupScreen({
             />
           </div>
         ) : null}
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-          <p className="min-w-0 flex-1 text-base text-ink">
-            Nhân vật: <span className="text-ink-2">đã gán sẵn cho từng người</span>
-          </p>
-          <button
-            type="button"
-            aria-expanded={showCharacters}
-            onClick={() => setShowCharacters(!showCharacters)}
-            className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-3 py-2 text-sm font-semibold text-ink"
-          >
-            Đổi nhân vật
-          </button>
-        </div>
         {showCharacters ? (
           <div className="mt-3 border-t border-line pt-3">
             <M3BCharacterScreen
@@ -327,8 +341,10 @@ export function SetupScreen({
         ) : null}
       </div>
 
-      {/* --- QR của quán: TUỲ CHỌN --- */}
-      <div className="mt-4 rounded-lg border border-line bg-card px-3 py-3">
+      {/* --- QR của quán: TUỲ CHỌN — đúng 1 hàng khi chưa có QR
+          (UIUX-GAME-V2); dòng trạng thái cũ đã bỏ, thông tin «quét QR
+          gốc tại quầy» sống ở M7 + sheet luật. --- */}
+      <div className="mt-3 rounded-lg border border-line bg-card px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="min-w-0 flex-1 text-base font-semibold text-ink">
             QR của quán <span className="font-normal text-ink-2">(tuỳ chọn)</span>
@@ -352,11 +368,6 @@ export function SetupScreen({
             </button>
           )}
         </div>
-        {!qr.payload ? (
-          <p className="mt-1 text-sm text-ink-2">
-            Chưa có QR — vẫn chơi được, người đãi quét QR gốc tại quầy.
-          </p>
-        ) : null}
         {showQr && !qr.payload ? (
           <QrCaptureBlock
             draft={draft}
@@ -387,16 +398,12 @@ export function SetupScreen({
             </p>
             {amountMismatch ? (
               <div className="mt-2">
-                <RedAlert>
-                  QR ghi sẵn {formatMoney(parsed.amountVnd ?? 0)}, khác tổng hoá đơn{' '}
-                  {formatMoney(totalVnd)} — chưa chơi được, hãy kiểm lại tại bàn.
-                </RedAlert>
+                <RedAlert>Số tiền trong QR khác tổng hoá đơn — kiểm lại tại bàn.</RedAlert>
               </div>
             ) : null}
             {matchedMember ? (
               <p className="mt-2 text-base text-debt-ink">
-                Tên người nhận trùng thành viên {matchedMember.displayName} — bắt buộc đối chiếu
-                bằng nguồn của quán (quầy / hoá đơn / nhân viên).
+                Tên trùng thành viên {matchedMember.displayName} — phải đối chiếu ở quầy.
               </p>
             ) : null}
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -453,8 +460,7 @@ export function SetupScreen({
             ) : null}
             {sourceTooWeak ? (
               <p className="mt-2 text-sm text-debt-ink">
-                Lời cam đoan của người đưa QR một mình không đủ — hãy đối chiếu với quầy, hoá đơn
-                hoặc nhân viên quán.
+                Nguồn này chưa đủ mạnh — đối chiếu thêm ở quầy.
               </p>
             ) : null}
           </div>
@@ -462,20 +468,19 @@ export function SetupScreen({
       </div>
 
       {/* --- Đồng thuận gọn + số chung (TRÊN nút Bắt đầu) --- */}
-      <div className="mt-4 rounded-lg border border-line-strong bg-card px-4 py-4">
-        <p className="text-base text-ink">
+      <div className="mt-3 rounded-lg border border-line-strong bg-card px-4 py-3">
+        <p className="text-[15px] text-ink">
           Tổng{' '}
-          <strong className="font-display text-[20px] font-extrabold">
+          <strong className="font-display text-[18px] font-extrabold">
             {formatMoney(totalVnd)}
           </strong>
-          {' · '}chia đều mỗi người{' '}
+          {' · '}mỗi người{' '}
           {minShare === maxShare
             ? formatMoney(minShare)
             : `${formatMoney(minShare)} – ${formatMoney(maxShare)}`}
         </p>
         <p className="mt-1 text-base text-ink">
-          Nếu chơi: một người trả toàn bộ — <strong>gánh thêm tối đa {formatMoney(extra)}</strong>{' '}
-          so với chia đều.
+          Một người trả hết — <strong>gánh thêm tối đa {formatMoney(extra)}</strong>.
         </p>
         {n === 2 ? (
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-warning-solid bg-warning-bg px-3 py-2.5">
@@ -485,25 +490,22 @@ export function SetupScreen({
               onChange={(e) => setTwoConfirmed(e.target.checked)}
               className="mt-1 h-5 w-5 shrink-0"
             />
-            <span className="text-base text-ink">
-              Cả hai đều đã hiểu: một trong hai người sẽ trả toàn bộ hoá đơn này.
-            </span>
+            <span className="text-base text-ink">Cả hai đã hiểu: một người trả toàn bộ.</span>
           </label>
         ) : null}
         {draft.replayOf ? (
           <p className="mt-2 text-sm text-ink-2">
-            Ván mới sẽ thay thế kết quả ván {draft.replayOf.code}; ván cũ vẫn nằm trong nhật ký
-            phiên.
+            Ván mới thay ván {draft.replayOf.code}; ván cũ vẫn trong nhật ký.
           </p>
         ) : null}
         {abandonedCount > 0 ? (
           <p className="mt-2 text-sm text-ink-2">
-            Phiên này đã có {abandonedCount} cam kết bị bỏ — được ghi công khai trong nhật ký phiên.
+            Đã có {abandonedCount} cam kết bị bỏ (ghi trong nhật ký phiên).
           </p>
         ) : null}
 
-        <label className="mt-4 mb-1.5 block text-base font-semibold text-ink" htmlFor="setup-chung">
-          Số chung — một thành viên khác tự tay nhập (ít nhất 6 chữ số)
+        <label className="mt-3 mb-1.5 block text-sm font-semibold text-ink" htmlFor="setup-chung">
+          Số chung — người khác nhập (ít nhất 6 chữ số)
         </label>
         <input
           id="setup-chung"
@@ -518,23 +520,20 @@ export function SetupScreen({
         {chung && !chungValid ? (
           <p className="mt-1 text-sm text-debt-ink">Số chung cần ít nhất 6 chữ số.</p>
         ) : null}
-        <button
-          type="button"
-          onClick={onOpenRules}
-          className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
-        >
-          Xem luật chơi
-        </button>
+        {/* UIUX-GAME-V2: nút «Xem luật chơi» trong khối này đã bỏ —
+            luật mở bằng nút «?» ở đầu overlay (1 cổng duy nhất). */}
       </div>
 
-      {/* --- Chi tiết ván: kỹ thuật thu gọn mặc định --- */}
+      {/* --- Chi tiết ván: kỹ thuật thu gọn mặc định. UIUX-GAME-V2:
+          chỉ còn C1 của ván này + 1 dòng offline ngắn; luật hoà và
+          trách nhiệm QR đầy đủ sống ở sheet «Luật chơi & chi tiết». --- */}
       <button
         type="button"
         aria-expanded={detailsOpen}
         onClick={() => setDetailsOpen(!detailsOpen)}
-        className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
+        className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
       >
-        {detailsOpen ? 'Thu gọn chi tiết ván' : 'Chi tiết ván (mã cam kết, luật hoà)'}
+        {detailsOpen ? 'Thu gọn chi tiết ván' : 'Chi tiết ván'}
       </button>
       {detailsOpen ? (
         <div className="mt-2 space-y-2 rounded-lg border border-line bg-grey-50 px-3 py-3 text-sm text-ink">
@@ -543,17 +542,12 @@ export function SetupScreen({
             <GroupedTechString value={commit.c1} className="font-mono font-bold" /> — máy tạo và
             hiện mã này trước khi số chung được nhập, để cả nhóm nhận diện đúng ván.
           </p>
-          <p>
-            Hoà: đấu trường hoà đến cùng thì những người đồng hạng cùng đãi, mỗi người một phần bằng
-            nhau; mâm cơm xoay không có hoà. Ván chính tối đa 40 giây, có thể vào đột tử 10 giây rồi
-            tối đa một ván phụ.
-          </p>
-          <p>{QR_RESPONSIBILITY_SHORT}</p>
+          <p>Game chạy offline sau lần mở đầu có mạng.</p>
         </div>
       ) : null}
 
       {/* --- Thanh Bắt đầu cố định: lý do NGAY CẠNH nút khi nút mờ (F4) --- */}
-      <div className="sticky bottom-0 z-20 mt-5 bg-canvas/95 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="sticky bottom-0 z-20 mt-4 bg-canvas/95 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
         {startReason ? (
           <p role="status" className="mb-2 text-sm font-semibold text-debt-ink">
             {startReason}

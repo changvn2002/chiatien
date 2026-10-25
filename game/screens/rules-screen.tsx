@@ -1,16 +1,19 @@
-// Màn «Luật hoà» tĩnh (SPEC §M4/§8.5, phân xử D6 mục 8): mở được từ màn
-// chọn game và màn đồng thuận. Nội dung là LUẬT dạng chữ dễ đọc, kèm câu
-// trung thực bắt buộc về RNG (nguyên văn SPEC §2) ở màn luật chơi.
+// Sheet «Luật chơi & chi tiết» (SPEC §M4/§8.5, phân xử D6 mục 8):
+// UIUX-GAME-V2 (2026-10-25) — đây là CHỖ DUY NHẤT chứa giải thích dài
+// của toàn game mode, mở bằng nút «?» ở đầu overlay; mọi màn khác chỉ
+// còn chữ ≤1 dòng ngắn. Gồm: luật hoà/đột tử, ghi chú trong ván (tốc
+// độ + màu danh tính — chuyển từ màn chơi), trách nhiệm QR nguyên văn
+// và ghi chú offline (chuyển từ đầu màn thiết lập).
 
 'use client';
 
-import { RNG_HONESTY_LINE } from '../copy';
+import { QR_RESPONSIBILITY_LINE, RNG_HONESTY_LINE } from '../copy';
 import { InfoBox, ScreenTitle } from './shared';
 
 export function RulesScreen({ onBack }: { onBack: () => void }) {
   return (
     <div>
-      <ScreenTitle>Luật hoà và luật chơi</ScreenTitle>
+      <ScreenTitle>Luật chơi & chi tiết</ScreenTitle>
       <div className="mt-4 space-y-4 text-base leading-relaxed text-ink">
         <section>
           <h3 className="font-bold">Đấu trường tự động — khi nào thì hoà?</h3>
@@ -49,10 +52,34 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
           </p>
         </section>
         <section>
+          <h3 className="font-bold">Trong ván</h3>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            <li>
+              Tua nhanh và quay nhanh / đánh nhanh chỉ đổi tốc độ diễn — kết quả của ván đã được
+              chốt từ seed và không đổi.
+            </li>
+            <li>
+              Chấm màu cạnh tên là màu danh tính của từng người trong ván — cùng màu với vòng/plate
+              trên sân và badge ở các màn khác.
+            </li>
+          </ul>
+        </section>
+        <section>
+          <h3 className="font-bold">Trách nhiệm QR</h3>
+          <p className="mt-1">{QR_RESPONSIBILITY_LINE}</p>
+        </section>
+        <section>
           <h3 className="font-bold">Về mã ván và seed</h3>
           <div className="mt-1">
             <InfoBox>{RNG_HONESTY_LINE}</InfoBox>
           </div>
+        </section>
+        <section>
+          <h3 className="font-bold">Chạy offline</h3>
+          <p className="mt-1">
+            Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không
+            có mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
+          </p>
         </section>
         <section>
           <h3 className="text-sm font-bold text-ink-2">Nguồn hình ảnh</h3>
