@@ -34,6 +34,204 @@ theo Keep a Changelog; phiên bản theo SemVer.
   bề mặt vẽ glyph: mọi đĩa ≥ 3:1, thấp nhất 4,11:1, 10/12
   ≥ 4,5:1 (trước: idx 0/7/9 chỉ 2,04–2,43:1).
 
+## [2.1.0] — 2026-10-25 — «FLOW-3STEP»: luồng vào game đúng 3 bước + đợt UI-SLIM
+
+Phát hành tại commit `9f06996` (tag `v2.1.0`). Nguồn: user chê sau
+v2.0.2 (nút «?»/«Thoát game» lỗi vị trí trên mobile, khối Quyết toán
+hiển thị 2 nơi, còn nhiều cái thừa) và lệnh đơn giản hoá «đúng 3 bước»
+kèm luật bấm nút khi thiếu phải cuộn tới vị trí thiếu — hồ sơ:
+docs/reviews/v2.1.0-review-record.md.
+
+### Added
+
+- **Wizard vào game đúng 3 bước** (có chỉ báo tiến trình): Bước 1
+  «Tiền & QR quán» — tổng tự điền từ phiên + QR quán chụp camera,
+  giải mã VietQR/EMVCo 100% client-side (thử BarcodeDetector trước,
+  jsQR nạp lười thành chunk riêng 45.789 B gzip ngoài critical path);
+  Bước 2 «Thêm người»; Bước 3 «Chọn game & chơi» — 2 thẻ game lớn có
+  minh hoạ + radio, khối đồng thuận + số chung, nút «Chơi — cả nhóm
+  đồng ý». Ratio từng bước đo bằng driver: 1,00 / 1,00 / 1,03 (QR đã
+  nạp + khối đối chiếu vẫn 1,00).
+- **QR chụp ở Bước 1 thành đích thanh toán thật ở màn kết quả M7**
+  (QR tự sinh parse đúng từng trường qua cùng hàm giải mã như camera;
+  M7 hiện phiếu trả cho quán kèm mã QR). QR không giải mã được không
+  bao giờ thành đích thanh toán; DATA-04 nguyên vẹn.
+
+### Changed
+
+- **Luật validation mới:** `firstBlocker()` là nguồn sự thật duy nhất;
+  nút Tiếp/Chơi KHÔNG disabled nữa — bấm khi thiếu sẽ chuyển đúng bước
+  chứa trường thiếu (kể cả nhảy ngược 3→1), cuộn mượt + focus + viền
+  đỏ + dòng lý do ngay tại trường (đã chứng minh 3 ca bằng driver:
+  thiếu tổng, QR chưa đối chiếu, thiếu số chung).
+- **Đổi người chơi / nhân vật / avatar qua POPUP bottom-sheet**
+  (GameSheet mới, dùng chung mẫu Sheet của app: portal ra
+  `document.body`, scrim, khoá cuộn nền, Esc, trả focus) thay panel
+  nhúng — overlay không còn bị đẩy dài (đứng yên 921px thay vì bị kéo
+  tới 1.283px/3.204px), đóng sheet giữ nguyên scrollTop + dữ liệu đã
+  nhập.
+- **Header game về 1 hàng** (tiêu đề trái; «?» + «Thoát game» phải,
+  cùng hàng) — đóng lỗi vị trí user chê.
+- Ô nhân vật đã chọn nói trạng thái trực tiếp ngay trên ô («{Tên} đã
+  chọn» / «Mẫu này đã đủ người», sprite mờ) — câu chữ gây đoán cũ xoá
+  hẳn.
+- Rà từng thành phần C1–C47 của đợt UI-SLIM, mỗi mục một kết luận
+  ĐẠT / ĐÃ GỌN / GIỮ CÓ LÝ DO (hồ sơ UI-SLIM-STATE.md của đợt).
+
+### Fixed
+
+- **Dock strip hết hiện trùng lệnh quyết toán (T1):** xoá hàng tóm
+  tắt lệnh đầu trong dock strip (trùng panel «Ai trả ai»); strip nay
+  chỉ còn hành động chính + 1 số tổng (127 → 121px). 2 test khoá cấu
+  trúc cũ được viết lại theo hợp đồng mới.
+
+### Invariants
+
+- `git diff -- lib` = 0 byte — logic/engine/seed/kết quả, giao thức
+  QR + đối chiếu, «Ghi vào sổ» + chống trùng giữ nguyên. Cổng parent
+  tự chạy lại trên cây phát hành: app **252/252**, game **237/237**,
+  tsc PASS, eslint PASS, prettier --check 16 file PASS, build PASS;
+  ngân sách route '/' **241.982 / 243.000 B** (dư 1.018 B — giảm
+  241 B so với v2.0.2 dù thêm wizard + sheet); console khi chụp pack
+  0 lỗi. Service worker `v11-2026-10-25`.
+
+## [2.0.2] — 2026-10-25 — «UIUX-GAME-V2»: làm lại trình bày game — gần như không cuộn, cắt tối đa chữ
+
+Phát hành tại commit `e5bf88e` (tag `v2.0.2`). Nguồn: user chê tiếp
+sau v2.0.1 — «mô tả còn quá nhiều, gây rối mắt và phải cuộn nhiều».
+Hồ sơ: docs/reviews/v2.0.2-review-record.md.
+
+### Changed
+
+- **Làm lại TRÌNH BÀY game mode thuần (7 file game):** màn thiết lập
+  nén (tổng 1 dòng + nút Sửa; chọn trò 2 chip ngang; người chơi/nhân
+  vật 1 khối; QR 1 hàng; đồng thuận 2 dòng); màn trong ván chỉ còn
+  sân + chip tên·màu + chip điều khiển; màn kết quả M7 rút gọn (cảnh
+  báo QR 1 câu, diễn biến thu gọn, frame kết ván thành thumbnail
+  180px). Đo bằng driver CDP (dữ kiện «Nhậu cuối tuần» 600.000 ₫ /
+  4 người; ratio = scrollHeight/viewport của overlay):
+  - Thiết lập 390×844: ratio **1,86 → 1,18**; từ hiển thị 245 → 134
+    (−45%); khối dài nhất 34 → 11 từ. Thiết lập 1440: 1,48 → 1,06.
+  - Trong ván G2/G1: ratio 1,33 → **1,00**; từ −67% / −66%.
+  - Kết quả: G2 1,70 → 1,19; G1 1,95 → 1,42; khối dài nhất 28 → 13
+    từ; frame kết ván 358px → thumbnail 180px.
+- **Không đoạn văn mặc định nào dài hơn 13 từ:** mọi giải thích dài
+  sống trong sheet «Luật chơi & chi tiết» mở bằng nút «?» — cổng duy
+  nhất. Đoạn cảnh báo offline bỏ khỏi đầu màn thiết lập (bản đầy đủ
+  vào sheet luật + 1 dòng trong «Chi tiết ván»).
+- 2 hằng chữ QR (`QR_NO_NAME_WARNING`, `QR_FINAL_CHECK_LINE`) rút
+  còn 1 dòng theo lệnh user — bản trách nhiệm QR đầy đủ nguyên văn
+  vẫn hiển thị trong sheet luật.
+
+### Invariants
+
+- Logic/engine/seed/kết quả, giao thức QR + đối chiếu, «Ghi vào sổ»
+  + chống trùng, sửa camera F9, CTA lối vào giữ nguyên 100%;
+  `git diff -- lib` = 0. Cổng: app **252/252**, game **237/237**,
+  tsc/eslint PASS, build PASS, prettier --check 7 file PASS; ngân
+  sách route '/' **242.223 / 243.000 B** (dư 777 B, không đổi);
+  console khi đo 0 lỗi. Service worker `v10-2026-10-25`.
+
+## [2.0.1] — 2026-10-25 — «FIX-UX-GAME»: sửa UX game theo phản hồi trực tiếp trên bản live
+
+Phát hành tại commit `867ea4e` (tag `v2.0.1`), trên nền v2.0.0 + sửa
+CI `8f03ed5`. Nguồn: người dùng mở live v2.0.0 và phản hồi «không tìm
+thấy game, lỗi quá, nhiều mô tả, chưa tối ưu khó chơi»; parent chơi
+thử thật trên production và ghi findings F1–F10. Hồ sơ:
+docs/reviews/v2.0.1-review-record.md.
+
+### Fixed
+
+- **Không tìm thấy game (F1):** lối vào thành CTA đặc full-width
+  «Chơi game đãi» — desktop ngay dưới tiêu đề «Quyết toán», mobile
+  ngay trên dải quyết toán dính (trước là nút mờ ở cuối cột).
+- **Luồng 7 màn nối tiếp gộp còn 1 màn thiết lập:** tổng tiền tự điền
+  từ tổng phiên (sửa được, hết bắt nhập lại — F2); chọn trò ngay tại
+  màn (mặc định «Mâm cơm xoay»); người chơi mặc định cả bàn, nhân
+  vật gán sẵn — «Đổi người chơi»/«Đổi nhân vật» chỉ mở dạng nhúng
+  khi cần (hết 2 màn bắt buộc dù mặc định đã đúng — F3). Đường vào
+  ván sau sửa: trang phiên → 2 lần bấm + 1 lần gõ số chung → ván
+  chạy (trước: 25 thao tác / 14 lần bấm).
+- **QR thành tuỳ chọn:** «Thêm QR» / «Chơi không cần QR»; QR lỗi =
+  cảnh báo 1 dòng tại chỗ; QR đọc được = đối chiếu gọn ngay tại màn,
+  lệch số tiền thì chặn (trước QR là cổng cứng sinh thêm màn đối
+  chiếu — F2).
+- **Ô Số chung nằm TRƯỚC nút Bắt đầu** trong khối đồng thuận (trước
+  nằm dưới nút — F4); thanh Bắt đầu dính đáy luôn hiện dòng lý do đỏ
+  khi nút mờ.
+- **Tường chữ (F5/F7):** mỗi khối tối đa 1 dòng mô tả; chi tiết kỹ
+  thuật (C1/seed/luật hoà/đột tử) gom vào «Chi tiết ván» thu gọn ở
+  màn thiết lập + kết quả; miễn trừ QR rút còn 1 dòng; màn kết quả
+  phân biệt đúng ván không-QR với QR không giải mã được.
+- **Khung sân trắng nhá khi mở ván (F8):** khung sân / «Đang mở
+  sân…» hiện ngay từ render đầu, hạ xuống khi scene chạy.
+- **Vòng sân bị cắt hai bên trên mobile (F9):** sửa gốc ở camera G1
+  (`game/phaser/scenes-g1.ts`) — kẹp tâm camera để toàn bộ bbox +
+  đệm luôn nằm trong khung khi zoom, cộng đai phụ stage (canvas
+  max-width 100%); sau sửa cả 4 plate trọn khung giữa trận và ở
+  frame kết ván.
+- **Sơ đồ vòng bàn tràn khung, cắt tên (F10):** đóng theo cấu trúc —
+  sơ đồ vòng bàn không còn trong luồng.
+
+### Added
+
+- **Ghi kết quả game vào sổ (F6):** màn kết quả nói rõ 1 dòng «Kết
+  quả này chưa tự ghi vào sổ» + nút «Ghi vào sổ: {người đãi} đã trả
+  {tổng}» qua API phiên hiện hữu (không đụng lib; chống ghi trùng
+  theo mã ván; cùng đãi = mỗi người một khoản, lẻ dồn người cuối).
+  Đã kiểm chứng end-to-end bằng ảnh: sổ thêm khoản «Game đãi — ván
+  #0476CC · 600.000 ₫», tổng phiên 600.000 → 1.200.000 ₫.
+
+### Invariants
+
+- `git diff -- lib` = 0; game vẫn là lazy chunk riêng. Cổng parent
+  tự chạy lại: test app **252/252**, test game **237/237**, tsc
+  PASS, prettier --check trên toàn bộ file đã đụng PASS; ngân sách
+  JS critical path route '/' **242.223 / 243.000 B** (dư 777 B).
+
+## [2.0.0] — 2026-10-25 — Game mode «Ai Đãi»: G1 đấu trường + G2 mâm cơm xoay
+
+Phát hành tại commit `d7a5607` (tag `v2.0.0`). Hồ sơ:
+docs/reviews/v2.0.0-review-record.md.
+
+### Added
+
+- **Game mode tuỳ chọn tại lúc quyết toán** (MỞ PHIẾU vẫn là mặc
+  định):
+  - **G1 «Đấu trường tự động»** — engine kết quả xác định (TypeScript
+    thuần, nhật ký sự kiện có hash để phát lại), trình bày bằng
+    Phaser, bộ sprite CC0 dựng sẵn.
+  - **G2 «Mâm cơm xoay»** — mâm xoay với kim đũa chỉ người đãi.
+  - **3 bộ nhân vật CC0** (KayKit Adventurers, KayKit Skeletons,
+    Kenney Blocky Characters 2.0), mỗi người chơi chọn một nhân vật,
+    nạp lười theo bộ.
+  - **Avatar ảnh chụp bằng camera**, chỉ lưu trên máy (localStorage)
+    — không bao giờ vào engine/seed/link chia sẻ (DATA-04 giữ
+    nguyên).
+  - **Chặn kép chống lạm dụng:** tổng hoá đơn ≤ 2.000.000 ₫ và phần
+    gánh thêm ≤ 500.000 ₫ / người / ván.
+- **Google Search Console verification meta** (`verification.google`
+  trong `app/layout.tsx`).
+
+### Invariants
+
+- Engine chia tiền không đổi: `git diff -- lib` = 0 byte. Cổng trên
+  cây phát hành: vitest app **252/252**, vitest game **237/237**,
+  `tsc --noEmit` PASS, eslint PASS, `next build` PASS. Ngân sách:
+  A 419.369 / 500.000; B theo bộ ≤ 400.000 (adventurers 324.076 /
+  skeletons 350.424 / blocky 388.583); D 1.244.385 / 1.500.000.
+
+### Notes
+
+- Bản này phát hành theo lệnh trực tiếp của user; cổng panel hình
+  ảnh §6/rule 12 được user miễn cho riêng bản này (pack v4 không đạt
+  đã được FIX-V4 xử lý cả 5 cụm finding và pack v5 đã chụp, nhưng
+  panel v5 chưa chạy tại thời điểm phát hành) — vòng chấm hình ảnh
+  tiếp tục trên bản live.
+- Chưa có số đo FPS trên máy thật và bài kiểm 15 người chơi thật
+  (G-GAME) tại thời điểm phát hành — cả hai ghi UNKNOWN trong hồ sơ
+  phát hành, không suy đoán.
+
 ## [1.9.1] — 2026-10-25 — Sửa nóng TC6: sheet modal không còn bị dải thành viên vẽ đè
 
 ### Fixed

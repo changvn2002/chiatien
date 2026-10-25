@@ -53,6 +53,18 @@ viên, khoản chi và kết quả quyết toán — **link không chứa thông
   xem/sửa tiếp được, không cần tài khoản hay máy chủ trung gian. Trước khi
   copy, app hiện preview số liệu của cuộc chia (số thành viên, số khoản,
   tổng tiền) và nói rõ link **không thu hồi được sau khi đã gửi**.
+- **Phiếu MỞ PHIẾU khi chốt chia** — kết quả được đóng thành phiếu
+  gấp theo từng người (mở phiếu chạm 1 lần để xem phần của mình +
+  nút VietQR của từng lệnh); link người nhận luôn hiện dạng phiếu
+  kèm tóm tắt trung tính, bản đầy đủ 1 chạm.
+- **Game mode «Ai Đãi» (tuỳ chọn, thay cho chia đều)** — vào game
+  đúng 3 bước: (1) tiền + QR quán chụp bằng camera (giải mã ngay
+  trên máy), (2) thêm người, (3) chọn game & chơi. Hai trò: «Đấu
+  trường tự động» và «Mâm cơm xoay»; nhân vật 3 bộ CC0 hoặc ảnh
+  chụp của chính người chơi (chỉ lưu trên máy). Người đãi quét QR
+  quán ngay trên phiếu kết quả — số tài khoản quán chỉ hiện dạng
+  đã che để đối chiếu. Kết quả game không tự ghi sổ; muốn ghi thì
+  bấm «Ghi vào sổ».
 - **Tiền VND chuẩn Việt Nam** — gõ `150000` hiển thị `150.000 ₫`, mọi phép tính
   là số nguyên đồng, không bao giờ lệch 1 đồng vì làm tròn.
 
@@ -119,8 +131,11 @@ Chi −240.000 ₫, Dũng −180.000 ₫)._
 **Thêm cả nhóm ngay trên màn hình cuộc chia.** Ai sẽ nhận tiền qua VietQR thì
 lưu tài khoản ngân hàng của người đó ngay trên máy của mình: chip của người đó
 có chấm xanh nghĩa là đã lưu ngân hàng trên máy này, vòng rỗng là chưa lưu —
-**không hiện số tài khoản**; số tài khoản đầy đủ chỉ xuất hiện trong sheet
-thanh toán của đúng lần chuyển liên quan.
+**không hiện số tài khoản**; số tài khoản đầy đủ chỉ xuất hiện ở hai nơi:
+sheet VietQR của đúng lần chuyển liên quan (kèm ngân hàng + tên chủ tài
+khoản để đối chiếu) và sheet sửa thành viên của chính người đó. Riêng
+trong game, QR của quán chỉ hiện dạng đã che (giữ đầu + 4 số cuối) ở bước
+đối chiếu và trên phiếu kết quả.
 
 ![Cuộc chia “Nhậu cuối tuần” vừa thêm đủ 4 thành viên — chip của An có chấm xanh: đã lưu ngân hàng trên máy này](docs/screenshots/gallery-01-thanh-vien.png)
 
@@ -163,8 +178,8 @@ làm sạch dữ liệu), giao diện trong `components/`, dữ liệu qua một
   `sanitize`, `storage`, `money`) và được kiểm chứng bằng **Vitest** — gồm
   property test cho thuật toán quyết toán (sau quyết toán mọi số dư về 0, số
   giao dịch ≤ n−1, tổng luôn cân bằng), fuzz test cho đường share link, và
-  component test cho lớp che số tài khoản (số TK chỉ xuất hiện trong sheet
-  thanh toán). Toàn bộ chạy trên CI cùng typecheck/lint/format/build, quét
+  component test cho lớp che số tài khoản (số TK đầy đủ chỉ xuất hiện trong
+  sheet thanh toán và sheet sửa thành viên). Toàn bộ chạy trên CI cùng typecheck/lint/format/build, quét
   bí mật (gitleaks) và kiểm ngân sách JS.
 - SEO/PWA đầy đủ: metadata + Open Graph, JSON-LD, sitemap, robots, web app
   manifest, icon cài lên màn hình chính, service worker để mở lại khi offline.
