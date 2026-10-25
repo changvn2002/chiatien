@@ -11,11 +11,13 @@ import { initials } from '@dicebear/collection';
 import { initialsOf } from '@/lib/identity';
 import { GameBadge } from '../screens/shared';
 import {
+  GLYPH_HEX_BY_COLOR_INDEX,
   STRONG_HEX_BY_COLOR_INDEX,
   STRONG_NAME_BY_COLOR_INDEX,
   buildIdentityMap,
   buildIdentityMapCovering,
   buildIdentityMapFromSessionMembers,
+  glyphHexForDiscHex,
 } from './identity';
 import { avatarDiceBearOptions, initialsOfName } from '../phaser/textures';
 
@@ -263,5 +265,81 @@ describe('FIX-V4 — GameBadge ở tầng DOM dùng ĐÚNG tông mạnh như pla
   it('glyph trên badge DOM vẫn bằng initialsOf của lib (tên một từ → 1 ký tự)', () => {
     expect(glyphOfDiceBear(badgeMarkup('Đức Anh', 3))).toBe('ĐA');
     expect(glyphOfDiceBear(badgeMarkup('Bình', 5))).toBe('B');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* A11Y-FIX — glyph theo đĩa (SPEC A11Y-FIX §4): bảng đĩa STRONG giữ  */
+/* nguyên 100%; màu glyph khoá theo colorIndex — mỗi idx chọn trắng   */
+/* #FFFFFF hoặc mực #212121 theo tỉ lệ WCAG cao hơn trên đĩa đó.      */
+/* ------------------------------------------------------------------ */
+
+function relativeLuminance(hex: string): number {
+  const channel = (v: number): number => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const r = channel(parseInt(hex.slice(1, 3), 16));
+  const g = channel(parseInt(hex.slice(3, 5), 16));
+  const b = channel(parseInt(hex.slice(5, 7), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(hexA: string, hexB: string): number {
+  const la = relativeLuminance(hexA);
+  const lb = relativeLuminance(hexB);
+  const lighter = Math.max(la, lb);
+  const darker = Math.min(la, lb);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+describe('A11Y-FIX — glyph theo đĩa (SPEC A11Y-FIX §4)', () => {
+  it('bảng glyph khoá đúng 12 giá trị theo thứ tự colorIndex', () => {
+    expect(GLYPH_HEX_BY_COLOR_INDEX).toEqual([
+      '#212121',
+      '#FFFFFF',
+      '#FFFFFF',
+      '#212121',
+      '#FFFFFF',
+      '#FFFFFF',
+      '#FFFFFF',
+      '#212121',
+      '#212121',
+      '#212121',
+      '#212121',
+      '#FFFFFF',
+    ]);
+  });
+
+  it('mỗi idx: glyph trên đĩa STRONG ≥ 3:1 và là lựa chọn tốt hơn trong {#FFFFFF, #212121}', () => {
+    for (let idx = 0; idx < 12; idx++) {
+      const disc = STRONG_HEX_BY_COLOR_INDEX[idx];
+      const glyph = GLYPH_HEX_BY_COLOR_INDEX[idx];
+      const other = glyph === '#FFFFFF' ? '#212121' : '#FFFFFF';
+      expect(contrastRatio(glyph, disc)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(glyph, disc)).toBeGreaterThanOrEqual(contrastRatio(other, disc));
+    }
+  });
+
+  it('glyphHexForDiscHex tra glyph theo hex đĩa; hex lạ → trắng', () => {
+    expect(glyphHexForDiscHex('#00B0FF')).toBe('#212121');
+    expect(glyphHexForDiscHex('#0D47A1')).toBe('#FFFFFF');
+    expect(glyphHexForDiscHex('#123456')).toBe('#FFFFFF');
+  });
+
+  it('bề mặt texture: avatarDiceBearOptions dùng glyph theo đĩa', () => {
+    expect(avatarDiceBearOptions('An', '#00B0FF').textColor).toEqual(['212121']);
+    expect(avatarDiceBearOptions('An', '#0D47A1').textColor).toEqual(['FFFFFF']);
+  });
+
+  it('bề mặt DOM: GameBadge vẽ glyph theo bảng (idx 7 mực, idx 1 trắng)', () => {
+    const chi = renderToStaticMarkup(
+      createElement(GameBadge, { name: 'Chi', colorIndex: 7, size: 32 }),
+    ).toLowerCase();
+    expect(chi).toContain('fill="#212121"');
+    const dung = renderToStaticMarkup(
+      createElement(GameBadge, { name: 'Dũng', colorIndex: 1, size: 32 }),
+    ).toLowerCase();
+    expect(dung).toContain('fill="#ffffff"');
   });
 });

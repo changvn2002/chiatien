@@ -3,6 +3,37 @@
 Mọi thay đổi đáng kể của dự án ghi tại đây, mới nhất ở trên. Định dạng
 theo Keep a Changelog; phiên bản theo SemVer.
 
+## [Unreleased] — 2026-10-26
+
+### Changed
+
+- Làm tươi hồ sơ ngân sách route '/' trong perf-budget.json —
+  thêm mốc đo hiện hành 241.982 B của v2.1.0 (measuredLatest),
+  giữ mốc khai 221.205 B (2026-10-23) làm baseline lịch sử;
+  lý do: phân xử CT-0 (SPEC A11Y-FIX chiatien §5) — 221.205 B
+  từng bị đọc nhầm thành «ngân sách thứ hai» trong khi ngân
+  sách duy nhất có thẩm quyền luôn là 243.000 B; ngân sách và
+  trần cứng KHÔNG đổi nên không cần ADR theo growthLock.
+
+### Fixed
+
+- Sửa 3 vi phạm A11Y serious + đĩa định danh theo SPEC
+  A11Y-FIX chiatien (Team 1B-7/1B-8), từ gói VERIFY-3 trên
+  live v2.1.0: (V-1) tên thành viên trên chip «Người cùng
+  chia» đang chọn đổi sang token scoped mới `--brand-950`
+  `#A62B0A` (derived vì AA — ngoại lệ học thuyết «0 token
+  loại C», provenance ghi trong tokens.chiatien-v4.json):
+  3,90 → 4,92:1; `--brand-900` dùng chung giữ nguyên.
+  (V-2) alias `--ink-2` nâng `#757575` → `#616161` tại một
+  điểm: 5,28:1 trên brand-50, 5,93:1 trên grey-50, 6,19:1
+  trên trắng. (V-3) bỏ `aria-label` thừa trên div chứa
+  canvas Phaser (`game/phaser/stage.tsx`) — nhãn đã có ở
+  H2 kề trên, không thêm role. (Đĩa định danh) giữ nguyên
+  100% bảng màu đĩa, thêm bảng glyph theo colorIndex
+  (trắng hoặc mực `#212121`, chọn tỉ lệ cao hơn) áp ở cả 4
+  bề mặt vẽ glyph: mọi đĩa ≥ 3:1, thấp nhất 4,11:1, 10/12
+  ≥ 4,5:1 (trước: idx 0/7/9 chỉ 2,04–2,43:1).
+
 ## [1.9.1] — 2026-10-25 — Sửa nóng TC6: sheet modal không còn bị dải thành viên vẽ đè
 
 ### Fixed

@@ -12,6 +12,16 @@
     "firstPartyJsGzipBytes": 221205,
     "thirdPartyJsGzipBytes": 0
   },
+  "measuredLatest": {
+    "date": "2026-10-25",
+    "release": "v2.1.0 «FLOW-3STEP» (live)",
+    "source": "docs/reviews/v2.1.0-review-record.md dòng 15; đối chiếu độc lập chiatien-game-v2/UI-SLIM-STATE.md dòng 137, 151",
+    "method": "scripts/check-bundle-budget.mjs — gzip (zlib level 9) mọi <script src> trong HTML prerender của route '/'",
+    "firstRouteJsGzipBytes": 241982,
+    "firstPartyJsGzipBytes": 241982,
+    "thirdPartyJsGzipBytes": 0,
+    "note": "Số đo HIỆN HÀNH gắn với bản live v2.1.0: PASS, dư 1.018 B so với ngân sách 243.000 B (trần cứng 307.200 B). measuredAtDeclare (221.205 B, ngày 2026-10-23) là số đo tại NGÀY KHAI ngân sách — giữ làm baseline lịch sử để tính tăng trưởng (+20.777 B tới v2.1.0); nó KHÔNG phải ngân sách và KHÔNG phải số đo hiện hành. Phân xử CT-0: SPEC A11Y-FIX chiatien (Team 1B-7) §5."
+  },
   "codeSplitEvidence": [
     "web-vitals (RUM, PERF-12) nạp bằng dynamic import trong components/chiatien/web-vitals.tsx — không xuất hiện trong tập script của HTML đầu, không tính vào critical path.",
     "Mã VietQR (lib/vietqr.ts + thư viện qrcode) chỉ chạy khi người dùng mở sheet thanh toán; avatar DiceBear sinh tại client theo nhu cầu render danh sách.",

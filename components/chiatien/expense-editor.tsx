@@ -291,7 +291,7 @@ export function ExpenseEditor({
                 className={cn(
                   'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
                   active
-                    ? 'border-brand bg-brand-soft text-brand-deep'
+                    ? 'border-brand bg-brand-soft text-brand-950'
                     : 'border-line-strong bg-card text-ink hover:border-brand-deep',
                 )}
               >

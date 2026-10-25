@@ -260,7 +260,6 @@ export function GameStage(props: StageProps) {
         aspectRatio: '1 / 1',
         marginInline: 'auto',
       }}
-      aria-label={props.log.params.game === 'g2' ? 'Mâm cơm xoay' : 'Đấu trường'}
     >
       <style>
         {

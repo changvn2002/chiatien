@@ -84,6 +84,7 @@ import {
   foodShadowEllipse,
   sharedFoodFrames,
 } from './g2-food';
+import { glyphHexForDiscHex } from '../assets/identity';
 import { initialsOfName } from './textures';
 
 export const G2_SCENE_KEY = 'aidai-g2';
@@ -814,7 +815,10 @@ export class G2Scene extends Phaser.Scene {
           fontFamily: '"Be Vietnam Pro", sans-serif',
           fontSize: `${fontSize}px`,
           fontStyle: 'bold',
-          color: '#212121',
+          // A11Y-FIX (SPEC A11Y-FIX §4): glyph theo bảng
+          // GLYPH_HEX_BY_COLOR_INDEX — mực ghim cho mọi đĩa chỉ đạt
+          // 1,62–1,87:1 trên các đĩa tối, nay trắng/mực tuỳ đĩa.
+          color: glyphHexForDiscHex(player.colorHex),
         })
         .setOrigin(0.5);
       while (initialsText.width > 42 && fontSize > 9) {

@@ -34,6 +34,7 @@
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { initialsOf, memberNameKey, normalizeMemberName } from '@/lib/identity';
+import { glyphHexForDiscHex } from '../assets/identity';
 import type Phaser from 'phaser';
 import type { PlayerView } from './bridge';
 
@@ -57,16 +58,20 @@ export function initialsOfName(name: string): string {
  * Tham số DiceBear cho avatar của một người — ĐÚNG cơ chế ui-bits.tsx
  * của app chính, để glyph sinh ra luôn bằng initialsOf(tên):
  * seed = memberNameKey(tên); nền = ĐÚNG một màu được truyền vào
- * (strongHex của identity map, dạng hex có '#'); chữ mực #212121;
- * tên chuẩn hoá đúng 1 từ → `chars: 1` (khử glyph 2 ký tự mặc định
- * kiểu «BÌ» / «DŨ» / «GI» cắt giữa âm tiết).
+ * (strongHex của identity map, dạng hex có '#'); màu chữ theo bảng
+ * glyph GLYPH_HEX_BY_COLOR_INDEX qua glyphHexForDiscHex (A11Y-FIX,
+ * SPEC A11Y-FIX §4) — trắng hoặc mực #212121 tuỳ đĩa, màu nào cho tỉ
+ * lệ tương phản WCAG cao hơn trên đĩa đó (trước đây ghim mực cho mọi
+ * đĩa, chỉ đạt 1,62–1,87:1 trên các đĩa tối); tên chuẩn hoá đúng 1 từ
+ * → `chars: 1` (khử glyph 2 ký tự mặc định kiểu «BÌ» / «DŨ» / «GI»
+ * cắt giữa âm tiết).
  */
 export function avatarDiceBearOptions(name: string, backgroundHex: string) {
   const wordCount = normalizeMemberName(name).split(' ').filter(Boolean).length;
   return {
     seed: memberNameKey(name),
     backgroundColor: [backgroundHex.replace('#', '')],
-    textColor: ['212121'],
+    textColor: [glyphHexForDiscHex(backgroundHex).replace('#', '')],
     fontFamily: ['Be Vietnam Pro', 'sans-serif'],
     fontWeight: 700,
     fontSize: 46,

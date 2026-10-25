@@ -167,6 +167,7 @@ import {
   type StageSpeed,
 } from './bridge';
 import type { DegradeLevel } from './degrade';
+import { glyphHexForDiscHex } from '../assets/identity';
 import { initialsOfName, loadAvatarTexture } from './textures';
 import {
   G1ColumnHitTracker,
@@ -1486,9 +1487,10 @@ export class G1Scene extends Phaser.Scene {
         fontFamily: '"Be Vietnam Pro", sans-serif',
         fontSize: '11px',
         fontStyle: 'bold',
-        // FIX-V4 (mục 7a): glyph TRẮNG trên đĩa strongHex — đồng bộ
-        // quyết định tông mạnh toàn game (DOM do lane ID2 xử lý).
-        color: '#ffffff',
+        // FIX-V4 (mục 7a) + A11Y-FIX (SPEC A11Y-FIX §4): glyph theo
+        // bảng GLYPH_HEX_BY_COLOR_INDEX — trắng hoặc mực tuỳ đĩa
+        // strongHex của người này (mọi đĩa ≥ 3:1; 10/12 ≥ 4,5:1).
+        color: glyphHexForDiscHex(player.colorHex),
       })
       .setOrigin(0.5);
     const hpBack = this.add.graphics();
@@ -1610,8 +1612,10 @@ export class G1Scene extends Phaser.Scene {
           fontFamily: '"Be Vietnam Pro", sans-serif',
           fontSize: '10px',
           fontStyle: 'bold',
-          // FIX-V4 (mục 7a): glyph TRẮNG trên đĩa strongHex như plate.
-          color: '#ffffff',
+          // FIX-V4 (mục 7a) + A11Y-FIX (SPEC A11Y-FIX §4): glyph theo
+          // bảng GLYPH_HEX_BY_COLOR_INDEX như plate — trắng hoặc mực
+          // tuỳ đĩa strongHex của người này.
+          color: glyphHexForDiscHex(player.colorHex),
         })
         .setOrigin(0.5);
       const nameText = this.add

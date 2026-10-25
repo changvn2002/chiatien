@@ -77,6 +77,46 @@ export const STRONG_HEX_BY_COLOR_INDEX: readonly string[] = [
   '#C2185B', // 11 — pink 700
 ];
 
+/**
+ * Bảng màu GLYPH (chữ initials) theo colorIndex — khoá CẠNH bảng đĩa
+ * STRONG ở trên (A11Y-FIX, SPEC A11Y-FIX §4 / hồ sơ W2 B.1). Quy tắc:
+ * mỗi idx chọn trắng #FFFFFF hoặc mực #212121 theo tỉ lệ WCAG cao hơn
+ * trên đĩa STRONG tương ứng; bảng đĩa giữ nguyên 100% (không đổi một
+ * hex nào của STRONG_HEX_BY_COLOR_INDEX) — chỉ màu chữ trên đĩa đổi.
+ * Sau sửa toàn bảng ≥ 4,11:1, 12/12 ≥ 3:1, 10/12 ≥ 4,5:1 (tỉ lệ cạnh
+ * từng idx dưới đây là tỉ lệ của glyph đã chọn trên đĩa STRONG đó,
+ * tính bằng công thức tương phản WCAG 2.x — nguồn: SPEC A11Y-FIX §4 /
+ * W2 B.1). Mọi bề mặt vẽ glyph (badge DOM, plate/cột G1, ghế G2,
+ * texture DiceBear) đều đọc bảng này — không bề mặt nào tự ghim trắng
+ * hay mực cho mọi đĩa nữa.
+ */
+export const GLYPH_HEX_BY_COLOR_INDEX: readonly string[] = [
+  '#212121', // 0 — mực trên #FFA000: 7,88:1
+  '#FFFFFF', // 1 — trắng trên #0D47A1: 8,63:1
+  '#FFFFFF', // 2 — trắng trên #00838F: 4,52:1
+  '#212121', // 3 — mực trên #E64A19: 4,11:1
+  '#FFFFFF', // 4 — trắng trên #512DA8: 9,17:1
+  '#FFFFFF', // 5 — trắng trên #388E3C: 4,12:1
+  '#FFFFFF', // 6 — trắng trên #3730A3: 9,93:1
+  '#212121', // 7 — mực trên #00B0FF: 6,64:1
+  '#212121', // 8 — mực trên #689F38: 5,06:1
+  '#212121', // 9 — mực trên #AFB42B: 7,20:1
+  '#212121', // 10 — mực trên #EF6C00: 5,23:1
+  '#FFFFFF', // 11 — trắng trên #C2185B: 5,87:1
+];
+
+/**
+ * Màu glyph cho một đĩa biết hex — cho các bề mặt Phaser chỉ có
+ * colorHex của player (PlayerView.colorHex, tức strongHex của identity
+ * map): tra colorIndex bằng STRONG_HEX_BY_COLOR_INDEX rồi trả glyph
+ * tương ứng trong GLYPH_HEX_BY_COLOR_INDEX. Hex lạ (không thuộc bảng
+ * STRONG) → '#FFFFFF' (mặc định cũ của DiceBear / glyph trắng).
+ */
+export function glyphHexForDiscHex(discHex: string): string {
+  const idx = STRONG_HEX_BY_COLOR_INDEX.indexOf(discHex.toUpperCase());
+  return idx >= 0 ? (GLYPH_HEX_BY_COLOR_INDEX[idx] ?? '#FFFFFF') : '#FFFFFF';
+}
+
 /** Tên màu tiếng Việt theo colorIndex — cho chip / nhãn chữ đi kèm màu (không ai bị phân biệt CHỈ bằng màu). Tên phải đúng màu thật sau FIX-V4: 1 đậm ↔ 7 sáng là cặp đối lập có chủ đích; 4 đổi «tím chàm» → «tím đậm» để nhường họ «chàm» cho 6 «chàm tím», tránh hai tên gần trùng nhau. */
 export const STRONG_NAME_BY_COLOR_INDEX: readonly string[] = [
   'hổ phách', // 0 amber

@@ -17,7 +17,8 @@
   /* === CHIATIEN V4 · TOKENS — nguồn duy nhất redesign-v4/chiatien/assets/tokens.json ===
      Neo Google Material LITERAL (NEO-0): seed Deep Orange 500 #FF5722 byte-identical.
      Brand = thang Deep Orange công bố; neutral = thang Grey công bố; canvas trắng
-     (NEUTRAL-FIRST). Semantic = bậc công bố theo họ. 0 token loại C. */
+     (NEUTRAL-FIRST). Semantic = bậc công bố theo họ. 0 token loại C —
+     ngoại lệ duy nhất: --brand-950 derived vì AA (xem khai báo dưới). */
   --brand-50: #FBE9E7;
   --brand-100: #FFCCBC;
   --brand-200: #FFAB91;
@@ -28,6 +29,8 @@
   --brand-700: #E64A19;
   --brand-800: #D84315;
   --brand-900: #BF360C;
+  /* Derived vì AA — ngoại lệ học thuyết «0 token loại C», thang Material dừng ở 900; chỉ dùng cho chip «Người cùng chia» đang chọn; provenance đầy đủ ở design/tokens.chiatien-v4.json. */
+  --brand-950: #A62B0A;
   --brand-a700: #DD2C00;
   --canvas: #FFFFFF;
   --grey-50: #FAFAFA;
@@ -83,7 +86,8 @@
   --ease-leave: cubic-bezier(0.3, 0, 1, 1);
 
   /* Alias tương thích D8 (STATE §1): tên cũ giữ, giá trị trỏ về token V4. */
-  --ink-2: #757575;
+  /* Nâng AA theo SPEC A11Y-FIX V-2 (5,28:1 trên brand-50 · 5,93:1 trên grey-50); không đặt text-ink-2 lên nền brand-100. */
+  --ink-2: #616161;
   --line: #EEEEEE;
   --line-strong: #E0E0E0;
   --card: #FFFFFF;
@@ -142,6 +146,7 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
   --color-brand-a700: var(--brand-a700);
   --color-credit: var(--credit);
   --color-credit-bg: var(--credit-bg);

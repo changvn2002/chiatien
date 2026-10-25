@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom';
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { memberNameKey, normalizeMemberName } from '@/lib/identity';
-import { STRONG_HEX_BY_COLOR_INDEX } from '../assets/identity';
+import { GLYPH_HEX_BY_COLOR_INDEX, STRONG_HEX_BY_COLOR_INDEX } from '../assets/identity';
 import { SPLIT_EVEN_LABEL } from '../copy';
 
 const gameBadgeSvgCache = new Map<string, string>();
@@ -22,8 +22,14 @@ const gameBadgeSvgCache = new Map<string, string>();
  * từ ép `chars: 1` cho glyph luôn bằng initialsOf của lib. KHÁC hai
  * bề mặt kia ở MÀU (FIX-V4 Cụm 2): nền là ĐÚNG MỘT ô strongHex của
  * identity map (bảng dùng chung ở game/assets/identity.ts, không chép
- * lại bảng ở đây) và glyph TRẮNG — tức cùng tông mạnh với đĩa plate
- * trong sân, thay cho nền pastel bậc 100 của Avatar app chính.
+ * lại bảng ở đây) — tức cùng tông mạnh với đĩa plate trong sân, thay
+ * cho nền pastel bậc 100 của Avatar app chính. MÀU GLYPH theo bảng
+ * GLYPH_HEX_BY_COLOR_INDEX khoá theo colorIndex (A11Y-FIX, SPEC
+ * A11Y-FIX §4): mỗi idx dùng trắng #FFFFFF hoặc mực #212121 — màu cho
+ * tỉ lệ tương phản WCAG cao hơn trên đĩa STRONG đó — sau sửa mọi
+ * đĩa ≥ 3:1 (sàn WCAG đồ hoạ/chữ lớn), 10/12 đĩa ≥ 4,5:1, toàn
+ * bảng ≥ 4,11:1; glyph trắng ghim cho mọi đĩa từng chỉ đạt
+ * 2,04–2,43:1 trên các đĩa sáng idx 0/7/9.
  *
  * Bằng chứng schema (kiểm tại node_modules, @dicebear/initials
  * 9.4.3 lib/types.d.ts + lib/schema.js): Options của style initials
@@ -31,7 +37,8 @@ const gameBadgeSvgCache = new Map<string, string>();
  * fontWeight } — KHÔNG có `fontColor`; màu chữ đi qua `textColor`
  * (pattern hex 6 ký tự không '#', mặc định ['ffffff']), nền qua
  * `backgroundColor` (cùng pattern). Nên ở đây: backgroundColor =
- * [strongHex bỏ '#'], textColor = ['FFFFFF'].
+ * [strongHex bỏ '#'], textColor = [GLYPH_HEX_BY_COLOR_INDEX[idx]
+ * bỏ '#'].
  */
 function gameBadgeSvg(name: string, colorIndex: number): string {
   const paletteSize = STRONG_HEX_BY_COLOR_INDEX.length;
@@ -47,7 +54,7 @@ function gameBadgeSvg(name: string, colorIndex: number): string {
   const rawSvg = createAvatar(initials, {
     seed: nameKey,
     backgroundColor: [STRONG_HEX_BY_COLOR_INDEX[idx].replace('#', '')],
-    textColor: ['FFFFFF'],
+    textColor: [GLYPH_HEX_BY_COLOR_INDEX[idx].replace('#', '')],
     fontFamily: ['Be Vietnam Pro', 'sans-serif'],
     fontWeight: 700,
     fontSize: 46,
