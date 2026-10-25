@@ -6,7 +6,8 @@ import type { ParsedShopQr } from './qr/emv';
 import type { QrSourceId } from './copy';
 import type { GameRecord } from './store';
 
-export type ScreenId = 'm1' | 'm2' | 'm3' | 'm3b' | 'm4' | 'm5' | 'm6' | 'm7' | 'm8' | 'rules';
+export type ScreenId =
+  'setup' | 'm1' | 'm2' | 'm3' | 'm3b' | 'm4' | 'm5' | 'm6' | 'm7' | 'm8' | 'rules';
 
 /** Kết quả bước QR (M1 nhập → M2 xác nhận) trước khi khoá vào ván. */
 export interface QrDraft {

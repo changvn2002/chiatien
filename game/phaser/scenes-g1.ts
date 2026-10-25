@@ -2184,8 +2184,28 @@ export class G1Scene extends Phaser.Scene {
       const halfH = STAGE_HEIGHT / (2 * targetZoom);
       targetCX = Phaser.Math.Clamp(targetCX, halfW, STAGE_WIDTH - halfW);
       targetCY = Phaser.Math.Clamp(targetCY, halfH, STAGE_HEIGHT - halfH);
+      // FIX-UX-GAME (F9, chơi thử live mobile 2026-10-25): kẹp tâm THÊM
+      // theo chính bbox trọng tâm — độ thiên về cặp giao đòn ở trên
+      // KHÔNG được đẩy bất kỳ fighter nào trong bbox ra khỏi khung.
+      // Trước đây tâm lệch tới 35% về điểm giao đòn trong khi khung ở
+      // zoom 1.35 chỉ dư ~30px mỗi phía so với bbox → plate + nhân vật
+      // ở phía đối diện (đỉnh sân) bị cắt mất nửa trên mobile, và frame
+      // kết ván chụp ở M7 cũng cắt theo. Nay: tâm sau khi thiên bị kẹp
+      // vào khoảng mà TOÀN BỘ bbox + đệm vẫn nằm trong khung; khoảng
+      // rỗng (bbox to hơn khung) thì giữ tâm bbox.
+      const loX = maxX + pad - halfW;
+      const hiX = minX - pad + halfW;
+      if (loX <= hiX) targetCX = Phaser.Math.Clamp(targetCX, loX, hiX);
+      const loY = maxY + pad - halfH;
+      const hiY = minY - pad + halfH;
+      if (loY <= hiY) targetCY = Phaser.Math.Clamp(targetCY, loY, hiY);
     }
-    const k = Math.min(1, delta * 0.004);
+    // FIX-UX-GAME (F9): khi ván chốt kết thúc (endFocus), camera hội tụ
+    // NHANH hơn hẳn về toàn cảnh — frame cuối được chụp ngay lúc sự
+    // kiện FINISHED phát ra, lerp chậm như giữa ván làm ảnh kết ván ở
+    // M7 vẫn còn zoom/cắt như ảnh chơi thử live.
+    const endFocusNow = this.endScheduled || alive.length <= 1;
+    const k = Math.min(1, delta * (endFocusNow && started ? 0.012 : 0.004));
     this.camZoom += (targetZoom - this.camZoom) * k;
     this.camCX += (targetCX - this.camCX) * k;
     this.camCY += (targetCY - this.camCY) * k;

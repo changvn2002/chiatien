@@ -29,6 +29,13 @@ export interface ConsentReady {
   paramsHash: string;
   seedDevice: number;
   chung: string;
+  /**
+   * FIX-UX-GAME: màn thiết lập gộp chốt đối chiếu QR NGAY tại nút Bắt
+   * đầu (không còn bước M2 riêng để ghi confirmedAt vào draft trước) —
+   * mốc đối chiếu đi kèm gói sẵn sàng này; entry ưu tiên giá trị này
+   * hơn draft.qr.confirmedAt khi dựng bản ghi ván.
+   */
+  qrConfirmedAt?: number | null;
 }
 
 export function M5ConsentScreen({

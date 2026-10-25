@@ -233,6 +233,7 @@ export function M3BCharacterScreen({
   onSplitEven,
   photos,
   onPhotosChanged,
+  embedded = false,
 }: {
   input: GameSessionInput;
   draft: GameDraft;
@@ -243,6 +244,12 @@ export function M3BCharacterScreen({
   /** Ảnh avatar trên máy (tra theo member id) — entry sở hữu state, màn này chỉ đọc + báo đổi. */
   photos: AvatarPhotoMap;
   onPhotosChanged: (next: Map<string, string>) => void;
+  /**
+   * FIX-UX-GAME: nhúng vào màn thiết lập gộp (nút «Đổi nhân vật») — ẩn
+   * tiêu đề + đoạn mô tả dài + hàng nút điều hướng; đổi bộ/gán áp ngay
+   * vào draft, không cần bấm Tiếp tục riêng.
+   */
+  embedded?: boolean;
 }) {
   const players = useMemo(
     () =>
@@ -433,12 +440,16 @@ export function M3BCharacterScreen({
 
   return (
     <div>
-      <ScreenTitle>Chọn nhân vật</ScreenTitle>
-      <p className="mt-1 text-base text-ink-2">
-        Cả bàn dùng chung một bộ nhân vật. Mỗi người chọn một nhân vật của riêng mình — không hai
-        người trùng một nhân vật. App cũng chia đều các mẫu nhân vật cho cả bàn, để mọi người trông
-        khác nhau rõ rệt và dễ phân biệt trong sân.
-      </p>
+      {embedded ? null : (
+        <>
+          <ScreenTitle>Chọn nhân vật</ScreenTitle>
+          <p className="mt-1 text-base text-ink-2">
+            Cả bàn dùng chung một bộ nhân vật. Mỗi người chọn một nhân vật của riêng mình — không
+            hai người trùng một nhân vật. App cũng chia đều các mẫu nhân vật cho cả bàn, để mọi
+            người trông khác nhau rõ rệt và dễ phân biệt trong sân.
+          </p>
+        </>
+      )}
 
       {/* --- Chọn bộ --- */}
       <h3 className="mt-5 text-base font-bold text-ink">1 · Chọn bộ cho cả bàn</h3>
@@ -745,31 +756,47 @@ export function M3BCharacterScreen({
             </div>
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => {
-              onDraft({ ...draft, characterSetId: set.setId, characterAssignments: assignments });
-              onNext();
-            }}
-            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
-          >
-            Tiếp tục
-          </button>
-          <button
-            type="button"
-            onClick={skipAutoAssign}
-            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-          >
-            Để app tự chọn
-          </button>
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
-          >
-            Quay lại
-          </button>
-          <SplitEvenButton onClick={onSplitEven} />
+          {embedded ? (
+            <button
+              type="button"
+              onClick={skipAutoAssign}
+              className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
+            >
+              Để app tự chọn
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onDraft({
+                    ...draft,
+                    characterSetId: set.setId,
+                    characterAssignments: assignments,
+                  });
+                  onNext();
+                }}
+                className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+              >
+                Tiếp tục
+              </button>
+              <button
+                type="button"
+                onClick={skipAutoAssign}
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
+              >
+                Để app tự chọn
+              </button>
+              <button
+                type="button"
+                onClick={onBack}
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
+              >
+                Quay lại
+              </button>
+              <SplitEvenButton onClick={onSplitEven} />
+            </>
+          )}
         </>
       ) : null}
     </div>

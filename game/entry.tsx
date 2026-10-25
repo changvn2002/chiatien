@@ -41,12 +41,7 @@ import {
 import type { GameRecord } from './store';
 import { bankDisplayOf } from './screens/m2-qr-screen';
 import { nameKeyOf } from './adapter';
-import { M1EntryScreen } from './screens/m1-entry-screen';
-import { M2QrScreen } from './screens/m2-qr-screen';
-import { M3PlayersScreen } from './screens/m3-players-screen';
-import { M3BCharacterScreen } from './screens/m3b-character-screen';
-import { M4GameScreen } from './screens/m4-game-screen';
-import { M5ConsentScreen } from './screens/m5-consent-screen';
+import { SetupScreen } from './screens/setup-screen';
 import type { ConsentReady } from './screens/m5-consent-screen';
 import { PlayScreen } from './screens/play-screen';
 import { M7ResultScreen } from './screens/m7-result-screen';
@@ -56,19 +51,39 @@ import { RulesScreen } from './screens/rules-screen';
 export function GameEntry({
   input,
   onExit,
+  onRecordLedgerPayments,
 }: {
   input: GameSessionInput;
   /** Rời game mode về app chính (chia đều bình thường / hoàn tất). */
   onExit: () => void;
+  /**
+   * FIX-UX-GAME (F6): ghi kết quả ván vào SỔ của phiên qua API phiên
+   * hiện hữu của app chính (session-view tự dựng khoản chi) — game chỉ
+   * BÁO khoản cần ghi (người đãi + số tiền), không tự ghi gì vào phiên
+   * và không đụng lib. Vắng prop này thì M7 chỉ hiện dòng nói rõ kết
+   * quả chưa tự ghi vào sổ, không hiện nút ghi.
+   */
+  onRecordLedgerPayments?: (
+    payments: { payerId: string; amountVnd: number }[],
+    matchCode: string,
+  ) => void;
 }) {
   const [recovered] = useState<GameRecord | null>(() => findInProgressRecord());
   const [screen, setScreen] = useState<ScreenId>(() =>
-    recovered ? (recovered.phase === 'result' ? 'm7' : 'm6') : 'm1',
+    recovered ? (recovered.phase === 'result' ? 'm7' : 'm6') : 'setup',
   );
   const [draft, setDraft] = useState<GameDraft>(() => ({
     ...EMPTY_DRAFT,
+    // FIX-UX-GAME (F2): tổng tiền TỰ ĐIỀN từ tổng phiên + trò mặc định
+    // G2 — vào màn thiết lập là bấm Bắt đầu được ngay khi đã nhập số
+    // chung, không còn nhập lại những gì app đã biết.
+    totalVnd: input.sessionTotalVnd,
+    game: 'g2',
     selectedPlayerIds: input.members.map((m) => m.id),
   }));
+  // Ván nào đã ghi vào sổ trong lần mở mode này (chống ghi trùng khi
+  // người dùng bấm nút ghi ở M7 hai lần).
+  const [ledgerRecordedCode, setLedgerRecordedCode] = useState<string | null>(null);
   const [record, setRecord] = useState<GameRecord | null>(recovered);
   // Ảnh avatar chụp trên máy (FIX-V3 N3): nạp từ kho RIÊNG
   // `ct-game-avatars-v1` — tách khỏi bản ghi ván; mọi màn + PlayerView
@@ -90,6 +105,19 @@ export function GameEntry({
   const [exitMatchOpen, setExitMatchOpen] = useState(false);
   const gameStatePushedRef = useRef(false);
 
+  // FIX-UX-GAME: C1 được tạo ngay trên màn thiết lập gộp (trong mục
+  // «Chi tiết ván») — vào màn thiết lập tức là cam kết đã hiển thị cho
+  // lần đồng thuận này, nên rời mode từ đây bằng «Chia đều cho lành»
+  // hay «Thoát game» đều ghi cam kết bị bỏ như luật cũ ở M5.
+  useEffect(() => {
+    if (screen === 'setup') {
+      consentShownRef.current = true;
+      // Hoãn sang microtask: setState đồng bộ trong thân effect bị cấm
+      // bởi react-hooks/set-state-in-effect (cùng mẫu ở M7).
+      void Promise.resolve().then(() => setAbandonedCount(countAbandonedCommitments()));
+    }
+  }, [screen]);
+
   const exitCleanup = useCallback(() => {
     // Thứ tự §1.2 phía React: stage tự cleanup khi unmount (sau khi state
     // của cha đổi), audio dừng + unload tại đây trước khi overlay đóng.
@@ -97,12 +125,7 @@ export function GameEntry({
     onExit();
   }, [onExit]);
 
-  /** Thoát chia đều TRƯỚC khi có ván (M1–M4): rời mode, không ghi nhật ký ván. */
-  const splitEvenBeforeMatch = useCallback(() => {
-    exitCleanup();
-  }, [exitCleanup]);
-
-  /** Thoát chia đều Ở M5: huỷ ý định; nếu C1 đã hiển thị trong lần này thì ghi 1 cam kết bị bỏ. */
+  /** Thoát chia đều từ màn thiết lập (C1 đã hiển thị tại đây): huỷ ý định; nếu C1 đã hiển thị trong lần này thì ghi 1 cam kết bị bỏ. */
   const splitEvenAtConsent = useCallback(() => {
     if (consentShownRef.current) {
       incrementAbandonedCommitments();
@@ -138,10 +161,11 @@ export function GameEntry({
   //   có ở màn chơi) và push lại state game để Back tiếp theo vẫn bị
   //   chặn trong overlay. Chỉ khi người dùng bấm «Thoát ván» trong hộp
   //   thì mới huỷ công khai qua publicCancelMatch.
-  // - Back ở m2–m5/m8/rules: lùi ĐÚNG một bước trong overlay (m2→m1,
-  //   m3→m2, m4→m3, m5→m4, m8→m7, rules→màn đã mở luật) rồi push lại
-  //   state game.
-  // - Back ở m1 (chưa có ván) hoặc m7 (ván đã chốt kết quả): đóng
+  // - Back ở m8/rules: lùi ĐÚNG một bước trong overlay (m8→m7,
+  //   rules→màn đã mở luật) rồi push lại state game. (FIX-UX-GAME:
+  //   luồng trước ván chỉ còn màn thiết lập gộp nên không còn các bước
+  //   lùi m2–m5 như luồng cũ.)
+  // - Back ở setup (chưa có ván) hoặc m7 (ván đã chốt kết quả): đóng
   //   overlay về app chính qua đúng đường thoát hiện hữu (kèm ghi cam
   //   kết bị bỏ nếu C1 đã hiển thị — như nút «Thoát game»).
   const backRef = useRef({ screen, publicCancelMatch, splitEvenAtConsent, exitCleanup });
@@ -167,11 +191,9 @@ export function GameEntry({
         return;
       }
       const prevStep: Partial<Record<ScreenId, ScreenId>> = {
-        m2: 'm1',
-        m3: 'm2',
-        m3b: 'm3',
-        m4: 'm3b',
-        m5: 'm4',
+        // FIX-UX-GAME: luồng trước ván chỉ còn màn thiết lập gộp —
+        // Back ở setup = rời mode (xử lý ở nhánh m1/m7 phía dưới, setup
+        // được xếp cùng nhóm màn gốc); chỉ còn m8 → m7 là bước lùi nội bộ.
         m8: 'm7',
       };
       const target = prevStep[cur.screen];
@@ -180,7 +202,7 @@ export function GameEntry({
         pushGameState();
         return;
       }
-      // m1 / m7: state game đã bị pop — đóng overlay, không push lại.
+      // setup / m7: state game đã bị pop — đóng overlay, không push lại.
       gameStatePushedRef.current = false;
       if (consentShownRef.current) cur.splitEvenAtConsent();
       else cur.exitCleanup();
@@ -285,7 +307,7 @@ export function GameEntry({
           confirmerId: qr.confirmerId,
           confirmerName: input.members.find((m) => m.id === qr.confirmerId)?.displayName ?? null,
           source: qr.source,
-          confirmedAt: qr.confirmedAt,
+          confirmedAt: ready.qrConfirmedAt ?? qr.confirmedAt,
           bankDisplay: bankDisplayOf(parsed),
           maskedAccount: parsed?.maskedAccount ?? null,
           accountName: parsed?.accountName ?? null,
@@ -320,22 +342,53 @@ export function GameEntry({
     setScreen('rules');
   }
 
-  /** «Chơi lại» từ M7 — đúng 3 bước SPEC: M1 điền sẵn nhưng sửa được → M4 tự chọn lại → M5 đầy đủ + dòng bổ sung. */
+  /** «Chơi lại» từ M7 — về thẳng màn thiết lập gộp, điền sẵn như ván trước nhưng sửa được (FIX-UX-GAME). */
   const handlePlayAgain = useCallback(() => {
     if (!record) return;
     setFinalFrame(null);
     setDraft({
       totalVnd: record.log.params.totalVnd,
-      qr: draft.qr, // QR điền sẵn từ bộ nhớ phiên này (payload + ảnh) — vẫn sửa được ở M1/M2.
+      qr: draft.qr, // QR điền sẵn từ bộ nhớ phiên này (payload + ảnh) — vẫn sửa được ở màn thiết lập.
       selectedPlayerIds: record.log.params.players.map((p) => p.id),
-      game: null, // M4 không chọn sẵn theo ván trước.
-      characterSetId: null, // M3B chọn lại bộ/nhân vật như lần đầu (trình diễn thuần, không ảnh hưởng ván cũ).
+      game: 'g2', // Mặc định ván nhanh như lần đầu vào mode.
+      characterSetId: null, // Gán lại mặc định như lần đầu (trình diễn thuần, không ảnh hưởng ván cũ).
       characterAssignments: {},
       replayOf: record,
     });
     setRecord(null);
-    setScreen('m1');
+    setScreen('setup');
   }, [record, draft.qr]);
+
+  /**
+   * FIX-UX-GAME (F6): M7 bấm «Ghi vào sổ» → entry quy kết quả ván
+   * thành các khoản thanh toán (người đãi + số tiền) rồi nhờ app chính
+   * ghi qua callback. Cùng đãi: mỗi người một khoản phần bằng nhau,
+   * phần lẻ dồn cho người cuối để tổng khớp đúng tổng hoá đơn.
+   */
+  const handleRecordToLedger = useCallback(() => {
+    if (!record || !onRecordLedgerPayments) return;
+    if (ledgerRecordedCode === record.code) return;
+    const total = record.log.params.totalVnd;
+    const result = record.log.result;
+    const payments =
+      result.kind === 'single'
+        ? [{ payerId: result.payerId, amountVnd: total }]
+        : result.payerIds.map((payerId, i) => {
+            const base = Math.floor(total / result.payerIds.length);
+            return {
+              payerId,
+              amountVnd:
+                i === result.payerIds.length - 1
+                  ? total - base * (result.payerIds.length - 1)
+                  : base,
+            };
+          });
+    // Chỉ ghi khi mọi người đãi còn là thành viên phiên (app chính tra
+    // khoản theo member id của phiên).
+    if (!payments.every((p) => input.members.some((m) => m.id === p.payerId))) return;
+    onRecordLedgerPayments(payments, record.code);
+    setLedgerRecordedCode(record.code);
+  }, [record, onRecordLedgerPayments, ledgerRecordedCode, input]);
 
   return (
     <div
@@ -396,7 +449,7 @@ export function GameEntry({
             offline CHỈ hiện ở lần vào mode đầu tiên (M1) — không lặp
             nguyên văn ở đầu mọi màn, không chiếm vị trí vàng trên sân
             chơi. */}
-        {screen === 'm1' ? (
+        {screen === 'setup' ? (
           <p className="mt-1 text-sm text-ink-2">
             Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không
             có mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
@@ -404,76 +457,20 @@ export function GameEntry({
         ) : null}
 
         <div className="mt-4">
-          {screen === 'm1' && (
-            <M1EntryScreen
+          {screen === 'setup' && (
+            <SetupScreen
               input={input}
               draft={draft}
               onDraft={setDraft}
-              onNext={() => {
-                unlockAudio(); // preload/decode audio từ M1 (SPEC §9), không chờ tới lúc chơi.
-                setScreen('m2');
-              }}
-              onSplitEven={splitEvenBeforeMatch}
-            />
-          )}
-          {screen === 'm2' && (
-            <M2QrScreen
-              input={input}
-              draft={draft}
-              onDraft={setDraft}
-              totalVnd={draft.totalVnd}
-              onNext={() => setScreen('m3')}
-              onBack={() => setScreen('m1')}
-              onSplitEven={splitEvenBeforeMatch}
-            />
-          )}
-          {screen === 'm3' && (
-            <M3PlayersScreen
-              input={input}
-              draft={draft}
-              onDraft={setDraft}
-              onNext={() => setScreen('m3b')}
-              onBack={() => setScreen('m2')}
-              onSplitEven={splitEvenBeforeMatch}
-              photos={photos}
-            />
-          )}
-          {screen === 'm3b' && (
-            <M3BCharacterScreen
-              input={input}
-              draft={draft}
-              onDraft={setDraft}
-              onNext={() => setScreen('m4')}
-              onBack={() => setScreen('m3')}
-              onSplitEven={splitEvenBeforeMatch}
-              photos={photos}
-              onPhotosChanged={setPhotos}
-            />
-          )}
-          {screen === 'm4' && (
-            <M4GameScreen
-              draft={draft}
-              onDraft={setDraft}
-              onNext={() => {
-                consentShownRef.current = true;
-                setAbandonedCount(countAbandonedCommitments());
-                setScreen('m5');
-              }}
-              onBack={() => setScreen('m3b')}
-              onOpenRules={() => goRules('m4')}
-              onSplitEven={splitEvenBeforeMatch}
-            />
-          )}
-          {screen === 'm5' && (
-            <M5ConsentScreen
-              input={input}
-              draft={draft}
               abandonedCount={abandonedCount}
-              onStart={handleStart}
-              onBack={() => setScreen('m4')}
-              onOpenRules={() => goRules('m5')}
+              onStart={(ready) => {
+                unlockAudio(); // preload/decode audio từ thao tác bắt đầu (SPEC §9).
+                handleStart(ready);
+              }}
+              onOpenRules={() => goRules('setup')}
               onSplitEven={splitEvenAtConsent}
               photos={photos}
+              onPhotosChanged={setPhotos}
             />
           )}
           {screen === 'rules' && <RulesScreen onBack={() => setScreen(rulesReturnRef.current)} />}
@@ -514,6 +511,9 @@ export function GameEntry({
               onReplayView={() => setScreen('m8')}
               onPlayAgain={handlePlayAgain}
               photos={photos}
+              ledgerRecorded={ledgerRecordedCode === record.code}
+              onRecordToLedger={onRecordLedgerPayments ? handleRecordToLedger : undefined}
+              onOpenRules={() => goRules('m7')}
             />
           )}
           {screen === 'm8' && record && (
@@ -562,9 +562,9 @@ export function GameEntry({
         ) : null}
 
         {/* Dòng chú thích lối thoát cũng là chrome lặp (cùng finding
-            boilerplate P1.5): chỉ hiện ở M1; các màn sau tự có nút
-            «Chia đều cho lành» thật trong khu hành động của chúng. */}
-        {screen === 'm1' ? (
+            boilerplate P1.5): chỉ hiện ở màn thiết lập; các màn sau tự
+            có nút «Chia đều cho lành» thật trong khu hành động. */}
+        {screen === 'setup' ? (
           <p className="mt-6 text-xs text-ink-2">
             Lối thoát luôn mở: bấm «{SPLIT_EVEN_LABEL}» ở bất kỳ màn nào để về quyết toán chia đều
             bình thường của phiên.

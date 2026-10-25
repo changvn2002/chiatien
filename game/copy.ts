@@ -10,6 +10,16 @@
 export const QR_RESPONSIBILITY_LINE =
   'App chỉ đọc và hiển thị thông tin chứa trong mã QR do nhóm cung cấp; app không xác minh tài khoản này thuộc về quán và không thực hiện việc chuyển tiền. Nhóm tự đối chiếu tên người nhận với QR tại quầy hoặc hoá đơn trước khi chơi, và người trả tiền kiểm tra lại tên người nhận trong app ngân hàng của mình trước khi xác nhận chuyển.';
 
+/**
+ * Miễn trừ QR RÚT GỌN 1 dòng (FIX-UX-GAME, mục 3 của đợt sửa sau chơi thử
+ * live 2026-10-25): màn kết quả + màn thiết lập chỉ hiện câu này thay cho
+ * đoạn dài QR_RESPONSIBILITY_LINE — ý giữ nguyên (app không xác minh chủ
+ * tài khoản, không chuyển tiền thay; nhóm tự đối chiếu tên trước khi
+ * chuyển), chữ rút còn một dòng đọc lướt.
+ */
+export const QR_RESPONSIBILITY_SHORT =
+  'App chỉ hiển thị thông tin trong QR nhóm cung cấp và không chuyển tiền thay — hãy đối chiếu tên người nhận với quán trước khi chuyển.';
+
 /** Câu trung thực bắt buộc về RNG — nguyên văn SPEC §2 (R2-1.6), đặt ở màn luật chơi/luật hoà. */
 export const RNG_HONESTY_LINE =
   'Mã ván và seed được công khai để cả nhóm nhận diện ván, xem lại đúng ván đó, và kiểm tra kết quả khớp với seed đã cam kết trước khi ván chạy. Game chạy trên máy của một thành viên và dựa trên sự cùng chứng kiến của cả nhóm — app không chứng minh được seed không bị chọn trước, nên ván chỉ nên dùng khi cả nhóm tin nhau và cùng có mặt từ lúc bắt đầu.';

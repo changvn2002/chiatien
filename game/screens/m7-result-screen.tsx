@@ -29,7 +29,7 @@ import type { Highlight } from '../engine/types';
 import { formatMoney } from '../adapter';
 import type { GameSessionInput } from '../adapter';
 import { buildIdentityMapCovering } from '../assets/identity';
-import { QR_FINAL_CHECK_LINE, QR_NO_NAME_WARNING, QR_RESPONSIBILITY_LINE } from '../copy';
+import { QR_FINAL_CHECK_LINE, QR_NO_NAME_WARNING, QR_RESPONSIBILITY_SHORT } from '../copy';
 import type { GameRecord } from '../store';
 import type { GameDraft } from '../state';
 import { playSfx } from '../audio/sound';
@@ -81,6 +81,9 @@ export function M7ResultScreen({
   onReplayView,
   onPlayAgain,
   photos,
+  ledgerRecorded = false,
+  onRecordToLedger,
+  onOpenRules,
 }: {
   input: GameSessionInput;
   record: GameRecord;
@@ -94,6 +97,15 @@ export function M7ResultScreen({
   onDiscardToSplitEven: () => void;
   onReplayView: () => void;
   onPlayAgain: () => void;
+  /**
+   * FIX-UX-GAME (F6): kết quả game KHÔNG tự ghi vào sổ — màn này nói
+   * rõ 1 dòng và, khi app chính cấp callback ghi sổ, hiện nút «Ghi
+   * vào sổ» để người dùng chủ động ghi. ledgerRecorded = đã ghi rồi.
+   */
+  ledgerRecorded?: boolean;
+  onRecordToLedger?: () => void;
+  /** Mở màn luật đầy đủ (luật hoà/đột tử) — từ mục «Chi tiết ván». */
+  onOpenRules?: () => void;
 }) {
   const log = record.log;
   const total = log.params.totalVnd;
@@ -319,6 +331,32 @@ export function M7ResultScreen({
         </ul>
       ) : null}
 
+      {/* FIX-UX-GAME (F6): nói rõ 1 dòng — game chỉ chọn người đãi,
+          kết quả CHƯA tự ghi vào sổ của phiên; ghi hay không là chọn
+          của nhóm qua nút ghi (app chính ghi khoản «Game đãi»). */}
+      <div className="mt-3 lg:col-start-1">
+        {ledgerRecorded ? (
+          <p className="text-base font-semibold text-ink">
+            ✓ Đã ghi vào sổ: {payerIds.map(nameOf).join(' và ')} đã trả {formatMoney(total)}.
+          </p>
+        ) : (
+          <>
+            <p className="text-base text-ink">
+              Kết quả này chưa tự ghi vào sổ — quyết toán của phiên vẫn như trước ván.
+            </p>
+            {onRecordToLedger ? (
+              <button
+                type="button"
+                onClick={onRecordToLedger}
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-brand bg-card px-4 py-2.5 text-base font-bold text-brand-deep"
+              >
+                Ghi vào sổ: {payerIds.map(nameOf).join(' và ')} đã trả {formatMoney(total)}
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
+
       {/* QR của quán */}
       {showQrSection ? (
         <div className="mt-3 overflow-hidden rounded-lg border border-line-strong bg-card px-4 py-3 lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:mt-4 lg:py-4">
@@ -419,17 +457,21 @@ export function M7ResultScreen({
             </p>
           ) : null}
           <div className="mt-3">
-            <InfoBox>{QR_RESPONSIBILITY_LINE}</InfoBox>
+            <InfoBox>{QR_RESPONSIBILITY_SHORT}</InfoBox>
           </div>
         </div>
       ) : (
         <div className="mt-5 lg:col-start-2 lg:row-start-2 lg:mt-4">
           <YellowAlert>
-            Ván này không hiển thị QR làm đích thanh toán vì QR chưa giải mã được ở bước đối chiếu.
-            Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.
+            {/* FIX-UX-GAME: phân biệt «chơi không cần QR» (qrHash null)
+                với «QR nhập vào nhưng không giải mã được» — luồng gộp
+                không còn «bước đối chiếu» riêng để nhắc tới. */}
+            {record.qrHash === null
+              ? 'Ván này chơi không kèm QR của quán. Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.'
+              : 'Ván này không hiển thị QR làm đích thanh toán vì QR chưa giải mã được khi nhập. Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.'}
           </YellowAlert>
           <div className="mt-3">
-            <InfoBox>{QR_RESPONSIBILITY_LINE}</InfoBox>
+            <InfoBox>{QR_RESPONSIBILITY_SHORT}</InfoBox>
           </div>
         </div>
       )}
@@ -474,25 +516,42 @@ export function M7ResultScreen({
         </p>
       ) : null}
 
-      {/* Seed đầy đủ — thu gọn, chạm để mở rộng (SPEC §M7/§5.2e). */}
+      {/* Chi tiết ván — kỹ thuật + luật hoà/đột tử thu gọn mặc định
+          (SPEC §M7/§5.2e; FIX-UX-GAME mục 3: thông tin kỹ thuật không
+          phơi ra luồng chính, gom hết vào mục thu gọn này). */}
       <button
         type="button"
         aria-expanded={seedOpen}
         onClick={() => setSeedOpen(!seedOpen)}
         className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink lg:col-span-2 lg:justify-self-start"
       >
-        {seedOpen ? 'Thu gọn thông tin ván' : 'Xem thông tin ván (mã ván, seed, thuật toán)'}
+        {seedOpen ? 'Thu gọn chi tiết ván' : 'Chi tiết ván'}
       </button>
       {seedOpen ? (
-        <dl className="mt-2 space-y-1 rounded-lg border border-line bg-grey-50 px-3 py-3 font-mono text-sm break-all text-ink lg:col-span-2">
-          <div>Mã ván: {record.code}</div>
-          <div>seed_device: {record.seedDevice}</div>
-          <div>Số chung: {record.chung}</div>
-          <div>Seed cuối: {record.seedFinal}</div>
-          <div>Thuật toán: {record.algo}</div>
-          <div>C1: {record.c1}</div>
-          <div>logHash: {log.logHash}</div>
-        </dl>
+        <div className="mt-2 rounded-lg border border-line bg-grey-50 px-3 py-3 lg:col-span-2">
+          <dl className="space-y-1 font-mono text-sm break-all text-ink">
+            <div>Mã ván: {record.code}</div>
+            <div>seed_device: {record.seedDevice}</div>
+            <div>Số chung: {record.chung}</div>
+            <div>Seed cuối: {record.seedFinal}</div>
+            <div>Thuật toán: {record.algo}</div>
+            <div>C1: {record.c1}</div>
+            <div>logHash: {log.logHash}</div>
+          </dl>
+          <p className="mt-3 text-sm text-ink">
+            Luật hoà: đấu trường hoà đến cùng (sau đột tử 10 giây và tối đa một ván phụ) thì những
+            người đồng hạng cùng đãi, mỗi người một phần bằng nhau; mâm cơm xoay không có hoà.
+          </p>
+          {onOpenRules ? (
+            <button
+              type="button"
+              onClick={onOpenRules}
+              className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
+            >
+              Xem luật đầy đủ
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Thứ tự hành động chốt cứng (SPEC §M7 / D5 màn 4).

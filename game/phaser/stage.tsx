@@ -21,7 +21,7 @@
 //   `sound`; stage chỉ chuyển tiếp setMuted — việc stop/unload Howl khi rời
 //   mode thuộc P-CORE (stage không giữ tham chiếu Howl nào).
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import {
   EventBus,
@@ -37,6 +37,11 @@ export function GameStage(props: StageProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const degradeRef = useRef<FpsDegradeTracker | null>(null);
+  // FIX-UX-GAME (F8): khung sân + dòng chờ hiện NGAY từ lần render đầu
+  // (trước đây container trống trong suốt trong lúc import('phaser') +
+  // nạp atlas → sân trắng nhá). booted lật khi Phaser Game đã tạo và
+  // scene đã start; lớp chờ nằm TRONG khung, không đổi kích thước hộp.
+  const [booted, setBooted] = useState(false);
 
   // Luôn giữ props mới nhất trong ref để các effect dài hơi (boot Phaser,
   // listener bus) không giữ closure cũ. Effect này khai báo TRƯỚC effect
@@ -53,6 +58,7 @@ export function GameStage(props: StageProps) {
     if (!container) return;
     let cancelled = false;
     let game: Phaser.Game | null = null;
+    let bootTimer: ReturnType<typeof setInterval> | null = null;
 
     const onFinished = () => {
       const current = propsRef.current;
@@ -172,10 +178,35 @@ export function GameStage(props: StageProps) {
         sound: current.sound,
         degrade,
       });
+      // Lớp chờ chỉ hạ khi scene đã RUNNING (create xong, đã nạp
+      // texture, sắp vẽ frame đầu) — hạ ngay tại start() thì vẫn còn
+      // cửa sổ hộp rỗng trong lúc preload (bắt gặp khi chụp pack
+      // FIX-UX-GAME: hộp be không chữ ở +350ms). Kiểm bằng isActive
+      // thăm dò 150ms bọc try/catch (bản thăm dò sự kiện 'create' qua
+      // getScene đã ném TypeError null ở bản đầu — xem pack B2), kèm
+      // hạn chót 4s: dù tín hiệu lạ cũng không để lớp chờ kẹt che sân.
+      bootTimer = setInterval(() => {
+        try {
+          if (game && game.scene.isActive(sceneKey)) {
+            if (bootTimer) clearInterval(bootTimer);
+            bootTimer = null;
+            if (!cancelled) setBooted(true);
+          }
+        } catch {
+          // Scene chưa sẵn sàng — thăm lại ở nhịp sau.
+        }
+      }, 150);
+      setTimeout(() => {
+        if (bootTimer) clearInterval(bootTimer);
+        bootTimer = null;
+        if (!cancelled) setBooted(true);
+      }, 4000);
     })();
 
     return () => {
       cancelled = true;
+      if (bootTimer) clearInterval(bootTimer);
+      setBooted(false);
       // (a) Dừng scene đang chạy → (b) destroy gỡ canvas + huỷ loop →
       // (c) xoá listener bus của stage. Đúng thứ tự ARCHITECTURE §1.2.
       if (game) {
@@ -214,16 +245,40 @@ export function GameStage(props: StageProps) {
       // overlay (trước đây container lún trong trang form, sân chỉ
       // ~40% viewport): khung giữ tỉ lệ sân 1:1, cao tối đa 78dvh,
       // căn giữa; Phaser Scale.FIT tự letterbox canvas vào khung.
+      // FIX-UX-GAME (F8/F9): BỎ height:'100%' (cha không có chiều cao
+      // xác định → hộp đo méo, FIT tham chiếu sai); hộp là hình vuông
+      // suy từ bề ngang (aspect-ratio) và bị trần 78dvh, bề ngang
+      // KHÔNG bao giờ vượt container (min(100%, 78dvh)); nền khung +
+      // viền hiện ngay để không bao giờ có khung trắng; position
+      // relative cho lớp chờ phủ trong hộp. Canvas Phaser con trực
+      // tiếp bị ép max-width:100% (xem thẻ style kèm) như dây đai phụ
+      // — FIT là cơ chế chính, CSS này chỉ chặn tràn tuyệt đối.
+      className="relative overflow-hidden rounded-lg border border-line-strong bg-[#f1ece4]"
       style={{
-        width: '100%',
-        height: '100%',
-        minHeight: 320,
+        width: 'min(100%, 78dvh)',
+        minHeight: 280,
         aspectRatio: '1 / 1',
-        maxHeight: '78dvh',
         marginInline: 'auto',
       }}
       aria-label={props.log.params.game === 'g2' ? 'Mâm cơm xoay' : 'Đấu trường'}
-    />
+    >
+      <style>
+        {
+          '[data-aidai-stage] canvas{max-width:100%!important;height:auto!important;display:block;margin-inline:auto}'
+        }
+      </style>
+      {!booted ? (
+        <div
+          role="status"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#f1ece4] px-4 text-center"
+        >
+          <p className="font-display text-[18px] font-extrabold text-ink">
+            {props.log.params.game === 'g2' ? 'Đang bày mâm…' : 'Đang mở sân…'}
+          </p>
+          <p className="text-sm text-ink-2">Sắp bắt đầu — giữ nguyên màn hình này.</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -330,6 +330,31 @@ export function SessionView({
     setExpenseEditing('new');
   }
 
+  /**
+   * FIX-UX-GAME (F6): game mode báo kết quả cần ghi — app chính ghi
+   * MỘT khoản chi «Game đãi» cho mỗi người đãi (người đãi đã trả cho
+   * quán, cả phiên là người hưởng, chia đều) qua đúng đường ghi khoản
+   * hiện hữu (expenseFromDraft + patch). Game không tự ghi vào phiên.
+   */
+  function recordGameResult(payments: { payerId: string; amountVnd: number }[], matchCode: string) {
+    const participantIds = session.members.map((m) => m.id);
+    const additions = payments
+      .filter((p) => p.amountVnd > 0 && participantIds.includes(p.payerId))
+      .map((p) =>
+        expenseFromDraft({
+          title: `Game đãi — ván ${matchCode}`,
+          amount: p.amountVnd,
+          payerId: p.payerId,
+          participantIds,
+          mode: 'equal',
+          custom: {},
+          weights: {},
+        }),
+      );
+    if (additions.length === 0) return;
+    patch({ expenses: [...session.expenses, ...additions] });
+  }
+
   function startTitleEdit() {
     setTitleDraft(session.title);
     setTitleEditing(true);
@@ -495,6 +520,27 @@ export function SessionView({
           }
         >
           <h2 className="mb-3 font-display text-[25px] font-extrabold text-ink">Quyết toán</h2>
+          {/* FIX-UX-GAME (F1): CTA game nằm NGAY DƯỚI tiêu đề của khối
+              Quyết toán — đầu aside dính nên thấy ngay ở khung đầu kể
+              cả khi panel quyết toán dài (đặt sau panel thì bị đẩy
+              khỏi khung đầu, bắt gặp khi chụp pack desktop 1440). Nút
+              đặc full-width thay GhostButton chìm ở cuối trang cũ. */}
+          <button
+            type="button"
+            disabled={session.members.length < 2}
+            onClick={() => setGameOpen(true)}
+            title={
+              session.members.length < 2
+                ? 'Cần ít nhất 2 thành viên để chơi game đãi'
+                : 'Chơi game để chọn người đãi'
+            }
+            className="mb-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink"
+          >
+            Chơi game đãi
+          </button>
+          {session.members.length < 2 ? (
+            <p className="-mt-2 mb-4 text-xs text-ink-2">Cần ít nhất 2 thành viên để chơi.</p>
+          ) : null}
           <SettlementPanel {...panelProps} variant={slipsEnabled ? 'row' : 'stacked'} />
           <StatusLine status={online} className="mt-4" />
         </aside>
@@ -505,11 +551,16 @@ export function SessionView({
         lớp
       </p>
 
-      {/* Điểm chạm DUY NHẤT của game mode «Ai Đãi» (ARCH §2.3): một nút mở
-          lớp phủ game trong cùng route của phiên. Cần ≥ 2 thành viên
-          (điều kiện vào game, SPEC §3.2). Không đổi hành vi/flow hiện hữu. */}
-      <div className="mt-1 flex shrink-0 items-center gap-2">
-        <GhostButton
+      {/* Điểm chạm của game mode «Ai Đãi» (ARCH §2.3) trên MOBILE
+          (FIX-UX-GAME F1): hàng này nằm trong cột flex của màn hình
+          làm việc (ledger cuộn nội bộ) nên luôn thấy trên khung đầu;
+          nút ĐẶC full-width thay GhostButton cũ. Desktop ≥900px dùng
+          CTA trong aside Quyết toán ở trên (aside dính) — hàng này ẩn
+          để không trùng. Cần ≥ 2 thành viên (SPEC §3.2); chú thích
+          thiếu thành viên chỉ hiện MỘT lần tại CTA của từng khung. */}
+      <div className="mt-1 shrink-0 min-[900px]:hidden">
+        <button
+          type="button"
           disabled={session.members.length < 2}
           onClick={() => setGameOpen(true)}
           title={
@@ -517,15 +568,20 @@ export function SessionView({
               ? 'Cần ít nhất 2 thành viên để chơi game đãi'
               : 'Chơi game để chọn người đãi'
           }
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink"
         >
           Chơi game đãi
-        </GhostButton>
+        </button>
         {session.members.length < 2 ? (
-          <span className="text-xs text-ink-2">Cần ít nhất 2 thành viên để chơi.</span>
+          <p className="mt-1.5 text-xs text-ink-2">Cần ít nhất 2 thành viên để chơi.</p>
         ) : null}
       </div>
       {gameOpen ? (
-        <GameEntry input={buildGameSessionInput(session)} onExit={() => setGameOpen(false)} />
+        <GameEntry
+          input={buildGameSessionInput(session)}
+          onExit={() => setGameOpen(false)}
+          onRecordLedgerPayments={recordGameResult}
+        />
       ) : null}
 
       <SessionSettlementStrip

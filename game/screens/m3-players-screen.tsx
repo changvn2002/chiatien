@@ -30,6 +30,7 @@ export function M3PlayersScreen({
   onBack,
   onSplitEven,
   photos,
+  embedded = false,
 }: {
   input: GameSessionInput;
   draft: GameDraft;
@@ -39,6 +40,12 @@ export function M3PlayersScreen({
   onSplitEven: () => void;
   /** Ảnh avatar trên máy theo member id (FIX-V3 N3) — có ảnh thì hàng người hiện ảnh tròn thay initials. */
   photos?: AvatarPhotoMap;
+  /**
+   * FIX-UX-GAME: nhúng vào màn thiết lập gộp (nút «Đổi người chơi») — ẩn
+   * tiêu đề + hàng nút điều hướng của màn độc lập; chọn xong là áp ngay
+   * vào draft, không cần bấm Tiếp tục riêng.
+   */
+  embedded?: boolean;
 }) {
   const selected = draft.selectedPlayerIds;
   // Identity map trên TOÀN BỘ thành viên phiên — không phụ thuộc
@@ -62,7 +69,7 @@ export function M3PlayersScreen({
 
   return (
     <div>
-      <ScreenTitle>Chọn người chơi</ScreenTitle>
+      {embedded ? null : <ScreenTitle>Chọn người chơi</ScreenTitle>}
       <p className="mt-1 text-base text-ink-2">
         Đã chọn {n} người. Mỗi người có một màu danh tính riêng, luôn kèm tên và ảnh đại diện.
       </p>
@@ -110,22 +117,26 @@ export function M3PlayersScreen({
           <RedAlert>{reason}</RedAlert>
         </div>
       ) : null}
-      <button
-        type="button"
-        disabled={!valid}
-        onClick={onNext}
-        className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink"
-      >
-        Tiếp tục
-      </button>
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
-      >
-        Quay lại
-      </button>
-      <SplitEvenButton onClick={onSplitEven} />
+      {embedded ? null : (
+        <>
+          <button
+            type="button"
+            disabled={!valid}
+            onClick={onNext}
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed disabled:cursor-not-allowed disabled:bg-deck-sand disabled:text-ink"
+          >
+            Tiếp tục
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
+          >
+            Quay lại
+          </button>
+          <SplitEvenButton onClick={onSplitEven} />
+        </>
+      )}
     </div>
   );
 }
