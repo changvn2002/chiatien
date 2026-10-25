@@ -1,0 +1,74 @@
+# Cấu hình Dependabot — quét & mở PR cập nhật dependency tự động (SEC-10).
+# File này là một trong hai bằng chứng "cơ chế quét lặp lại" của SEC-10 điều (2);
+# bằng chứng còn lại là bước "Dependency audit" chặn cứng trong ci.yml
+# (pnpm audit --prod, fail khi có lỗ hổng).
+#
+# LƯU Ý pnpm: repo dùng pnpm (packageManager pnpm@10.32.1, pnpm-lock.yaml).
+# Dependabot không có ecosystem "pnpm" riêng — khai báo "npm" và Dependabot
+# xử lý package.json + lockfile ở mức cơ bản. Nếu một PR của Dependabot chưa
+# đồng bộ pnpm-lock.yaml, CI sẽ bắt được ngay vì bước Install chạy
+# `pnpm install --frozen-lockfile`; khi đó chạy lại `pnpm install` ở máy dev
+# rồi push bổ sung vào nhánh của PR trước khi merge.
+version: 2
+updates:
+  # --- Dependencies của ứng dụng (npm ecosystem, thư mục gốc) ---
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      # Hàng tuần, sáng thứ Hai 09:00 giờ Việt Nam — đầu tuần, còn cả tuần
+      # để review/merge; tránh cuối tuần khi không ai trông CI.
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Saigon"
+    # Tối đa 5 PR mở cùng lúc: đủ cho 2 nhóm + vài PR major lẻ, không ngập repo.
+    open-pull-requests-limit: 5
+    groups:
+      # Gộp mọi bản minor/patch của dependency chạy thật (dependencies)
+      # thành 1 PR/tuần — giảm nhiễu, CI audit + test sẽ chặn nếu hỏng.
+      production-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      # Nhóm riêng cho công cụ dev (test/lint/type/build): minor/patch gộp
+      # chung 1 PR, tách khỏi nhóm production để dễ review và dễ revert.
+      dev-tooling:
+        dependency-type: "development"
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "eslint"
+          - "eslint-*"
+          - "typescript"
+          - "@types/*"
+          - "prettier"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "@testing-library/*"
+          - "jsdom"
+        update-types:
+          - "minor"
+          - "patch"
+    # Bản major KHÔNG nằm trong nhóm nào → Dependabot mở PR riêng từng gói,
+    # bắt buộc review thủ công (đúng tinh thần SEC-10: nâng cấp có quyết định).
+    # Không khai labels: repo hiện không có quy ước label cho PR (đã kiểm tra
+    # .github/ và tài liệu repo) — không bịa label chưa tồn tại.
+
+  # --- GitHub Actions dùng trong ci.yml (checkout, setup-node, pnpm, gitleaks) ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Saigon"
+    open-pull-requests-limit: 5
+    groups:
+      # Actions ít và rủi ro thấp khi lên minor/patch → gộp 1 PR.
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
