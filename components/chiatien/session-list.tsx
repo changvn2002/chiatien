@@ -71,7 +71,7 @@ export function SessionList({
     const hashStart = raw.indexOf('#chia=');
     if (hashStart === -1) {
       setImportError(
-        'Link này không mở được — có thể link đã bị cắt ngắn khi gửi, hoặc không còn đúng định dạng. Hãy nhờ người gửi copy lại link đầy đủ.',
+        'Link không mở được — có thể bị cắt ngắn khi gửi hoặc sai định dạng. Nhờ người gửi copy lại link đầy đủ.',
       );
       return;
     }
@@ -237,7 +237,7 @@ export function SessionList({
         title="Xoá cuộc chia này?"
         message={
           pendingDelete
-            ? `Cuộc chia "${pendingDelete.title}" cùng mọi khoản chi trong đó sẽ bị xoá khỏi máy này. Bạn vẫn hoàn tác được ngay sau khi xoá.`
+            ? `Cuộc chia "${pendingDelete.title}" và mọi khoản chi sẽ bị xoá khỏi máy này. Bạn vẫn hoàn tác được ngay sau khi xoá.`
             : ''
         }
         confirmLabel="Xoá cuộc chia"

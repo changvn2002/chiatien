@@ -19,48 +19,42 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
           <h3 className="font-bold">Đấu trường tự động — khi nào thì hoà?</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>
-              Mọi đòn đánh và lần ngã đều được ghi theo từng nhịp (tick) của ván. Hai người được coi
-              là ngã cùng lúc khi họ ngã trong cùng một nhịp của bản ghi.
+              Mọi đòn đánh và lần ngã đều ghi theo nhịp (tick). Ngã trong cùng một nhịp là ngã cùng
+              lúc.
+            </li>
+            <li>Nếu mọi người ngã cùng một nhịp và không còn ai đứng, họ vào ván phụ.</li>
+            <li>
+              Ván chính tối đa 40 giây. Còn từ 2 người đứng khi hết giờ thì vào đột tử 10 giây (có
+              báo trước): mỗi người ngã ở đòn trúng đầu tiên, không tính sức khoẻ tích luỹ.
             </li>
             <li>
-              Nếu mọi người ngã trong cùng một nhịp và không còn ai đứng, những người ngã ở nhịp đó
-              sẽ vào ván phụ.
+              Sau đột tử vẫn chưa phân định được thì có đúng một ván phụ 10 giây cho người đồng
+              hạng, theo luật đột tử. Không có ván phụ thứ hai.
             </li>
             <li>
-              Ván chính tối đa 40 giây. Hết giờ mà còn từ 2 người đứng trở lên thì vào đột tử 10
-              giây: màn hình báo trước một dòng — trong đột tử, mỗi người ngã ở đòn trúng đầu tiên
-              trúng vào chính mình, không tính sức khoẻ tích luỹ trước đó.
-            </li>
-            <li>
-              Sau đột tử vẫn chưa phân định được thì chỉ có đúng một ván phụ 10 giây dành cho những
-              người đang đồng hạng, theo cùng luật đột tử. Không có ván phụ thứ hai.
-            </li>
-            <li>
-              Sau ván phụ mà vẫn hoà, những người đồng hạng sẽ cùng đãi: mỗi người trả một phần bằng
-              nhau của hoá đơn (tổng chia cho số người đồng hạng) bằng cùng mã QR của quán ở màn kết
-              quả. Những người còn lại không phải trả. Cùng đãi là kết quả của game — khác với chia
-              đều cho cả nhóm.
+              Sau ván phụ vẫn hoà, người đồng hạng cùng đãi: mỗi người trả một phần bằng nhau của
+              hoá đơn (tổng chia số người đồng hạng) bằng QR của quán ở màn kết quả. Người còn lại
+              không phải trả. Cùng đãi là kết quả của game — khác chia đều cả nhóm.
             </li>
           </ul>
         </section>
         <section>
           <h3 className="font-bold">Mâm cơm xoay — không có hoà</h3>
           <p className="mt-1">
-            Mỗi người ngồi đúng một vị trí quanh mâm. Kết quả được chốt một ô duy nhất và đôi đũa
-            luôn dừng ở phần giữa của ô đó, không dừng ở biên giữa hai ô — nên mâm cơm xoay không có
-            kết quả hoà và không có ván phụ. Chỉ quay đúng 1 vòng.
+            Mỗi người một vị trí quanh mâm. Đũa luôn dừng giữa một ô duy nhất, không dừng ở biên —
+            nên không có hoà, không có ván phụ. Chỉ quay 1 vòng.
           </p>
         </section>
         <section>
           <h3 className="font-bold">Trong ván</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>
-              Tua nhanh và quay nhanh / đánh nhanh chỉ đổi tốc độ diễn — kết quả của ván đã được
-              chốt từ seed và không đổi.
+              Tua nhanh, quay nhanh / đánh nhanh chỉ đổi tốc độ — kết quả đã chốt từ seed, không
+              đổi.
             </li>
             <li>
-              Chấm màu cạnh tên là màu danh tính của từng người trong ván — cùng màu với vòng/plate
-              trên sân và badge ở các màn khác.
+              Chấm màu cạnh tên là màu danh tính của mỗi người — khớp vòng/plate trên sân và badge ở
+              các màn khác.
             </li>
           </ul>
         </section>
@@ -77,8 +71,8 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
         <section>
           <h3 className="font-bold">Chạy offline</h3>
           <p className="mt-1">
-            Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không
-            có mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
+            Game chạy offline sau lần mở đầu có mạng. Lần đầu mở không có mạng thì game không khả
+            dụng — app chính không ảnh hưởng.
           </p>
         </section>
         <section>

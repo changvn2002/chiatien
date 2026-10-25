@@ -20,6 +20,34 @@ import {
 } from './phieu';
 
 /**
+ * Khoá localStorage RIÊNG cho id phiên đang mở dở (TEAM 2F W2): trước
+ * đây `activeId` chỉ sống ở bộ nhớ — mở lại app luôn rơi về Màn danh
+ * sách, người dùng phải chọn lại phiên trước khi làm tiếp (một nửa của
+ * phản hồi «vô lại bắt làm lại»). Nay id được ghi bền trên máy (chỉ là
+ * id phiên, không kèm dữ liệu phiên) và khôi phục ở bootstrap khi phiên
+ * đó còn tồn tại. Để ngay tại file wiring này — lib/ giữ nguyên bất biến.
+ */
+const ACTIVE_SESSION_KEY = 'chiatien:active-session:v1';
+
+function loadPersistedActiveId(): string | null {
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_SESSION_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedActiveId(id: string | null): void {
+  try {
+    if (id) window.localStorage.setItem(ACTIVE_SESSION_KEY, id);
+    else window.localStorage.removeItem(ACTIVE_SESSION_KEY);
+  } catch {
+    // localStorage bị chặn (private mode) — activeId chỉ sống ở bộ nhớ như trước.
+  }
+}
+
+/**
  * Toàn bộ wiring storage của app — tách khỏi app.tsx theo ARC-11 khoản 2
  * để component gốc thuần trình bày: nạp localStorage + share link lúc mở,
  * ghi bền mọi thay đổi, đồng bộ xuyên tab, toast Lưu/Hoàn tác. Hành vi
@@ -114,6 +142,13 @@ export function useSessions() {
         setImportedSeal(ensureImportedSeal(imported));
         setLayer1Active(true);
       }
+    } else {
+      // TEAM 2F W2: không phải lần import — khôi phục thẳng phiên đang
+      // mở dở trước khi app đóng (nếu phiên đó còn trong danh sách).
+      const savedActiveId = loadPersistedActiveId();
+      if (savedActiveId && initial.some((s) => s.id === savedActiveId)) {
+        setActiveId(savedActiveId);
+      }
     }
     setLoaded(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -142,6 +177,13 @@ export function useSessions() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // TEAM 2F W2: ghi bền phiên đang mở mỗi khi nó đổi (chỉ sau khi
+  // bootstrap xong — tránh ghi đè bằng giá trị null lúc chưa nạp).
+  useEffect(() => {
+    if (!loaded) return;
+    savePersistedActiveId(activeId);
+  }, [activeId, loaded]);
 
   function flashSaved() {
     window.clearTimeout(savedTimerRef.current);

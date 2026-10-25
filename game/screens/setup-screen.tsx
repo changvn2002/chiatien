@@ -156,6 +156,8 @@ export function SetupScreen({
   input,
   draft,
   onDraft,
+  initialStep,
+  onStepChange,
   abandonedCount,
   onStart,
   onSplitEven,
@@ -165,6 +167,14 @@ export function SetupScreen({
   input: GameSessionInput;
   draft: GameDraft;
   onDraft: (next: GameDraft) => void;
+  /**
+   * Bước wizard khởi tạo (TEAM 2F W2): entry truyền bước khôi phục từ
+   * draft thiết lập bền — vào lại game là đứng đúng bước đang dở.
+   * Vắng prop này thì bắt đầu ở bước 1 như trước.
+   */
+  initialStep?: 1 | 2 | 3;
+  /** Báo mỗi lần bước đổi lên entry để ghi vào draft bền. */
+  onStepChange?: (step: 1 | 2 | 3) => void;
   /** Số cam kết đã bị bỏ trong phiên — hiện tối thiểu khi > 0 (SPEC §M6). */
   abandonedCount: number;
   onStart: (ready: ConsentReady) => void;
@@ -187,7 +197,12 @@ export function SetupScreen({
   // bấm Tiếp/Chơi khi thiếu -> chuyển đúng bước, cuộn mượt tới trường,
   // focus, viền đỏ + dòng lý do ngay dưới trường; nút KHÔNG còn bị mờ
   // không lý do (bẫy F4 của v2.0.0 không tái diễn).
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(() => initialStep ?? 1);
+  // TEAM 2F W2: báo bước hiện tại lên entry (chỉ khi entry có nhận) để
+  // vị trí wizard đi vào draft bền cùng các trường thiết lập khác.
+  useEffect(() => {
+    onStepChange?.(step);
+  }, [step, onStepChange]);
   const [fieldError, setFieldError] = useState<{ key: FieldKey; message: string } | null>(null);
   // UIUX-GAME-V2: tổng tiền mặc định là HÀNG GỌN 1 dòng (nhãn + số +
   // nút «Sửa»); ô nhập chỉ mở khi sửa hoặc khi chưa có tổng hợp lệ.
@@ -874,8 +889,8 @@ export function SetupScreen({
             <div className="mt-2 space-y-2 rounded-lg border border-line bg-grey-50 px-3 py-3 text-sm text-ink">
               <p>
                 Mã cam kết của máy (C1):{' '}
-                <GroupedTechString value={commit.c1} className="font-mono font-bold" /> — máy tạo và
-                hiện mã này trước khi số chung được nhập, để cả nhóm nhận diện đúng ván.
+                <GroupedTechString value={commit.c1} className="font-mono font-bold" /> — hiện trước
+                khi nhập số chung để cả nhóm nhận diện ván.
               </p>
               <p>Game chạy offline sau lần mở đầu có mạng.</p>
             </div>

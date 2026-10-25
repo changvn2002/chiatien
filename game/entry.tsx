@@ -32,13 +32,17 @@ import {
 import type { GameDraft, PlayerView, ScreenId } from './state';
 import { EMPTY_DRAFT } from './state';
 import {
+  clearGameDraft,
   countAbandonedCommitments,
+  filterRestoredPlayerIds,
   findInProgressRecord,
   incrementAbandonedCommitments,
+  loadGameDraft,
   patchRecord,
+  saveGameDraft,
   upsertRecord,
 } from './store';
-import type { GameRecord } from './store';
+import type { GameRecord, PersistedGameDraft } from './store';
 import { bankDisplayOf } from './screens/m2-qr-screen';
 import { nameKeyOf } from './adapter';
 import { SetupScreen } from './screens/setup-screen';
@@ -72,19 +76,90 @@ export function GameEntry({
   const [screen, setScreen] = useState<ScreenId>(() =>
     recovered ? (recovered.phase === 'result' ? 'm7' : 'm6') : 'setup',
   );
-  const [draft, setDraft] = useState<GameDraft>(() => ({
-    ...EMPTY_DRAFT,
-    // FIX-UX-GAME (F2): tổng tiền TỰ ĐIỀN từ tổng phiên + trò mặc định
-    // G2 — vào màn thiết lập là bấm Bắt đầu được ngay khi đã nhập số
-    // chung, không còn nhập lại những gì app đã biết.
-    totalVnd: input.sessionTotalVnd,
-    game: 'g2',
-    selectedPlayerIds: input.members.map((m) => m.id),
-  }));
+  // TEAM 2F W2: vân tay phiên cho draft thiết lập bền — băm tiêu đề +
+  // danh sách id thành viên của PHIÊN NÀY. Draft lưu trên máy chỉ được
+  // khôi phục khi vân tay khớp: draft của phiên khác (hoặc của chính
+  // phiên này sau khi roster đổi) không áp sang.
+  const sessionKey = fnv1a64(`${input.sessionTitle}|${input.members.map((m) => m.id).join(',')}`);
+  // Draft thiết lập dở dang của ĐÚNG phiên này (nếu có) — đọc một lần
+  // lúc mount. Có ván đang dở được khôi phục thì bỏ qua draft (đi thẳng
+  // M6/M7 như trước, không dựng thiết lập mới).
+  const [restoredDraft] = useState<PersistedGameDraft | null>(() => {
+    if (recovered) return null;
+    const saved = loadGameDraft();
+    return saved && saved.sessionKey === sessionKey ? saved : null;
+  });
+  const [draft, setDraft] = useState<GameDraft>(() => {
+    if (restoredDraft) {
+      // Khôi phục đúng những gì người dùng đã nhập ở lượt thiết lập
+      // trước: lựa chọn người (lọc theo roster hiện tại — id lạ bỏ,
+      // rỗng thì về cả bàn), tổng đã sửa, trò, gán nhân vật. QR KHÔNG
+      // khôi phục (chỉ sống ở bộ nhớ theo §8) và replayOf luôn null.
+      const memberIds = input.members.map((m) => m.id);
+      const memberSet = new Set(memberIds);
+      return {
+        ...EMPTY_DRAFT,
+        totalVnd: restoredDraft.totalVnd,
+        game: restoredDraft.game,
+        selectedPlayerIds: filterRestoredPlayerIds(restoredDraft.selectedPlayerIds, memberIds),
+        characterSetId: restoredDraft.characterSetId,
+        characterAssignments: Object.fromEntries(
+          Object.entries(restoredDraft.characterAssignments).filter(([id]) => memberSet.has(id)),
+        ),
+      };
+    }
+    return {
+      ...EMPTY_DRAFT,
+      // FIX-UX-GAME (F2): tổng tiền TỰ ĐIỀN từ tổng phiên + trò mặc định
+      // G2 — vào màn thiết lập là bấm Bắt đầu được ngay khi đã nhập số
+      // chung, không còn nhập lại những gì app đã biết.
+      totalVnd: input.sessionTotalVnd,
+      game: 'g2',
+      selectedPlayerIds: input.members.map((m) => m.id),
+    };
+  });
+  // Bước wizard hiện tại — SetupScreen báo lên qua onStepChange để bước
+  // cũng vào draft bền (vào lại là đứng đúng bước đang dở, không về 1).
+  const [setupStep, setSetupStep] = useState<1 | 2 | 3>(() => restoredDraft?.step ?? 1);
+  // Mốc so «đã sửa gì so với lúc mount chưa»: chỉ ghi draft bền khi
+  // người dùng THỰC SỰ đổi thiết lập — mở game của phiên khác xem qua
+  // rồi thoát không được ghi đè draft đang dở của phiên trước.
+  const draftSaveStateRef = useRef<{ initial: string | null; saved: boolean }>({
+    initial: null,
+    saved: false,
+  });
+
   // Ván nào đã ghi vào sổ trong lần mở mode này (chống ghi trùng khi
   // người dùng bấm nút ghi ở M7 hai lần).
   const [ledgerRecordedCode, setLedgerRecordedCode] = useState<string | null>(null);
   const [record, setRecord] = useState<GameRecord | null>(recovered);
+
+  // Ghi draft thiết lập bền mỗi khi draft / bước đổi trong giai đoạn
+  // thiết lập (chưa có ván chốt). CHỈ các trường an toàn của
+  // PersistedGameDraft — draft.qr và các trường đồng thuận không bao
+  // giờ xuống storage (xem kỷ luật ở game/store.ts).
+  useEffect(() => {
+    if (record || screen !== 'setup') return;
+    const persistable: PersistedGameDraft = {
+      sessionKey,
+      totalVnd: draft.totalVnd,
+      selectedPlayerIds: draft.selectedPlayerIds,
+      game: draft.game,
+      characterSetId: draft.characterSetId,
+      characterAssignments: draft.characterAssignments,
+      step: setupStep,
+      savedAt: Date.now(),
+    };
+    const snapshot = JSON.stringify({ ...persistable, savedAt: 0 });
+    const state = draftSaveStateRef.current;
+    if (state.initial === null) {
+      state.initial = snapshot;
+      return;
+    }
+    if (snapshot === state.initial && !state.saved) return;
+    saveGameDraft(persistable);
+    state.saved = true;
+  }, [draft, setupStep, screen, record, sessionKey]);
   // Ảnh avatar chụp trên máy (FIX-V3 N3): nạp từ kho RIÊNG
   // `ct-game-avatars-v1` — tách khỏi bản ghi ván; mọi màn + PlayerView
   // tra map này theo member id tại lúc hiển thị / bắt đầu ván / replay.
@@ -320,6 +395,9 @@ export function GameEntry({
         patchRecord(draft.replayOf.code, { status: 'da-thay-the', replacedBy: code });
       }
       upsertRecord(rec);
+      // TEAM 2F W2: ván đã THỰC SỰ bắt đầu — draft thiết lập đã tiêu
+      // thụ, dọn khỏi máy để lần chơi sau không dính draft cũ.
+      clearGameDraft();
       consentShownRef.current = false;
       setFinalFrame(null);
       setRecord(rec);
@@ -478,6 +556,8 @@ export function GameEntry({
               input={input}
               draft={draft}
               onDraft={setDraft}
+              initialStep={setupStep}
+              onStepChange={setSetupStep}
               abandonedCount={abandonedCount}
               onStart={(ready) => {
                 unlockAudio(); // preload/decode audio từ thao tác bắt đầu (SPEC §9).

@@ -49,7 +49,7 @@ import { PlayerAvatar, ScreenTitle, SplitEvenButton } from './shared';
 
 /** Dòng riêng tư BẮT BUỘC của N3 — giữ đúng ý, không yếu đi. */
 export const AVATAR_PRIVACY_LINE =
-  'Ảnh chỉ lưu trên máy này để hiện trong game — không tải lên máy chủ, không đính kèm link chia sẻ.';
+  'Ảnh chỉ lưu trên máy này — không tải lên máy chủ, không gắn vào link chia sẻ.';
 
 /* ------------------------------------------------------------------ */
 /* Crop frame idle THẬT từ atlas của nhân vật (kỹ thuật M4/P6).        */
@@ -371,7 +371,7 @@ export function M3BCharacterScreen({
     } catch {
       // Không có camera / quyền bị từ chối → rơi về chọn file ảnh (input có capture).
       setPhotoNote(
-        'Không mở được camera (chưa được cấp quyền hoặc máy không có camera). Hãy chọn ảnh có sẵn — trên điện thoại, nút chọn ảnh vẫn cho chụp trực tiếp.',
+        'Không mở được camera (chưa cấp quyền hoặc máy không có camera). Chọn ảnh có sẵn — trên điện thoại vẫn chụp trực tiếp được.',
       );
       captureInputRef.current?.click();
     }
@@ -443,9 +443,8 @@ export function M3BCharacterScreen({
         <>
           <ScreenTitle>Chọn nhân vật</ScreenTitle>
           <p className="mt-1 text-base text-ink-2">
-            Cả bàn dùng chung một bộ nhân vật. Mỗi người chọn một nhân vật của riêng mình — không
-            hai người trùng một nhân vật. App cũng chia đều các mẫu nhân vật cho cả bàn, để mọi
-            người trông khác nhau rõ rệt và dễ phân biệt trong sân.
+            Cả bàn dùng chung một bộ. Mỗi người một nhân vật riêng, không trùng nhau; app chia đều
+            các mẫu để mọi người dễ phân biệt.
           </p>
         </>
       )}
@@ -459,9 +458,7 @@ export function M3BCharacterScreen({
           className="mt-2 rounded-lg border border-line bg-grey-50 px-4 py-6"
         >
           <p className="text-base font-semibold text-ink">Đang tải bộ nhân vật…</p>
-          <p className="mt-1 text-sm text-ink-2">
-            Chờ một chút — danh sách bộ và nhân vật sẽ hiện ngay khi tải xong.
-          </p>
+          <p className="mt-1 text-sm text-ink-2">Danh sách bộ sẽ hiện ngay khi tải xong.</p>
           <div aria-hidden className="mt-4 space-y-2">
             <div className="h-4 w-2/3 animate-pulse rounded bg-line" />
             <div className="h-4 w-1/2 animate-pulse rounded bg-line" />
@@ -644,8 +641,8 @@ export function M3BCharacterScreen({
           </div>
           {set.characters.length < players.length ? (
             <p className="mt-2 text-sm text-ink-2">
-              Bộ này có {set.characters.length} nhân vật cho {players.length} người chơi — khi hết
-              nhân vật trống, app gán lặp lại, ưu tiên mẫu đang ít người chọn nhất.
+              Bộ có {set.characters.length} nhân vật cho {players.length} người — hết nhân vật
+              trống, app gán lặp, ưu tiên mẫu ít người chọn nhất.
             </p>
           ) : null}
 
@@ -665,8 +662,8 @@ export function M3BCharacterScreen({
                 />
                 <p className="text-sm text-ink-2">
                   {activePhoto
-                    ? 'Đang dùng ảnh chụp — ảnh tròn này sẽ hiện ở các màn của game thay cho ký tự viết tắt.'
-                    : 'Chưa có ảnh — đang hiện ký tự viết tắt như thường. Chụp hoặc chọn một ảnh để thay.'}
+                    ? 'Đang dùng ảnh chụp — hiện ở các màn game thay ký tự viết tắt.'
+                    : 'Chưa có ảnh — đang hiện ký tự viết tắt. Chụp hoặc chọn ảnh để thay.'}
                 </p>
               </div>
 

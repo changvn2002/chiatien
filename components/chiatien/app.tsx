@@ -151,8 +151,8 @@ export function ChiaTienApp() {
             loading="lazy"
           />
           <p className="min-w-0 flex-1">
-            Link này không mở được — có thể link đã bị cắt ngắn khi gửi, hoặc không còn đúng định
-            dạng. Hãy nhờ người gửi copy lại link đầy đủ.
+            Link không mở được — có thể bị cắt ngắn khi gửi hoặc sai định dạng. Nhờ người gửi copy
+            lại link đầy đủ.
           </p>
           <button
             type="button"
@@ -171,18 +171,18 @@ export function ChiaTienApp() {
               Đã nhập cuộc chia “{importedTitle}” — bản sao này nằm trên máy của bạn, cứ sửa thoải
               mái.
               {importedDropped > 0 &&
-                ` Có ${importedDropped} khoản chi trong link không hợp lệ nên đã bị loại bỏ để tránh lệch tiền — hãy kiểm tra lại danh sách khoản chi.`}
+                ` Có ${importedDropped} khoản chi trong link không hợp lệ đã bị loại bỏ — kiểm tra lại danh sách khoản chi.`}
             </p>
             {/* Nhãn chuẩn của DATA-04(iii)/SEC-12.6: nội dung link là do
                 người gửi cung cấp, app không xác thực được danh tính. */}
             <p className="mt-1 font-semibold">
-              Lưu ý: đây là dữ liệu do người gửi cung cấp, chưa xác thực — hãy đối chiếu danh sách
-              thành viên và khoản chi trước khi thanh toán theo.
+              Lưu ý: dữ liệu do người gửi cung cấp, chưa xác thực — đối chiếu thành viên và khoản
+              chi trước khi thanh toán.
             </p>
             {importedStrippedBank && (
               <p className="mt-1">
-                Link này thuộc bản cũ — thông tin ngân hàng trong link (nếu có) đã bị bỏ qua và
-                không được lưu vào máy này.
+                Link bản cũ — thông tin ngân hàng trong link (nếu có) đã bị bỏ, không lưu vào máy
+                này.
               </p>
             )}
           </div>
@@ -203,9 +203,8 @@ export function ChiaTienApp() {
           className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-50 px-4 py-3 text-base font-medium text-brand-deep"
         >
           <p className="min-w-0 flex-1">
-            Dữ liệu vừa được thay đổi ở một tab khác — app đã tải lại bản mới nhất để không tab nào
-            ghi đè làm mất dữ liệu của tab nào. Nếu bạn đang nhập dở trong form ở tab này, hãy kiểm
-            tra lại nội dung trước khi bấm lưu.
+            Dữ liệu vừa thay đổi ở tab khác — app đã tải bản mới nhất để các tab không ghi đè nhau.
+            Nếu đang nhập dở ở tab này, kiểm tra lại trước khi bấm lưu.
           </p>
           <button
             type="button"
@@ -311,14 +310,12 @@ export function ChiaTienApp() {
                 />
               </summary>
               <p className="max-w-[72ch] pb-4 text-base leading-relaxed text-muted">
-                Chia Tiền là công cụ chia tiền nhóm miễn phí cho người Việt. Mỗi chuyến đi chơi, bữa
-                ăn nhậu hay kỳ ở trọ chung là một “cuộc chia”: bạn ghi lại ai đã trả khoản nào, app
-                tự chia cho đúng những người liên quan, triệt tiêu các khoản nợ chồng chéo và cho ra
-                danh sách “ai trả ai bao nhiêu” với số lần chuyển tiền ít nhất — kèm mã VietQR để
-                quét chuyển ngay khi người nhận có tài khoản ngân hàng. Không cần cài app, không cần
-                đăng nhập, không có máy chủ: mở link là dùng ngay trên trình duyệt, dữ liệu nằm trên
-                máy của bạn, cần gửi cho cả nhóm thì dùng link chia sẻ gồm thành viên, khoản chi và
-                kết quả quyết toán — thông tin ngân hàng không nằm trong link.
+                Chia Tiền là công cụ chia tiền nhóm miễn phí cho người Việt. Mỗi chuyến đi, bữa ăn
+                hay kỳ ở trọ chung là một “cuộc chia”: ghi ai đã trả khoản nào, app tự chia cho đúng
+                người liên quan, triệt tiêu nợ chồng chéo và cho ra danh sách “ai trả ai bao nhiêu”
+                với ít lần chuyển nhất — kèm VietQR để quét chuyển ngay. Không cần cài app hay đăng
+                nhập, không có máy chủ: dữ liệu nằm trên máy của bạn; gửi cả nhóm bằng link chia sẻ
+                — thông tin ngân hàng không nằm trong link.
               </p>
             </details>
 
@@ -337,8 +334,8 @@ export function ChiaTienApp() {
                 <li>
                   <h3 className="mb-1 text-xl font-bold text-ink">Thêm người của nhóm</h3>
                   <p className="text-base leading-relaxed text-muted">
-                    Đặt tên cho chuyến đi hay bữa tiệc rồi thêm từng người trong nhóm. Ai muốn nhận
-                    tiền qua VietQR thì lưu tài khoản ngay trên máy của họ.
+                    Đặt tên cuộc chia rồi thêm từng người. Ai nhận tiền qua VietQR thì lưu tài khoản
+                    trên máy của họ.
                   </p>
                 </li>
                 <li>
@@ -346,8 +343,8 @@ export function ChiaTienApp() {
                     Ghi khoản chi khi có người trả
                   </h3>
                   <p className="text-base leading-relaxed text-muted">
-                    Ai trả, bao nhiêu, chia cho những ai — chọn cách chia đều, tuỳ chỉnh số tiền
-                    từng người, hoặc chia theo phần (ở mấy đêm, ăn mấy bữa).
+                    Ai trả, bao nhiêu, chia cho ai — chia đều, tuỳ chỉnh từng người, hoặc chia theo
+                    phần (mấy đêm, mấy bữa).
                   </p>
                 </li>
                 <li>
@@ -355,8 +352,8 @@ export function ChiaTienApp() {
                     Mở quyết toán, quét VietQR hoặc copy cho Zalo
                   </h3>
                   <p className="text-base leading-relaxed text-muted">
-                    App tính số dư từng người và rút gọn thành ít lần chuyển nhất. Quét VietQR để
-                    trả ngay, hoặc copy bản quyết toán gửi thẳng vào nhóm Zalo, Messenger.
+                    App tính số dư và rút gọn thành ít lần chuyển nhất. Quét VietQR để trả ngay,
+                    hoặc copy quyết toán gửi Zalo, Messenger.
                   </p>
                 </li>
               </ol>

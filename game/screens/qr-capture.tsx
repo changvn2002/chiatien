@@ -73,7 +73,7 @@ export function QrCaptureBlock({
         }
       });
     } catch {
-      setQrNote('Không mở được camera. Hãy thử chọn ảnh QR hoặc dán nội dung QR.');
+      setQrNote('Không mở được camera. Chọn ảnh QR hoặc dán nội dung QR.');
     }
   }
 
@@ -82,9 +82,7 @@ export function QrCaptureBlock({
     if (!video) return;
     const payload = await decodeQrFromCanvasSource(video, video.videoWidth, video.videoHeight);
     if (!payload) {
-      setQrNote(
-        'Chưa đọc được QR trong khung hình. Hãy đưa QR vào gần hơn, đủ sáng và trọn 4 góc rồi chụp lại.',
-      );
+      setQrNote('Chưa đọc được QR. Đưa QR lại gần, đủ sáng, trọn 4 góc rồi chụp lại.');
       return;
     }
     applyPayload(payload, null);
@@ -102,9 +100,7 @@ export function QrCaptureBlock({
     });
     const payload = await decodeQrFromFile(file);
     if (!payload) {
-      setQrNote(
-        'Chưa đọc được QR từ ảnh này. Hãy thử ảnh rõ hơn, trọn 4 góc, hoặc dán nội dung QR.',
-      );
+      setQrNote('Chưa đọc được QR. Thử ảnh rõ hơn (trọn 4 góc) hoặc dán nội dung QR.');
       return;
     }
     applyPayload(payload, dataUrl);

@@ -253,12 +253,11 @@ export function MemberEditor({
             <span>Lưu tài khoản trên máy này để tạo VietQR</span>
           </label>
           <p className="mt-1 text-xs leading-relaxed text-ink-2">
-            Chỉ lưu trên máy này — không đi theo link chia sẻ. Ai nhận tiền qua QR thì lưu tài khoản
-            ngay trên máy của mình.
+            Chỉ lưu trên máy này, không theo link chia sẻ. Ai nhận tiền qua QR thì lưu tài khoản
+            trên máy mình.
           </p>
           <p className="mt-1 text-xs leading-relaxed text-ink-2">
-            Chỉ nhập tài khoản của chính người này, khi họ đồng ý cho lưu trên máy này để nhận tiền
-            qua VietQR.
+            Chỉ nhập tài khoản của chính người này, khi họ đồng ý lưu trên máy này để nhận VietQR.
           </p>
         </div>
       )}

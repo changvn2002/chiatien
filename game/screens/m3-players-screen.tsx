@@ -71,7 +71,7 @@ export function M3PlayersScreen({
     <div>
       {embedded ? null : <ScreenTitle>Chọn người chơi</ScreenTitle>}
       <p className="mt-1 text-base text-ink-2">
-        Đã chọn {n} người. Mỗi người có một màu danh tính riêng, luôn kèm tên và ảnh đại diện.
+        Đã chọn {n} người — mỗi người một màu riêng, kèm tên và ảnh.
       </p>
       <div className="mt-4 space-y-2">
         {input.members.map((m) => {

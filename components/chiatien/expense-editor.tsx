@@ -199,8 +199,7 @@ export function ExpenseEditor({
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4" onChange={() => setTouched(true)}>
       {restoredDraft && (
         <p role="status" className="text-base font-medium text-brand-deep">
-          Đã khôi phục nội dung bạn nhập dở từ lần trước — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ để
-          bỏ bản nháp này.
+          Đã khôi phục nội dung bạn nhập dở — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ để bỏ nháp này.
         </p>
       )}
       {savedMoreNotice && (

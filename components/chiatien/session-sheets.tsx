@@ -291,12 +291,12 @@ export function SessionSheets(props: SessionSheetsProps) {
         <ul className="mt-3 grid list-disc gap-2 pl-5 text-base leading-relaxed text-ink-2">
           <li>
             Link chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
-            tổng {formatVND(total)} — không chứa thông tin ngân hàng; mã QR chỉ hiện trên máy đã lưu
-            tài khoản của người nhận.
+            tổng {formatVND(total)} — không có thông tin ngân hàng; QR chỉ hiện trên máy đã lưu tài
+            khoản người nhận.
           </li>
           <li>
-            Người nhận mở link sẽ có bản sao trên máy của họ và sửa tiếp được — đối chiếu lại trước
-            khi thanh toán theo.
+            Người nhận có bản sao trên máy của họ, sửa tiếp được — đối chiếu lại trước khi thanh
+            toán.
           </li>
           <li>Chỉ gửi link cho người trong nhóm.</li>
         </ul>
@@ -330,7 +330,7 @@ export function SessionSheets(props: SessionSheetsProps) {
       <ConfirmDialog
         open={confirmDeleteSession}
         title="Xoá cuộc chia này?"
-        message={`Cuộc chia "${session.title}" cùng mọi khoản chi trong đó sẽ bị xoá khỏi máy này. Bạn vẫn hoàn tác được ngay sau khi xoá.`}
+        message={`Cuộc chia "${session.title}" và mọi khoản chi sẽ bị xoá khỏi máy này. Bạn vẫn hoàn tác được ngay sau khi xoá.`}
         confirmLabel="Xoá cuộc chia"
         onCancel={onCancelDeleteSession}
         onConfirm={onConfirmDeleteSession}
@@ -352,7 +352,7 @@ export function SessionSheets(props: SessionSheetsProps) {
         title="Xoá khoản chi này?"
         message={
           pendingDeleteExpense
-            ? `Khoản chi "${pendingDeleteExpense.title}" sẽ bị xoá và số dư quyết toán tính lại ngay. Bạn vẫn hoàn tác được ngay sau khi xoá.`
+            ? `Khoản chi "${pendingDeleteExpense.title}" sẽ bị xoá, số dư tính lại ngay. Bạn vẫn hoàn tác được ngay sau khi xoá.`
             : ''
         }
         confirmLabel="Xoá khoản chi"
