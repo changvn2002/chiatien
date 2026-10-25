@@ -205,7 +205,10 @@ export function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () =
 /** Khung cảnh báo đỏ (chặn). */
 export function RedAlert({ children }: { children: React.ReactNode }) {
   return (
-    <div role="alert" className="rounded-lg border border-debt-solid bg-debt-bg px-3 py-2.5 text-base text-debt-ink">
+    <div
+      role="alert"
+      className="rounded-lg border border-debt-solid bg-debt-bg px-3 py-2.5 text-base text-debt-ink"
+    >
       {children}
     </div>
   );
@@ -214,7 +217,10 @@ export function RedAlert({ children }: { children: React.ReactNode }) {
 /** Khung cảnh báo vàng (cần đối chiếu). */
 export function YellowAlert({ children }: { children: React.ReactNode }) {
   return (
-    <div role="alert" className="rounded-lg border border-warning-solid bg-warning-bg px-3 py-2.5 text-base text-ink">
+    <div
+      role="alert"
+      className="rounded-lg border border-warning-solid bg-warning-bg px-3 py-2.5 text-base text-ink"
+    >
       {children}
     </div>
   );
@@ -223,7 +229,9 @@ export function YellowAlert({ children }: { children: React.ReactNode }) {
 /** Khung thông tin trung tính. */
 export function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-line bg-grey-50 px-3 py-2.5 text-base text-ink">{children}</div>
+    <div className="rounded-lg border border-line bg-grey-50 px-3 py-2.5 text-base text-ink">
+      {children}
+    </div>
   );
 }
 

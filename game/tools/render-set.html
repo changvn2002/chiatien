@@ -1,256 +1,319 @@
 <!doctype html>
 <html lang="vi">
-<head>
-<meta charset="utf-8">
-<title>render set atlas — chiatien game (lane A3)</title>
-<style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style>
-<script type="importmap">
-{"imports":{
-  "three":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/build/three.module.js",
-  "three/addons/":"/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/examples/jsm/"
-}}
-</script>
-</head>
-<body>
-<script type="module">
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-// render-set.html — pipeline A3 (FIX-V3): render 1 nhân vật (model gốc hoặc
-// biến thể nướng) thành sprite sheet PNG trong suốt + anchors neo đầu.
-// Mở rộng từ render-atlas.html (lane A): thêm hành động `run`, số frame RIÊNG
-// theo hành động (framesSpec), biến thể (ẩn node phụ kiện + tint theo bộ phận),
-// và metadata neo đầu per-frame (xương/node `head` chiếu qua camera).
-//
-// Query:
-//   ?src=<url glb>&family=adv|blocky&cell=128
-//   &framesSpec=idle:3,run:5,punchA:6,...   (mặc định theo family)
-//   &hide=regex1;regex2     node bị ẩn thêm (ngoài vũ khí)
-//   &tintBody=RRGGBB        tint các mesh thân/tay/chân (trang phục)
-//   &tintAll=RRGGBB         tint mọi mesh
-//   &tintHead=RRGGBB        tint riêng mesh đầu
-// Trang phục vụ từ gốc ~/workspace/mini-apps (render-set.mjs lo server+proxy).
-
-const qs = new URLSearchParams(location.search);
-const CELL = parseInt(qs.get('cell') || '128', 10);
-const FAMILY = qs.get('family') || 'adv';
-
-// Ánh xạ hành động → clip THẬT đọc từ GLB (xem handoff A3 §hồ sơ từng bộ).
-// [action, clip, t0, t1, normalize-bbox]
-const ACTIONS_ADV = [
-  ['idle',    'Idle',                             0.00, 0.92, false],
-  ['run',     'Running_A',                        0.00, 1.00, true ],
-  ['punchA',  'Unarmed_Melee_Attack_Punch_A',     0.00, 1.00, false],
-  ['punchB',  'Unarmed_Melee_Attack_Punch_B',     0.00, 1.00, false],
-  ['kick',    'Unarmed_Melee_Attack_Kick',        0.00, 1.00, false],
-  ['hitA',    'Hit_A',                            0.00, 1.00, false],
-  ['hitB',    'Hit_B',                            0.00, 1.00, false],
-  ['dodge',   'Dodge_Backward',                   0.00, 1.00, true ],
-  ['fall',    'Death_A',                          0.04, 0.97, true ],
-  ['victory', 'Cheer',                            0.00, 1.00, false],
-];
-// Kenney Blocky: pack THIẾU clip hit/dodge thật (đã kiểm GLB) — hit lấy đoạn
-// choáng đầu của `die`, dodge lấy đoạn cúi của `pick-up`, victory = emote-yes.
-// Mọi thay thế đều ghi trong manifest/handoff, không gọi là clip gốc.
-const ACTIONS_BLOCKY = [
-  ['idle',    'idle',              0.00, 1.00, false],
-  ['run',     'sprint',            0.00, 1.00, true ],
-  ['punchA',  'attack-melee-right',0.00, 1.00, false],
-  ['punchB',  'attack-melee-left', 0.00, 1.00, false],
-  ['kick',    'attack-kick-right', 0.00, 1.00, false],
-  ['hitA',    'die',               0.00, 0.30, true ],
-  ['hitB',    'emote-no',          0.00, 1.00, false],
-  ['dodge',   'pick-up',           0.00, 0.55, true ],
-  ['fall',    'die',               0.00, 1.00, true ],
-  ['victory', 'emote-yes',         0.00, 1.00, false],
-];
-const ACTIONS = FAMILY === 'blocky' ? ACTIONS_BLOCKY : ACTIONS_ADV;
-const DEFAULT_SPEC = { idle:3, run:5, punchA:6, punchB:5, kick:6, hitA:3, hitB:3, dodge:3, fall:4, victory:3 };
-const spec = { ...DEFAULT_SPEC };
-if (qs.get('framesSpec')) {
-  for (const part of qs.get('framesSpec').split(',')) {
-    const [k, v] = part.split(':'); if (k && v) spec[k] = parseInt(v, 10);
-  }
-}
-const COLS = Math.max(...ACTIONS.map(([k]) => spec[k] || 1));
-
-const WEAPON = /sword|shield|axe|spellbook|wand|staff|crossbow|knife|mug|throwable|blade|quiver|arrow/i;
-const hideRes = (qs.get('hide') || '').split(';').filter(Boolean).map(s => new RegExp(s, 'i'));
-const BODY_RE = /body|arm|leg|torso|chest/i;
-const HEAD_RE = /head/i;
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(1);
-renderer.setSize(CELL, CELL);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
-document.body.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 60);
-camera.position.set(0, 1.22, 4.55);
-camera.lookAt(0, 0.82, 0);
-
-scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3f4a, 1.35));
-const key = new THREE.DirectionalLight(0xffffff, 2.0);
-key.position.set(2.4, 4.2, 3.0);
-key.castShadow = true;
-key.shadow.mapSize.set(1024, 1024);
-key.shadow.camera.left = -2; key.shadow.camera.right = 2;
-key.shadow.camera.top = 3; key.shadow.camera.bottom = -1;
-key.shadow.radius = 4;
-scene.add(key);
-const rim = new THREE.DirectionalLight(0xbfd4ff, 0.8);
-rim.position.set(-3, 2, -2.5);
-scene.add(rim);
-
-const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(3.2, 40),
-  new THREE.ShadowMaterial({ opacity: 0.22 })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-const SRC = qs.get('src');
-if (!SRC) throw new Error('thieu ?src=');
-const gltf = await new GLTFLoader().loadAsync(SRC);
-const model = gltf.scene;
-const tintAll = qs.get('tintAll'), tintBody = qs.get('tintBody'), tintHead = qs.get('tintHead');
-model.traverse(o => {
-  const nm = o.name || '';
-  if (WEAPON.test(nm) || hideRes.some(r => r.test(nm))) o.visible = false;
-  if (o.isMesh) {
-    o.castShadow = true;
-    o.material = o.material.clone();
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    // tên mesh quyết định nhóm tint: đầu riêng, thân/tay/chân = trang phục.
-    let hex = null;
-    if (tintAll) hex = tintAll;
-    else if (HEAD_RE.test(nm) && tintHead) hex = tintHead;
-    else if (BODY_RE.test(nm) && tintBody) hex = tintBody;
-    if (hex) mats.forEach(m => { if (m) m.color.set('#' + hex); });
-  }
-});
-// chuẩn hoá chiều cao 1,8, chân chạm y=0, tâm x/z về 0 (như pipeline cũ)
-const box = new THREE.Box3().setFromObject(model);
-const size = box.getSize(new THREE.Vector3());
-model.scale.setScalar(1.8 / size.y);
-const box2 = new THREE.Box3().setFromObject(model);
-model.position.x -= (box2.min.x + box2.max.x) / 2;
-model.position.z -= (box2.min.z + box2.max.z) / 2;
-model.position.y -= box2.min.y;
-const group = new THREE.Group();
-group.add(model);
-// Góc yaw: mặc định profile cũ rotation.y = π/2 (mặt +Z → hướng phải màn
-// hình). Lane A5 (FIX-V4.1): bộ blocky render lại ở góc ĐÃ CHỨNG MINH của
-// lane A4 cho preview — ?yawDeg=-35, tức rotation.y = −35° TUYỆT ĐỐI (mặt
-// +Z hướng về camera 3/4, cùng hệ quy chiếu với render-preview.html:
-// yaw 0° = chính diện). Quy đổi so với trục profile cũ π/2: −35° − 90° =
-// −125° lệch khỏi profile. Chỉ blocky truyền tham số này; hai bộ kia
-// không truyền → giữ nguyên profile π/2.
-const YAW_RAD = qs.has('yawDeg')
-  ? (parseFloat(qs.get('yawDeg')) * Math.PI) / 180
-  : Math.PI / 2;
-group.rotation.y = YAW_RAD;
-scene.add(group);
-
-const headNode = model.getObjectByName('head') || null;
-
-const clips = {};
-for (const c of gltf.animations) clips[c.name] = c;
-const mixer = new THREE.AnimationMixer(model);
-
-function skinnedBBox() {
-  scene.updateMatrixWorld(true);
-  const b = new THREE.Box3();
-  const v = new THREE.Vector3();
-  let any = false;
-  model.traverse(o => {
-    if (o.isSkinnedMesh) {
-      any = true;
-      const pos = o.geometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        v.fromBufferAttribute(pos, i);
-        o.applyBoneTransform(i, v);
-        v.applyMatrix4(o.matrixWorld);
-        b.expandByPoint(v);
+  <head>
+    <meta charset="utf-8" />
+    <title>render set atlas — chiatien game (lane A3)</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
       }
-    }
-  });
-  if (!any) return new THREE.Box3().setFromObject(model); // blocky: node-anim, không skinned
-  return b;
-}
+      canvas {
+        display: block;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/build/three.module.js",
+          "three/addons/": "/chiatien-game-v2/visual-demos/c-3d-prerender/node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-function headAnchor() {
-  // Neo đầu: vị trí xương/node `head` + 0,30 đơn vị lên (xấp xỉ đỉnh đầu),
-  // chiếu qua camera → toạ độ chuẩn hoá 0..1 TRONG Ô (x: trái→phải, y: trên→dưới).
-  if (!headNode) return null;
-  scene.updateMatrixWorld(true);
-  camera.updateMatrixWorld();
-  const p = new THREE.Vector3();
-  headNode.getWorldPosition(p);
-  p.y += 0.30;
-  p.project(camera);
-  return {
-    x: Math.round(((p.x + 1) / 2) * 1000) / 1000,
-    y: Math.round(((1 - (p.y + 1) / 2)) * 1000) / 1000,
-  };
-}
+      // render-set.html — pipeline A3 (FIX-V3): render 1 nhân vật (model gốc hoặc
+      // biến thể nướng) thành sprite sheet PNG trong suốt + anchors neo đầu.
+      // Mở rộng từ render-atlas.html (lane A): thêm hành động `run`, số frame RIÊNG
+      // theo hành động (framesSpec), biến thể (ẩn node phụ kiện + tint theo bộ phận),
+      // và metadata neo đầu per-frame (xương/node `head` chiếu qua camera).
+      //
+      // Query:
+      //   ?src=<url glb>&family=adv|blocky&cell=128
+      //   &framesSpec=idle:3,run:5,punchA:6,...   (mặc định theo family)
+      //   &hide=regex1;regex2     node bị ẩn thêm (ngoài vũ khí)
+      //   &tintBody=RRGGBB        tint các mesh thân/tay/chân (trang phục)
+      //   &tintAll=RRGGBB         tint mọi mesh
+      //   &tintHead=RRGGBB        tint riêng mesh đầu
+      // Trang phục vụ từ gốc ~/workspace/mini-apps (render-set.mjs lo server+proxy).
 
-function renderAt(clipName, t01, normalize) {
-  const clip = clips[clipName];
-  if (!clip) throw new Error('thieu clip ' + clipName);
-  mixer.stopAllAction();
-  const a = mixer.clipAction(clip);
-  a.reset().setLoop(THREE.LoopOnce, 1).play();
-  mixer.setTime(clip.duration * t01);
-  group.position.set(0, 0, 0);
-  if (normalize) {
-    const b = skinnedBBox();
-    group.position.x -= (b.min.x + b.max.x) / 2;
-    group.position.z -= (b.min.z + b.max.z) / 2;
-    group.position.y -= b.min.y;
-  }
-  const anchor = headAnchor();
-  renderer.render(scene, camera);
-  return anchor;
-}
+      const qs = new URLSearchParams(location.search);
+      const CELL = parseInt(qs.get('cell') || '128', 10);
+      const FAMILY = qs.get('family') || 'adv';
 
-const cv = document.createElement('canvas');
-cv.width = COLS * CELL;
-cv.height = ACTIONS.length * CELL;
-const ctx = cv.getContext('2d');
-const anchors = {};
-ACTIONS.forEach(([action, clipName, t0, t1, norm], r) => {
-  const n = spec[action] || 1;
-  anchors[action] = [];
-  for (let f = 0; f < n; f++) {
-    const t = n === 1 ? t0 : t0 + (t1 - t0) * (f / (n - 1));
-    anchors[action].push(renderAt(clipName, t, norm));
-    ctx.drawImage(renderer.domElement, f * CELL, r * CELL);
-  }
-});
+      // Ánh xạ hành động → clip THẬT đọc từ GLB (xem handoff A3 §hồ sơ từng bộ).
+      // [action, clip, t0, t1, normalize-bbox]
+      const ACTIONS_ADV = [
+        ['idle', 'Idle', 0.0, 0.92, false],
+        ['run', 'Running_A', 0.0, 1.0, true],
+        ['punchA', 'Unarmed_Melee_Attack_Punch_A', 0.0, 1.0, false],
+        ['punchB', 'Unarmed_Melee_Attack_Punch_B', 0.0, 1.0, false],
+        ['kick', 'Unarmed_Melee_Attack_Kick', 0.0, 1.0, false],
+        ['hitA', 'Hit_A', 0.0, 1.0, false],
+        ['hitB', 'Hit_B', 0.0, 1.0, false],
+        ['dodge', 'Dodge_Backward', 0.0, 1.0, true],
+        ['fall', 'Death_A', 0.04, 0.97, true],
+        ['victory', 'Cheer', 0.0, 1.0, false],
+      ];
+      // Kenney Blocky: pack THIẾU clip hit/dodge thật (đã kiểm GLB) — hit lấy đoạn
+      // choáng đầu của `die`, dodge lấy đoạn cúi của `pick-up`, victory = emote-yes.
+      // Mọi thay thế đều ghi trong manifest/handoff, không gọi là clip gốc.
+      const ACTIONS_BLOCKY = [
+        ['idle', 'idle', 0.0, 1.0, false],
+        ['run', 'sprint', 0.0, 1.0, true],
+        ['punchA', 'attack-melee-right', 0.0, 1.0, false],
+        ['punchB', 'attack-melee-left', 0.0, 1.0, false],
+        ['kick', 'attack-kick-right', 0.0, 1.0, false],
+        ['hitA', 'die', 0.0, 0.3, true],
+        ['hitB', 'emote-no', 0.0, 1.0, false],
+        ['dodge', 'pick-up', 0.0, 0.55, true],
+        ['fall', 'die', 0.0, 1.0, true],
+        ['victory', 'emote-yes', 0.0, 1.0, false],
+      ];
+      const ACTIONS = FAMILY === 'blocky' ? ACTIONS_BLOCKY : ACTIONS_ADV;
+      const DEFAULT_SPEC = {
+        idle: 3,
+        run: 5,
+        punchA: 6,
+        punchB: 5,
+        kick: 6,
+        hitA: 3,
+        hitB: 3,
+        dodge: 3,
+        fall: 4,
+        victory: 3,
+      };
+      const spec = { ...DEFAULT_SPEC };
+      if (qs.get('framesSpec')) {
+        for (const part of qs.get('framesSpec').split(',')) {
+          const [k, v] = part.split(':');
+          if (k && v) spec[k] = parseInt(v, 10);
+        }
+      }
+      const COLS = Math.max(...ACTIONS.map(([k]) => spec[k] || 1));
 
-window.__meta = {
-  family: FAMILY, cell: CELL, cols: COLS, rows: ACTIONS.length,
-  yawDeg: qs.has('yawDeg') ? parseFloat(qs.get('yawDeg')) : 90,
-  sheetWidth: cv.width, sheetHeight: cv.height,
-  actions: ACTIONS.map(([k, clip, t0, t1, norm]) => ({ action: k, clip, t0, t1, normalize: norm, frames: spec[k] })),
-  anchors,
-  headNodeFound: !!headNode,
-  allClips: gltf.animations.map(c => c.name),
-  clipDurations: Object.fromEntries(gltf.animations.map(c => [c.name, Math.round(c.duration * 1000) / 1000])),
-  nodes: (() => { const a = []; model.traverse(o => a.push(o.name)); return a; })(),
-  variant: { hide: qs.get('hide') || '', tintBody: tintBody || '', tintAll: tintAll || '', tintHead: tintHead || '' },
-};
-document.body.innerHTML = '';
-document.body.appendChild(cv);
-await new Promise(r => setTimeout(r, 150));
-document.title = 'SHEET_DONE ' + JSON.stringify({ cell: CELL, family: FAMILY, cols: COLS, rows: ACTIONS.length });
-</script>
-</body>
+      const WEAPON =
+        /sword|shield|axe|spellbook|wand|staff|crossbow|knife|mug|throwable|blade|quiver|arrow/i;
+      const hideRes = (qs.get('hide') || '')
+        .split(';')
+        .filter(Boolean)
+        .map((s) => new RegExp(s, 'i'));
+      const BODY_RE = /body|arm|leg|torso|chest/i;
+      const HEAD_RE = /head/i;
+
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        preserveDrawingBuffer: true,
+      });
+      renderer.setPixelRatio(1);
+      renderer.setSize(CELL, CELL);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 60);
+      camera.position.set(0, 1.22, 4.55);
+      camera.lookAt(0, 0.82, 0);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3f4a, 1.35));
+      const key = new THREE.DirectionalLight(0xffffff, 2.0);
+      key.position.set(2.4, 4.2, 3.0);
+      key.castShadow = true;
+      key.shadow.mapSize.set(1024, 1024);
+      key.shadow.camera.left = -2;
+      key.shadow.camera.right = 2;
+      key.shadow.camera.top = 3;
+      key.shadow.camera.bottom = -1;
+      key.shadow.radius = 4;
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0xbfd4ff, 0.8);
+      rim.position.set(-3, 2, -2.5);
+      scene.add(rim);
+
+      const ground = new THREE.Mesh(
+        new THREE.CircleGeometry(3.2, 40),
+        new THREE.ShadowMaterial({ opacity: 0.22 }),
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const SRC = qs.get('src');
+      if (!SRC) throw new Error('thieu ?src=');
+      const gltf = await new GLTFLoader().loadAsync(SRC);
+      const model = gltf.scene;
+      const tintAll = qs.get('tintAll'),
+        tintBody = qs.get('tintBody'),
+        tintHead = qs.get('tintHead');
+      model.traverse((o) => {
+        const nm = o.name || '';
+        if (WEAPON.test(nm) || hideRes.some((r) => r.test(nm))) o.visible = false;
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.material = o.material.clone();
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          // tên mesh quyết định nhóm tint: đầu riêng, thân/tay/chân = trang phục.
+          let hex = null;
+          if (tintAll) hex = tintAll;
+          else if (HEAD_RE.test(nm) && tintHead) hex = tintHead;
+          else if (BODY_RE.test(nm) && tintBody) hex = tintBody;
+          if (hex)
+            mats.forEach((m) => {
+              if (m) m.color.set('#' + hex);
+            });
+        }
+      });
+      // chuẩn hoá chiều cao 1,8, chân chạm y=0, tâm x/z về 0 (như pipeline cũ)
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      model.scale.setScalar(1.8 / size.y);
+      const box2 = new THREE.Box3().setFromObject(model);
+      model.position.x -= (box2.min.x + box2.max.x) / 2;
+      model.position.z -= (box2.min.z + box2.max.z) / 2;
+      model.position.y -= box2.min.y;
+      const group = new THREE.Group();
+      group.add(model);
+      // Góc yaw: mặc định profile cũ rotation.y = π/2 (mặt +Z → hướng phải màn
+      // hình). Lane A5 (FIX-V4.1): bộ blocky render lại ở góc ĐÃ CHỨNG MINH của
+      // lane A4 cho preview — ?yawDeg=-35, tức rotation.y = −35° TUYỆT ĐỐI (mặt
+      // +Z hướng về camera 3/4, cùng hệ quy chiếu với render-preview.html:
+      // yaw 0° = chính diện). Quy đổi so với trục profile cũ π/2: −35° − 90° =
+      // −125° lệch khỏi profile. Chỉ blocky truyền tham số này; hai bộ kia
+      // không truyền → giữ nguyên profile π/2.
+      const YAW_RAD = qs.has('yawDeg')
+        ? (parseFloat(qs.get('yawDeg')) * Math.PI) / 180
+        : Math.PI / 2;
+      group.rotation.y = YAW_RAD;
+      scene.add(group);
+
+      const headNode = model.getObjectByName('head') || null;
+
+      const clips = {};
+      for (const c of gltf.animations) clips[c.name] = c;
+      const mixer = new THREE.AnimationMixer(model);
+
+      function skinnedBBox() {
+        scene.updateMatrixWorld(true);
+        const b = new THREE.Box3();
+        const v = new THREE.Vector3();
+        let any = false;
+        model.traverse((o) => {
+          if (o.isSkinnedMesh) {
+            any = true;
+            const pos = o.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              v.fromBufferAttribute(pos, i);
+              o.applyBoneTransform(i, v);
+              v.applyMatrix4(o.matrixWorld);
+              b.expandByPoint(v);
+            }
+          }
+        });
+        if (!any) return new THREE.Box3().setFromObject(model); // blocky: node-anim, không skinned
+        return b;
+      }
+
+      function headAnchor() {
+        // Neo đầu: vị trí xương/node `head` + 0,30 đơn vị lên (xấp xỉ đỉnh đầu),
+        // chiếu qua camera → toạ độ chuẩn hoá 0..1 TRONG Ô (x: trái→phải, y: trên→dưới).
+        if (!headNode) return null;
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld();
+        const p = new THREE.Vector3();
+        headNode.getWorldPosition(p);
+        p.y += 0.3;
+        p.project(camera);
+        return {
+          x: Math.round(((p.x + 1) / 2) * 1000) / 1000,
+          y: Math.round((1 - (p.y + 1) / 2) * 1000) / 1000,
+        };
+      }
+
+      function renderAt(clipName, t01, normalize) {
+        const clip = clips[clipName];
+        if (!clip) throw new Error('thieu clip ' + clipName);
+        mixer.stopAllAction();
+        const a = mixer.clipAction(clip);
+        a.reset().setLoop(THREE.LoopOnce, 1).play();
+        mixer.setTime(clip.duration * t01);
+        group.position.set(0, 0, 0);
+        if (normalize) {
+          const b = skinnedBBox();
+          group.position.x -= (b.min.x + b.max.x) / 2;
+          group.position.z -= (b.min.z + b.max.z) / 2;
+          group.position.y -= b.min.y;
+        }
+        const anchor = headAnchor();
+        renderer.render(scene, camera);
+        return anchor;
+      }
+
+      const cv = document.createElement('canvas');
+      cv.width = COLS * CELL;
+      cv.height = ACTIONS.length * CELL;
+      const ctx = cv.getContext('2d');
+      const anchors = {};
+      ACTIONS.forEach(([action, clipName, t0, t1, norm], r) => {
+        const n = spec[action] || 1;
+        anchors[action] = [];
+        for (let f = 0; f < n; f++) {
+          const t = n === 1 ? t0 : t0 + (t1 - t0) * (f / (n - 1));
+          anchors[action].push(renderAt(clipName, t, norm));
+          ctx.drawImage(renderer.domElement, f * CELL, r * CELL);
+        }
+      });
+
+      window.__meta = {
+        family: FAMILY,
+        cell: CELL,
+        cols: COLS,
+        rows: ACTIONS.length,
+        yawDeg: qs.has('yawDeg') ? parseFloat(qs.get('yawDeg')) : 90,
+        sheetWidth: cv.width,
+        sheetHeight: cv.height,
+        actions: ACTIONS.map(([k, clip, t0, t1, norm]) => ({
+          action: k,
+          clip,
+          t0,
+          t1,
+          normalize: norm,
+          frames: spec[k],
+        })),
+        anchors,
+        headNodeFound: !!headNode,
+        allClips: gltf.animations.map((c) => c.name),
+        clipDurations: Object.fromEntries(
+          gltf.animations.map((c) => [c.name, Math.round(c.duration * 1000) / 1000]),
+        ),
+        nodes: (() => {
+          const a = [];
+          model.traverse((o) => a.push(o.name));
+          return a;
+        })(),
+        variant: {
+          hide: qs.get('hide') || '',
+          tintBody: tintBody || '',
+          tintAll: tintAll || '',
+          tintHead: tintHead || '',
+        },
+      };
+      document.body.innerHTML = '';
+      document.body.appendChild(cv);
+      await new Promise((r) => setTimeout(r, 150));
+      document.title =
+        'SHEET_DONE ' +
+        JSON.stringify({ cell: CELL, family: FAMILY, cols: COLS, rows: ACTIONS.length });
+    </script>
+  </body>
 </html>

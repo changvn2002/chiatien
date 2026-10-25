@@ -55,7 +55,9 @@ export function parseAvatarStore(raw: string | null): Map<string, string> {
 }
 
 /** Đọc toàn bộ kho ảnh trên máy. Không có storage (SSR/test) → map rỗng. */
-export function loadAvatarPhotos(storage: AvatarStorageLike | null = defaultStorage()): Map<string, string> {
+export function loadAvatarPhotos(
+  storage: AvatarStorageLike | null = defaultStorage(),
+): Map<string, string> {
   if (!storage) return new Map();
   try {
     return parseAvatarStore(storage.getItem(AVATAR_STORE_KEY));

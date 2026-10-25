@@ -108,8 +108,8 @@ export function PlayScreen({
               </button>
             </div>
             <p className="mt-1.5 text-sm text-ink-2">
-              Tua nhanh và {isG2 ? 'quay nhanh' : 'đánh nhanh'} chỉ đổi tốc độ diễn — kết quả của ván
-              đã được chốt và không đổi.
+              Tua nhanh và {isG2 ? 'quay nhanh' : 'đánh nhanh'} chỉ đổi tốc độ diễn — kết quả của
+              ván đã được chốt và không đổi.
             </p>
             <button
               type="button"
@@ -156,8 +156,8 @@ export function PlayScreen({
         >
           <div className="w-full max-w-md rounded-lg bg-card px-4 py-4">
             <p className="text-base leading-relaxed text-ink">
-              Huỷ ván {record.code} và chia đều cho lành? Việc huỷ này hiện cho cả nhóm và được ghi vào
-              nhật ký phiên.
+              Huỷ ván {record.code} và chia đều cho lành? Việc huỷ này hiện cho cả nhóm và được ghi
+              vào nhật ký phiên.
             </p>
             <button
               type="button"

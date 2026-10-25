@@ -2,11 +2,7 @@
 // frame, ngưỡng ~45 → bậc 1, ~30 → bậc 2, không nâng bậc lại giữa ván.
 
 import { describe, expect, it } from 'vitest';
-import {
-  DEGRADE_WINDOW_FRAMES,
-  FpsDegradeTracker,
-  degradeLevelForFps,
-} from './degrade';
+import { DEGRADE_WINDOW_FRAMES, FpsDegradeTracker, degradeLevelForFps } from './degrade';
 
 function feed(tracker: FpsDegradeTracker, frameMs: number, frames: number): void {
   for (let i = 0; i < frames; i++) tracker.push(frameMs);

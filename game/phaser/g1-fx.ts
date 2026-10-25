@@ -331,8 +331,7 @@ export type G1FloaterSubmit =
   | { type: 'dropped' };
 
 export type G1FloaterPumpAction =
-  | { type: 'show'; show: G1FloaterShow }
-  | { type: 'merge'; targetId: string; damage: number };
+  { type: 'show'; show: G1FloaterShow } | { type: 'merge'; targetId: string; damage: number };
 
 /**
  * Hành động NÉ LIÊN TỤC cho floater đang sống (FIX-V4.1): 'move' = trượt
@@ -340,8 +339,7 @@ export type G1FloaterPumpAction =
  * trong bán kính tìm → scene mờ floater sớm (plate luôn thắng).
  */
 export type G1FloaterEvadeAction =
-  | { type: 'move'; id: number; x: number; y: number }
-  | { type: 'fade'; id: number };
+  { type: 'move'; id: number; x: number; y: number } | { type: 'fade'; id: number };
 
 /** Điểm neo spawn của một nạn nhân theo loại floater (scene tính từ thân hiện tại). */
 export interface G1FloaterAnchors {
@@ -368,8 +366,13 @@ export interface G1FloaterAnchors {
  *   trí sạch thì thả ĐÚNG 1 mục đầu hàng (không sạch → giữ lại chờ).
  */
 export class G1FloaterDirector {
-  private visible: Array<{ id: number; entry: G1FloaterEntry; rect: G1Rect; x: number; y: number }> =
-    [];
+  private visible: Array<{
+    id: number;
+    entry: G1FloaterEntry;
+    rect: G1Rect;
+    x: number;
+    y: number;
+  }> = [];
   private queue: G1FloaterEntry[] = [];
   private nextId = 1;
   private nextReleaseAt = 0;
@@ -442,9 +445,7 @@ export class G1FloaterDirector {
 
   private enqueue(entry: G1FloaterEntry): G1FloaterSubmit {
     if (entry.kind === 'damage') {
-      const existing = this.queue.find(
-        (q) => q.kind === 'damage' && q.targetId === entry.targetId,
-      );
+      const existing = this.queue.find((q) => q.kind === 'damage' && q.targetId === entry.targetId);
       if (existing) {
         existing.damage += entry.damage;
         existing.crit = existing.crit || entry.crit;

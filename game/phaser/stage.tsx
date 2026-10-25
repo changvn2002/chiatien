@@ -163,8 +163,7 @@ export function GameStage(props: StageProps) {
       gameRef.current = game;
       game.scene.add(scenes.G2_SCENE_KEY, scenes.G2Scene, false);
       game.scene.add(scenes.G1_SCENE_KEY, scenes.G1Scene, false);
-      const sceneKey =
-        current.log.params.game === 'g2' ? scenes.G2_SCENE_KEY : scenes.G1_SCENE_KEY;
+      const sceneKey = current.log.params.game === 'g2' ? scenes.G2_SCENE_KEY : scenes.G1_SCENE_KEY; // gitleaks:allow — hằng khoá scene Phaser, không phải thông tin bí mật
       game.scene.start(sceneKey, {
         log: current.log,
         players: current.players,

@@ -75,8 +75,7 @@ describe('(2) phân phối', () => {
     const N = 4000;
     for (let seed = 0; seed < N; seed++) {
       const log = runG1(seed, p);
-      const ids =
-        log.result.kind === 'single' ? [log.result.payerId] : log.result.payerIds;
+      const ids = log.result.kind === 'single' ? [log.result.payerId] : log.result.payerIds;
       // Co-payers: mỗi người trong tập nhận 1/k «suất đãi» để tổng xác suất vẫn = 1.
       for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1 / ids.length);
     }
@@ -172,7 +171,11 @@ describe('(4) G2 hình học điểm dừng', () => {
       const cell = 360 / n;
       for (let seed = 0; seed < 2000; seed++) {
         const log = runG2(seed, p);
-        const spin = log.events[0] as { cellIndex: number; finalAngleDeg: number; spinSeconds: number };
+        const spin = log.events[0] as {
+          cellIndex: number;
+          finalAngleDeg: number;
+          spinSeconds: number;
+        };
         const frac = (spin.finalAngleDeg - spin.cellIndex * cell) / cell;
         expect(frac).toBeGreaterThanOrEqual(0.25 - 1e-9);
         expect(frac).toBeLessThanOrEqual(0.75 + 1e-9);
@@ -245,7 +248,9 @@ describe('(6) verifyReplay', () => {
   });
   it('sửa result → false', () => {
     const log = runG2(99, params('g2', 4));
-    const other = log.params.players.find((pl) => pl.id !== (log.result as { payerId: string }).payerId)!;
+    const other = log.params.players.find(
+      (pl) => pl.id !== (log.result as { payerId: string }).payerId,
+    )!;
     const tampered = { ...log, result: { kind: 'single' as const, payerId: other.id } };
     expect(verifyReplay(tampered)).toBe(false);
   });

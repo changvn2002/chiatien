@@ -61,7 +61,13 @@ function PayerBadge({
   ringHex?: string;
 }) {
   return (
-    <PlayerAvatar name={name} colorIndex={colorIndex} size={size} photoDataUrl={photoDataUrl} ringHex={ringHex} />
+    <PlayerAvatar
+      name={name}
+      colorIndex={colorIndex}
+      size={size}
+      photoDataUrl={photoDataUrl}
+      ringHex={ringHex}
+    />
   );
 }
 
@@ -274,7 +280,10 @@ export function M7ResultScreen({
         {/* Đường xé phiếu — ngôn ngữ phiếu của app chính
             (slip-card.tsx: giấy phiếu paper-grain + đường xé đứt
             nét): đặt LÊN cấu trúc ai→ai, không đổi cấu trúc/nội dung. */}
-        <div aria-hidden className="relative mt-2 border-t-2 border-dashed border-line-strong lg:mt-3">
+        <div
+          aria-hidden
+          className="relative mt-2 border-t-2 border-dashed border-line-strong lg:mt-3"
+        >
           <span className="absolute top-0 -left-[18px] h-3 w-3 -translate-y-1/2 rounded-full bg-canvas" />
           <span className="absolute top-0 -right-[18px] h-3 w-3 -translate-y-1/2 rounded-full bg-canvas" />
         </div>
@@ -323,13 +332,17 @@ export function M7ResultScreen({
             <span className="text-sm font-bold tracking-[0.2em] text-white">VietQR</span>
             <span className="text-xs text-white">Đối chiếu tên + số tiền trước khi quét</span>
           </div>
-          <h3 className="text-base leading-snug font-semibold text-ink">VietQR của quán cho người đãi quét</h3>
+          <h3 className="text-base leading-snug font-semibold text-ink">
+            VietQR của quán cho người đãi quét
+          </h3>
           {record.qr.accountName ? (
             <p className="mt-1 text-base leading-snug text-ink lg:leading-normal">
               Tên quán / chủ tài khoản: <strong>{record.qr.accountName}</strong>
             </p>
           ) : (
-            <p className="mt-1 text-base leading-snug text-ink lg:leading-normal">QR này không ghi tên quán / chủ tài khoản.</p>
+            <p className="mt-1 text-base leading-snug text-ink lg:leading-normal">
+              QR này không ghi tên quán / chủ tài khoản.
+            </p>
           )}
           <p className="text-base leading-snug text-ink lg:leading-normal">
             Ngân hàng: {record.qr.bankDisplay} · Số tài khoản:{' '}
@@ -337,7 +350,9 @@ export function M7ResultScreen({
           </p>
           <p className="mt-1 text-base text-ink lg:mt-2">
             Số tiền phải trả:{' '}
-            <strong className="font-display text-[22px] font-extrabold lg:text-[24px]">{formatMoney(payAmount)}</strong>
+            <strong className="font-display text-[22px] font-extrabold lg:text-[24px]">
+              {formatMoney(payAmount)}
+            </strong>
             {result.kind === 'co-payers' ? (
               <span className="text-ink-2"> — mỗi người cùng đãi trả một phần như vậy</span>
             ) : null}
@@ -350,12 +365,16 @@ export function M7ResultScreen({
 
           {shownPayload && qrDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- QR là data-URL sinh tại client từ payload của quán; next/image không áp dụng cho data-URL động
-            <img src={qrDataUrl} alt="Mã QR của quán đã đối chiếu ở bước xác nhận" className="mx-auto mt-2 w-[180px] max-w-full lg:mt-3 lg:w-64" />
+            <img
+              src={qrDataUrl}
+              alt="Mã QR của quán đã đối chiếu ở bước xác nhận"
+              className="mx-auto mt-2 w-[180px] max-w-full lg:mt-3 lg:w-64"
+            />
           ) : (
             <div className="mt-3">
               <p className="text-base text-ink">
-                App đã mở lại nên mã QR không còn trong bộ nhớ. Hãy dán lại nội dung QR của quán — app chỉ
-                hiển thị khi nội dung khớp đúng mã đã khoá vào ván này.
+                App đã mở lại nên mã QR không còn trong bộ nhớ. Hãy dán lại nội dung QR của quán —
+                app chỉ hiển thị khi nội dung khớp đúng mã đã khoá vào ván này.
               </p>
               <textarea
                 rows={3}
@@ -381,8 +400,8 @@ export function M7ResultScreen({
               </button>
               {reenteredOk === false ? (
                 <p className="mt-1.5 text-base text-debt-ink">
-                  Nội dung vừa nhập không khớp mã QR đã khoá vào ván. Hãy dùng đúng QR của quán, hoặc quét
-                  QR gốc tại quầy.
+                  Nội dung vừa nhập không khớp mã QR đã khoá vào ván. Hãy dùng đúng QR của quán,
+                  hoặc quét QR gốc tại quầy.
                 </p>
               ) : null}
             </div>
@@ -406,8 +425,8 @@ export function M7ResultScreen({
       ) : (
         <div className="mt-5 lg:col-start-2 lg:row-start-2 lg:mt-4">
           <YellowAlert>
-            Ván này không hiển thị QR làm đích thanh toán vì QR chưa giải mã được ở bước đối chiếu. Người
-            đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.
+            Ván này không hiển thị QR làm đích thanh toán vì QR chưa giải mã được ở bước đối chiếu.
+            Người đãi hãy quét QR gốc tại quầy hoặc trên hoá đơn của quán.
           </YellowAlert>
           <div className="mt-3">
             <InfoBox>{QR_RESPONSIBILITY_LINE}</InfoBox>
@@ -450,8 +469,8 @@ export function M7ResultScreen({
         </figure>
       ) : log.params.game === 'g2' && spinEvent && spinEvent.type === 'spin' ? (
         <p className="mt-4 text-base text-ink lg:col-span-2">
-          Mâm đã dừng ở vị trí của {nameOf(result.kind === 'single' ? result.payerId : '')} — giữ nguyên
-          hình ảnh lúc mâm dừng ở màn chơi.
+          Mâm đã dừng ở vị trí của {nameOf(result.kind === 'single' ? result.payerId : '')} — giữ
+          nguyên hình ảnh lúc mâm dừng ở màn chơi.
         </p>
       ) : null}
 

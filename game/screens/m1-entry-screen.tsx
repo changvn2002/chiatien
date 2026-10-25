@@ -78,7 +78,9 @@ export function M1EntryScreen({
     if (!video) return;
     const payload = await decodeQrFromCanvasSource(video, video.videoWidth, video.videoHeight);
     if (!payload) {
-      setQrNote('Chưa đọc được QR trong khung hình. Hãy đưa QR vào gần hơn, đủ sáng và trọn 4 góc rồi chụp lại.');
+      setQrNote(
+        'Chưa đọc được QR trong khung hình. Hãy đưa QR vào gần hơn, đủ sáng và trọn 4 góc rồi chụp lại.',
+      );
       return;
     }
     applyPayload(payload, null);
@@ -96,7 +98,9 @@ export function M1EntryScreen({
     });
     const payload = await decodeQrFromFile(file);
     if (!payload) {
-      setQrNote('Chưa đọc được QR từ ảnh này. Hãy thử ảnh rõ hơn, trọn 4 góc, hoặc dán nội dung QR.');
+      setQrNote(
+        'Chưa đọc được QR từ ảnh này. Hãy thử ảnh rõ hơn, trọn 4 góc, hoặc dán nội dung QR.',
+      );
       return;
     }
     applyPayload(payload, dataUrl);
@@ -137,8 +141,8 @@ export function M1EntryScreen({
     <div>
       <ScreenTitle>Nhập tiền và QR của quán</ScreenTitle>
       <p className="mt-1 text-base text-ink-2">
-        Tổng số tiền buổi hôm nay phải trả cho quán và mã QR của quán. Game chỉ dùng hai dữ kiện này để
-        chọn người đãi — phép chia đều của phiên không đổi.
+        Tổng số tiền buổi hôm nay phải trả cho quán và mã QR của quán. Game chỉ dùng hai dữ kiện này
+        để chọn người đãi — phép chia đều của phiên không đổi.
       </p>
 
       <label className="mt-5 mb-1.5 block text-base font-semibold text-ink" htmlFor="m1-total">
@@ -159,8 +163,8 @@ export function M1EntryScreen({
       />
       {totalChangedVsSession ? (
         <p className="mt-1.5 text-sm text-ink-2">
-          Tổng này khác tổng hiện tại của phiên ({formatMoney(input.sessionTotalVnd)}). Trần của ván được
-          kiểm theo đúng tổng vừa nhập.
+          Tổng này khác tổng hiện tại của phiên ({formatMoney(input.sessionTotalVnd)}). Trần của ván
+          được kiểm theo đúng tổng vừa nhập.
         </p>
       ) : null}
 
@@ -174,15 +178,17 @@ export function M1EntryScreen({
               ))}
             </ul>
             <p className="mt-1">
-              Người được chọn sẽ gánh thêm tối đa {formatMoney(caps.maxExtra)} so với chia đều. Cách hợp
-              lệ duy nhất là quay về chia đều như thường.
+              Người được chọn sẽ gánh thêm tối đa {formatMoney(caps.maxExtra)} so với chia đều. Cách
+              hợp lệ duy nhất là quay về chia đều như thường.
             </p>
           </RedAlert>
         </div>
       ) : null}
 
       <h3 className="mt-6 text-base font-semibold text-ink">QR của quán</h3>
-      <p className="text-sm text-ink-2">Chọn một trong ba cách. Ảnh QR chỉ được xử lý ngay trên máy này.</p>
+      <p className="text-sm text-ink-2">
+        Chọn một trong ba cách. Ảnh QR chỉ được xử lý ngay trên máy này.
+      </p>
 
       {/* FIX-V3 P1.8 (pattern 8 — MoMo 2.1 / ShopeePay 2.2) trong
           GIỚI HẠN TÍNH NĂNG THẬT đang có: vùng chụp/chọn/dán QR nằm
@@ -196,101 +202,125 @@ export function M1EntryScreen({
           <span className="text-sm font-bold tracking-[0.2em] text-white">VietQR</span>
           <span className="text-xs text-white">QR của quán</span>
         </div>
-        <span aria-hidden className="pointer-events-none absolute top-10 left-2 h-5 w-5 border-t-[3px] border-l-[3px] border-brand" />
-        <span aria-hidden className="pointer-events-none absolute top-10 right-2 h-5 w-5 border-t-[3px] border-r-[3px] border-brand" />
-        <span aria-hidden className="pointer-events-none absolute right-2 bottom-2 h-5 w-5 border-r-[3px] border-b-[3px] border-brand" />
-        <span aria-hidden className="pointer-events-none absolute bottom-2 left-2 h-5 w-5 border-b-[3px] border-l-[3px] border-brand" />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-10 left-2 h-5 w-5 border-t-[3px] border-l-[3px] border-brand"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-10 right-2 h-5 w-5 border-t-[3px] border-r-[3px] border-brand"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-2 bottom-2 h-5 w-5 border-r-[3px] border-b-[3px] border-brand"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-2 left-2 h-5 w-5 border-b-[3px] border-l-[3px] border-brand"
+        />
 
-      <div className="mt-1 flex flex-wrap gap-2">
-        {cameraOn ? (
-          <>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {cameraOn ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void captureFrame()}
+                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
+              >
+                Chụp QR trong khung hình
+              </button>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
+              >
+                Tắt camera
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => void captureFrame()}
-              className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed"
-            >
-              Chụp QR trong khung hình
-            </button>
-            <button
-              type="button"
-              onClick={stopCamera}
+              onClick={() => void startCamera()}
               className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
             >
-              Tắt camera
+              Chụp bằng camera
             </button>
-          </>
-        ) : (
+          )}
           <button
             type="button"
-            onClick={() => void startCamera()}
+            onClick={() => fileRef.current?.click()}
             className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
           >
-            Chụp bằng camera
+            Chọn ảnh QR
           </button>
-        )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              void onPickFile(e.target.files?.[0] ?? null);
+              e.target.value = '';
+            }}
+          />
+        </div>
+
+        {cameraOn ? (
+          <div className="relative mt-3 bg-ink p-2">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute top-1 left-1 z-10 h-5 w-5 border-t-[3px] border-l-[3px] border-white"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute top-1 right-1 z-10 h-5 w-5 border-t-[3px] border-r-[3px] border-white"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute right-1 bottom-1 z-10 h-5 w-5 border-r-[3px] border-b-[3px] border-white"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-1 left-1 z-10 h-5 w-5 border-b-[3px] border-l-[3px] border-white"
+            />
+            <video ref={videoRef} playsInline muted className="mx-auto block w-full max-w-md" />
+          </div>
+        ) : null}
+
+        <label className="mt-4 mb-1.5 block text-base font-semibold text-ink" htmlFor="m1-paste">
+          Hoặc dán nội dung QR
+        </label>
+        <textarea
+          id="m1-paste"
+          rows={3}
+          // Viền MỘT nét trung tính (PRES vòng 2, mục 11): bỏ
+          // focus:border-brand-deep — viền brand + vòng :focus-visible
+          // brand-900 toàn cục chồng thành viền đôi cam/đỏ đọc như báo
+          // lỗi. Khi focus, CHỈ viền của ô đổi sang line-strong #534946
+          // (DESIGN.md: token line-strong / Line Control) và outline bị
+          // tắt bằng style nội tuyến (luật :focus-visible ở globals.css
+          // là CSS không-layer, đè được outline-none dạng utility nên
+          // phải tắt ở tầng style) — focus vẫn đọc rõ qua nét viền đậm
+          // trung tính duy nhất đó.
+          style={{ outline: 'none' }}
+          // F3 (audit PWA native-feel): font-size ≥16px cho MỌI ô nhập của
+          // game — ô này trước đây text-sm (14px) làm iOS tự zoom khi
+          // focus. F6: khi focus, cuộn ô về giữa màn hình để bàn phím ảo
+          // không che (cơ chế scrollIntoView block:center).
+          onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
+          className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 font-mono text-base text-ink placeholder:text-placeholder focus:border-[#534946]"
+          placeholder="Dán chuỗi nội dung đọc được từ mã QR…"
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+        />
         <button
           type="button"
-          onClick={() => fileRef.current?.click()}
-          className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
+          onClick={applyPaste}
+          disabled={!pasteText.trim()}
+          className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted"
         >
-          Chọn ảnh QR
+          Dùng nội dung này
         </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            void onPickFile(e.target.files?.[0] ?? null);
-            e.target.value = '';
-          }}
-        />
-      </div>
-
-      {cameraOn ? (
-        <div className="relative mt-3 bg-ink p-2">
-          <span aria-hidden className="pointer-events-none absolute top-1 left-1 z-10 h-5 w-5 border-t-[3px] border-l-[3px] border-white" />
-          <span aria-hidden className="pointer-events-none absolute top-1 right-1 z-10 h-5 w-5 border-t-[3px] border-r-[3px] border-white" />
-          <span aria-hidden className="pointer-events-none absolute right-1 bottom-1 z-10 h-5 w-5 border-r-[3px] border-b-[3px] border-white" />
-          <span aria-hidden className="pointer-events-none absolute bottom-1 left-1 z-10 h-5 w-5 border-b-[3px] border-l-[3px] border-white" />
-          <video ref={videoRef} playsInline muted className="mx-auto block w-full max-w-md" />
-        </div>
-      ) : null}
-
-      <label className="mt-4 mb-1.5 block text-base font-semibold text-ink" htmlFor="m1-paste">
-        Hoặc dán nội dung QR
-      </label>
-      <textarea
-        id="m1-paste"
-        rows={3}
-        // Viền MỘT nét trung tính (PRES vòng 2, mục 11): bỏ
-        // focus:border-brand-deep — viền brand + vòng :focus-visible
-        // brand-900 toàn cục chồng thành viền đôi cam/đỏ đọc như báo
-        // lỗi. Khi focus, CHỈ viền của ô đổi sang line-strong #534946
-        // (DESIGN.md: token line-strong / Line Control) và outline bị
-        // tắt bằng style nội tuyến (luật :focus-visible ở globals.css
-        // là CSS không-layer, đè được outline-none dạng utility nên
-        // phải tắt ở tầng style) — focus vẫn đọc rõ qua nét viền đậm
-        // trung tính duy nhất đó.
-        style={{ outline: 'none' }}
-        // F3 (audit PWA native-feel): font-size ≥16px cho MỌI ô nhập của
-        // game — ô này trước đây text-sm (14px) làm iOS tự zoom khi
-        // focus. F6: khi focus, cuộn ô về giữa màn hình để bàn phím ảo
-        // không che (cơ chế scrollIntoView block:center).
-        onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
-        className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 font-mono text-base text-ink placeholder:text-placeholder focus:border-[#534946]"
-        placeholder="Dán chuỗi nội dung đọc được từ mã QR…"
-        value={pasteText}
-        onChange={(e) => setPasteText(e.target.value)}
-      />
-      <button
-        type="button"
-        onClick={applyPaste}
-        disabled={!pasteText.trim()}
-        className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted"
-      >
-        Dùng nội dung này
-      </button>
       </div>
 
       {/* MỘT dòng trạng thái duy nhất (PRES vòng 2, mục 11): trước đây

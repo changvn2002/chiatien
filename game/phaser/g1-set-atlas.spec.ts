@@ -51,7 +51,10 @@ describe('manifest thật trên đĩa → contract F (lane INT)', () => {
   it('mọi nhân vật trong manifest đều có neo đất đã đo trong bảng g1-set-atlas', () => {
     for (const set of PARSED!.sets) {
       for (const c of set.characters) {
-        expect(setGroundAnchorOf(set.setId, c.characterKey), `${set.setId}/${c.characterKey}`).toBeDefined();
+        expect(
+          setGroundAnchorOf(set.setId, c.characterKey),
+          `${set.setId}/${c.characterKey}`,
+        ).toBeDefined();
       }
     }
   });
@@ -180,7 +183,9 @@ describe('anchors.json per-frame (N3)', () => {
   it('parse được anchors thật của cả 3 bộ, cell đúng bộ', () => {
     expect(anchors?.setId).toBe('adventurers');
     expect(anchors?.cell).toBe(96);
-    expect(parseSetAnchors(readPublicJson('game/atlas/sets/skeletons/anchors.json'))?.cell).toBe(96);
+    expect(parseSetAnchors(readPublicJson('game/atlas/sets/skeletons/anchors.json'))?.cell).toBe(
+      96,
+    );
     expect(parseSetAnchors(readPublicJson('game/atlas/sets/blocky/anchors.json'))?.cell).toBe(128);
   });
 
@@ -204,7 +209,9 @@ describe('anchors.json per-frame (N3)', () => {
         for (const c of set.characters) {
           for (const [action, count] of Object.entries(G1_SET_ACTION_FRAME_COUNTS)) {
             expect(
-              parsed!.characters[c.characterKey]?.[action as keyof typeof G1_SET_ACTION_FRAME_COUNTS],
+              parsed!.characters[c.characterKey]?.[
+                action as keyof typeof G1_SET_ACTION_FRAME_COUNTS
+              ],
               `${setId}/${c.characterKey}/${action}`,
             ).toHaveLength(count);
           }
@@ -216,7 +223,9 @@ describe('anchors.json per-frame (N3)', () => {
   it('parse sai dạng → null', () => {
     expect(parseSetAnchors(null)).toBeNull();
     expect(parseSetAnchors({ setId: 'x' })).toBeNull();
-    expect(parseSetAnchors({ setId: 'x', characters: { k: { idle: [{ x: 'a', y: 0 }] } } })).toBeNull();
+    expect(
+      parseSetAnchors({ setId: 'x', characters: { k: { idle: [{ x: 'a', y: 0 }] } } }),
+    ).toBeNull();
   });
 
   it('normPointOffset: quy chuẩn hoá về lệch px theo neo sprite (giữa-đáy ô), lật ngang gương qua trục giữa', () => {

@@ -121,10 +121,15 @@ const LEGACY_MODEL_BY_CHARACTER_KEY: Readonly<Record<string, string>> = {
  * (biến thể / skeletons / blocky) → xoay vòng 5 model cũ theo chỉ số
  * người chơi (đúng cơ chế modelFor cũ) — luôn có model, không vô hình.
  */
-export function legacyFallbackModelKey(characterKey: string | undefined, playerIndex: number): string {
+export function legacyFallbackModelKey(
+  characterKey: string | undefined,
+  playerIndex: number,
+): string {
   const mapped = characterKey ? LEGACY_MODEL_BY_CHARACTER_KEY[characterKey] : undefined;
   if (mapped) return mapped;
-  const i = ((playerIndex % G1_LEGACY_MODEL_KEYS.length) + G1_LEGACY_MODEL_KEYS.length) % G1_LEGACY_MODEL_KEYS.length;
+  const i =
+    ((playerIndex % G1_LEGACY_MODEL_KEYS.length) + G1_LEGACY_MODEL_KEYS.length) %
+    G1_LEGACY_MODEL_KEYS.length;
   return G1_LEGACY_MODEL_KEYS[i];
 }
 
@@ -260,7 +265,7 @@ export function parseSetAnchors(raw: unknown): G1SetAnchors | null {
 /**
  * Neo đầu của đúng (nhân vật, hành động, frame) đang hiển thị; frame
  * vượt mảng → kẹp về frame cuối của hành động; thiếu dữ liệu → undefined
- * (phía gọi rơi về neo ước lượng). 
+ * (phía gọi rơi về neo ước lượng).
  */
 export function headAnchorFor(
   anchors: G1SetAnchors | null | undefined,
@@ -312,30 +317,174 @@ export interface G1NormGroundAnchor {
 }
 
 export const G1_SET_GROUND_ANCHORS: Readonly<Record<string, G1NormGroundAnchor>> = {
-  'adventurers/barbarian': { groundX: 0.337, groundY: 0.833, fallX: 0.489, fallY: 0.875, headTopY: 0.094 },
-  'adventurers/barbarian-ice': { groundX: 0.34, groundY: 0.833, fallX: 0.551, fallY: 0.875, headTopY: 0.177 },
-  'adventurers/hooded-teal': { groundX: 0.399, groundY: 0.802, fallX: 0.477, fallY: 0.865, headTopY: 0.125 },
-  'adventurers/knight': { groundX: 0.263, groundY: 0.844, fallX: 0.511, fallY: 0.875, headTopY: 0.104 },
-  'adventurers/knight-night': { groundX: 0.271, groundY: 0.844, fallX: 0.443, fallY: 0.865, headTopY: 0.104 },
-  'adventurers/knight-red': { groundX: 0.263, groundY: 0.844, fallX: 0.538, fallY: 0.875, headTopY: 0.146 },
-  'adventurers/mage': { groundX: 0.429, groundY: 0.833, fallX: 0.385, fallY: 0.917, headTopY: 0.177 },
-  'adventurers/mage-leaf': { groundX: 0.431, groundY: 0.833, fallX: 0.359, fallY: 0.917, headTopY: 0.177 },
-  'adventurers/mage-purple': { groundX: 0.457, groundY: 0.833, fallX: 0.516, fallY: 0.844, headTopY: 0.302 },
-  'adventurers/rogue': { groundX: 0.381, groundY: 0.802, fallX: 0.557, fallY: 0.885, headTopY: 0.125 },
-  'adventurers/rogue-orange': { groundX: 0.388, groundY: 0.802, fallX: 0.463, fallY: 0.875, headTopY: 0.125 },
-  'adventurers/roguehooded': { groundX: 0.392, groundY: 0.802, fallX: 0.557, fallY: 0.875, headTopY: 0.125 },
-  'skeletons/skel-mage': { groundX: 0.425, groundY: 0.833, fallX: 0.346, fallY: 0.927, headTopY: 0.104 },
-  'skeletons/skel-mage-gold': { groundX: 0.452, groundY: 0.833, fallX: 0.476, fallY: 0.854, headTopY: 0.24 },
-  'skeletons/skel-mage-violet': { groundX: 0.425, groundY: 0.833, fallX: 0.346, fallY: 0.927, headTopY: 0.104 },
-  'skeletons/skel-minion': { groundX: 0.468, groundY: 0.844, fallX: 0.451, fallY: 0.875, headTopY: 0.104 },
-  'skeletons/skel-minion-ember': { groundX: 0.468, groundY: 0.844, fallX: 0.451, fallY: 0.875, headTopY: 0.104 },
-  'skeletons/skel-minion-rose': { groundX: 0.47, groundY: 0.844, fallX: 0.449, fallY: 0.875, headTopY: 0.104 },
-  'skeletons/skel-rogue': { groundX: 0.459, groundY: 0.844, fallX: 0.51, fallY: 0.875, headTopY: 0.104 },
-  'skeletons/skel-rogue-frost': { groundX: 0.464, groundY: 0.844, fallX: 0.543, fallY: 0.875, headTopY: 0.156 },
-  'skeletons/skel-rogue-mint': { groundX: 0.469, groundY: 0.844, fallX: 0.428, fallY: 0.865, headTopY: 0.104 },
-  'skeletons/skel-warrior': { groundX: 0.463, groundY: 0.833, fallX: 0.385, fallY: 0.875, headTopY: 0.135 },
-  'skeletons/skel-warrior-ash': { groundX: 0.472, groundY: 0.833, fallX: 0.479, fallY: 0.865, headTopY: 0.229 },
-  'skeletons/skel-warrior-ghost': { groundX: 0.463, groundY: 0.833, fallX: 0.385, fallY: 0.875, headTopY: 0.135 },
+  'adventurers/barbarian': {
+    groundX: 0.337,
+    groundY: 0.833,
+    fallX: 0.489,
+    fallY: 0.875,
+    headTopY: 0.094,
+  },
+  'adventurers/barbarian-ice': {
+    groundX: 0.34,
+    groundY: 0.833,
+    fallX: 0.551,
+    fallY: 0.875,
+    headTopY: 0.177,
+  },
+  'adventurers/hooded-teal': {
+    groundX: 0.399,
+    groundY: 0.802,
+    fallX: 0.477,
+    fallY: 0.865,
+    headTopY: 0.125,
+  },
+  'adventurers/knight': {
+    groundX: 0.263,
+    groundY: 0.844,
+    fallX: 0.511,
+    fallY: 0.875,
+    headTopY: 0.104,
+  },
+  'adventurers/knight-night': {
+    groundX: 0.271,
+    groundY: 0.844,
+    fallX: 0.443,
+    fallY: 0.865,
+    headTopY: 0.104,
+  },
+  'adventurers/knight-red': {
+    groundX: 0.263,
+    groundY: 0.844,
+    fallX: 0.538,
+    fallY: 0.875,
+    headTopY: 0.146,
+  },
+  'adventurers/mage': {
+    groundX: 0.429,
+    groundY: 0.833,
+    fallX: 0.385,
+    fallY: 0.917,
+    headTopY: 0.177,
+  },
+  'adventurers/mage-leaf': {
+    groundX: 0.431,
+    groundY: 0.833,
+    fallX: 0.359,
+    fallY: 0.917,
+    headTopY: 0.177,
+  },
+  'adventurers/mage-purple': {
+    groundX: 0.457,
+    groundY: 0.833,
+    fallX: 0.516,
+    fallY: 0.844,
+    headTopY: 0.302,
+  },
+  'adventurers/rogue': {
+    groundX: 0.381,
+    groundY: 0.802,
+    fallX: 0.557,
+    fallY: 0.885,
+    headTopY: 0.125,
+  },
+  'adventurers/rogue-orange': {
+    groundX: 0.388,
+    groundY: 0.802,
+    fallX: 0.463,
+    fallY: 0.875,
+    headTopY: 0.125,
+  },
+  'adventurers/roguehooded': {
+    groundX: 0.392,
+    groundY: 0.802,
+    fallX: 0.557,
+    fallY: 0.875,
+    headTopY: 0.125,
+  },
+  'skeletons/skel-mage': {
+    groundX: 0.425,
+    groundY: 0.833,
+    fallX: 0.346,
+    fallY: 0.927,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-mage-gold': {
+    groundX: 0.452,
+    groundY: 0.833,
+    fallX: 0.476,
+    fallY: 0.854,
+    headTopY: 0.24,
+  },
+  'skeletons/skel-mage-violet': {
+    groundX: 0.425,
+    groundY: 0.833,
+    fallX: 0.346,
+    fallY: 0.927,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-minion': {
+    groundX: 0.468,
+    groundY: 0.844,
+    fallX: 0.451,
+    fallY: 0.875,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-minion-ember': {
+    groundX: 0.468,
+    groundY: 0.844,
+    fallX: 0.451,
+    fallY: 0.875,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-minion-rose': {
+    groundX: 0.47,
+    groundY: 0.844,
+    fallX: 0.449,
+    fallY: 0.875,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-rogue': {
+    groundX: 0.459,
+    groundY: 0.844,
+    fallX: 0.51,
+    fallY: 0.875,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-rogue-frost': {
+    groundX: 0.464,
+    groundY: 0.844,
+    fallX: 0.543,
+    fallY: 0.875,
+    headTopY: 0.156,
+  },
+  'skeletons/skel-rogue-mint': {
+    groundX: 0.469,
+    groundY: 0.844,
+    fallX: 0.428,
+    fallY: 0.865,
+    headTopY: 0.104,
+  },
+  'skeletons/skel-warrior': {
+    groundX: 0.463,
+    groundY: 0.833,
+    fallX: 0.385,
+    fallY: 0.875,
+    headTopY: 0.135,
+  },
+  'skeletons/skel-warrior-ash': {
+    groundX: 0.472,
+    groundY: 0.833,
+    fallX: 0.479,
+    fallY: 0.865,
+    headTopY: 0.229,
+  },
+  'skeletons/skel-warrior-ghost': {
+    groundX: 0.463,
+    groundY: 0.833,
+    fallX: 0.385,
+    fallY: 0.875,
+    headTopY: 0.135,
+  },
   'blocky/blocky-a': { groundX: 0.45, groundY: 0.844, fallX: 0.45, fallY: 0.844, headTopY: 0.086 },
   'blocky/blocky-b': { groundX: 0.45, groundY: 0.844, fallX: 0.45, fallY: 0.844, headTopY: 0.086 },
   'blocky/blocky-c': { groundX: 0.45, groundY: 0.844, fallX: 0.45, fallY: 0.844, headTopY: 0.086 },
@@ -351,6 +500,9 @@ export const G1_SET_GROUND_ANCHORS: Readonly<Record<string, G1NormGroundAnchor>>
 };
 
 /** Neo đất chuẩn hoá của một nhân vật bộ mới; undefined nếu không có trong bảng đo. */
-export function setGroundAnchorOf(setId: string, characterKey: string): G1NormGroundAnchor | undefined {
+export function setGroundAnchorOf(
+  setId: string,
+  characterKey: string,
+): G1NormGroundAnchor | undefined {
   return G1_SET_GROUND_ANCHORS[`${setId}/${characterKey}`];
 }

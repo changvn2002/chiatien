@@ -79,11 +79,19 @@ print('webp bytes:', __import__('os').path.getsize(webp_out))
 `;
     const atlasDir = path.join(repoRoot, 'public/game/atlas');
     fs.mkdirSync(atlasDir, { recursive: true });
-    await run('python3', ['-c', py, outPng, outPng + '.meta.json',
-      path.join(atlasDir, 'g2-food.webp'), path.join(atlasDir, 'g2-food.json')]);
-    fs.rmSync(outPng, { force: true }); fs.rmSync(outPng + '.meta.json', { force: true });
+    await run('python3', [
+      '-c',
+      py,
+      outPng,
+      outPng + '.meta.json',
+      path.join(atlasDir, 'g2-food.webp'),
+      path.join(atlasDir, 'g2-food.json'),
+    ]);
+    fs.rmSync(outPng, { force: true });
+    fs.rmSync(outPng + '.meta.json', { force: true });
     void tmpPng;
   }
 } finally {
-  serve.kill('SIGKILL'); proxy.kill('SIGKILL');
+  serve.kill('SIGKILL');
+  proxy.kill('SIGKILL');
 }

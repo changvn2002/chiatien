@@ -17,8 +17,7 @@ export interface MatchParams {
 }
 
 export type MatchResult =
-  | { kind: 'single'; payerId: string }
-  | { kind: 'co-payers'; payerIds: string[] };
+  { kind: 'single'; payerId: string } | { kind: 'co-payers'; payerIds: string[] };
 
 export type AttackKind = 'dam' | 'da';
 export type AttackOutcome = 'hit' | 'miss' | 'dodge' | 'crit';

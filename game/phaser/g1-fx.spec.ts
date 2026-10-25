@@ -80,7 +80,15 @@ describe('flash trúng đòn (P0.1 — cấm trắng xoá, pha ≤40% về ấm/
   });
 
   it('không màu danh tính nào flash ra trắng hoặc gần trắng', () => {
-    for (const hex of ['#FFA000', '#1976D2', '#0097A7', '#E64A19', '#512DA8', '#388E3C', '#C2185B']) {
+    for (const hex of [
+      '#FFA000',
+      '#1976D2',
+      '#0097A7',
+      '#E64A19',
+      '#512DA8',
+      '#388E3C',
+      '#C2185B',
+    ]) {
       for (const crit of [false, true]) {
         const c = g1HitFlashColor(hex, crit);
         expect(c).not.toBe(0xffffff);
@@ -101,7 +109,8 @@ describe('flash trúng đòn (P0.1 — cấm trắng xoá, pha ≤40% về ấm/
   it('flash sáng hơn tint nền (đọc được là trúng đòn) nhưng đậm hơn trắng thuần', () => {
     const tint = g1TintColorValue('#1976D2');
     const flash = g1HitFlashColor('#1976D2', false);
-    const lum = (c: number) => ((c >> 16) & 0xff) * 0.3 + ((c >> 8) & 0xff) * 0.59 + (c & 0xff) * 0.11;
+    const lum = (c: number) =>
+      ((c >> 16) & 0xff) * 0.3 + ((c >> 8) & 0xff) * 0.59 + (c & 0xff) * 0.11;
     // Kênh B (hue chính) của flash đậm hơn tint → màu «đậm lên» khi trúng.
     expect(flash & 0xff).toBeLessThan(tint & 0xff);
     expect(lum(flash)).toBeLessThan(250);
@@ -342,8 +351,14 @@ describe('floater FIX-V4: trần 2 toàn sân + FIFO + stagger + né plate tuy�
 
 describe('tách plate lặp (FIX-V4 — chống chồng triệt để, ưu tiên đẩy dọc)', () => {
   const BOUNDS: G1Rect = { x1: 6, y1: 6, x2: 894, y2: 894 };
-  const overlaps = (a: { x: number; y: number }, aw: number, ah: number, b: { x: number; y: number }, bw: number, bh: number) =>
-    Math.abs(a.x - b.x) < (aw + bw) / 2 + 4 && Math.abs(a.y - b.y) < (ah + bh) / 2 + 4;
+  const overlaps = (
+    a: { x: number; y: number },
+    aw: number,
+    ah: number,
+    b: { x: number; y: number },
+    bw: number,
+    bh: number,
+  ) => Math.abs(a.x - b.x) < (aw + bw) / 2 + 4 && Math.abs(a.y - b.y) < (ah + bh) / 2 + 4;
 
   it('hai plate trùng tâm: tách dọc hoàn toàn, plate trước giữ nguyên chỗ', () => {
     const out = g1SeparatePlates(
@@ -527,18 +542,38 @@ describe('neo đất sprite (P0.3 — đo từ alpha bbox atlas thật)', () => 
 
   it('flipX gương điểm đất qua trục neo; ngã dùng neo fall (dịch phải + thấp hơn)', () => {
     const a = g1SpriteAnchorOf('knight');
-    const stand = g1GroundOffset(a, 192, { fallen: false, flipX: false, scaleYRatio: 1, angleDeg: 0 });
-    const flipped = g1GroundOffset(a, 192, { fallen: false, flipX: true, scaleYRatio: 1, angleDeg: 0 });
+    const stand = g1GroundOffset(a, 192, {
+      fallen: false,
+      flipX: false,
+      scaleYRatio: 1,
+      angleDeg: 0,
+    });
+    const flipped = g1GroundOffset(a, 192, {
+      fallen: false,
+      flipX: true,
+      scaleYRatio: 1,
+      angleDeg: 0,
+    });
     expect(flipped.x).toBeCloseTo(-stand.x, 5);
     expect(flipped.y).toBeCloseTo(stand.y, 5);
-    const fallen = g1GroundOffset(a, 192, { fallen: true, flipX: false, scaleYRatio: 1, angleDeg: 0 });
+    const fallen = g1GroundOffset(a, 192, {
+      fallen: true,
+      flipX: false,
+      scaleYRatio: 1,
+      angleDeg: 0,
+    });
     expect(fallen.x).toBeGreaterThan(stand.x); // thân nằm dịch về +x
     expect(fallen.y).toBeGreaterThan(stand.y); // đáy thân nằm sát đất hơn
   });
 
   it('squash thân (scaleY 0.88) kéo điểm đất lên theo đúng tỉ lệ; nghiêng 0° là đồng nhất', () => {
     const a = g1SpriteAnchorOf('mage');
-    const base = g1GroundOffset(a, 178, { fallen: false, flipX: false, scaleYRatio: 1, angleDeg: 0 });
+    const base = g1GroundOffset(a, 178, {
+      fallen: false,
+      flipX: false,
+      scaleYRatio: 1,
+      angleDeg: 0,
+    });
     const squashed = g1GroundOffset(a, 178, {
       fallen: false,
       flipX: false,
@@ -664,13 +699,16 @@ describe('floater FIX-V4.1: quỹ đạo quét khi sinh + NÉ LIÊN TỤC khi đ
   });
 
   it('g1FindNearestSafeSpot: chỗ hiện tại sạch → giữ nguyên; bị chặn → điểm sạch gần nhất theo quét', () => {
-    expect(g1FindNearestSafeSpot({ x: 450, y: 350 }, 96, 34, [], STAGE)).toEqual({ x: 450, y: 350 });
+    expect(g1FindNearestSafeSpot({ x: 450, y: 350 }, 96, 34, [], STAGE)).toEqual({
+      x: 450,
+      y: 350,
+    });
     const block: G1Rect = { x1: 400, y1: 322, x2: 500, y2: 378 };
     const spot = g1FindNearestSafeSpot({ x: 450, y: 350 }, 96, 34, [block], STAGE);
     expect(spot).not.toBeNull();
-    expect(g1RectsOverlap(g1FloaterSweptRect(spot!.x, spot!.y, 96, 34), block, G1_FLOATER_PLATE_PAD)).toBe(
-      false,
-    );
+    expect(
+      g1RectsOverlap(g1FloaterSweptRect(spot!.x, spot!.y, 96, 34), block, G1_FLOATER_PLATE_PAD),
+    ).toBe(false);
   });
 });
 
@@ -702,7 +740,9 @@ describe('layout plate compact (FIX-V4.1 — cụm quá dày thì THU GỌN, kh�
     expect(g1CountOverlappingPairs(rects, 4)).toBe(0);
     for (const r of rects) {
       expect(r.scale).toBeLessThan(1);
-      expect(r.scale).toBeGreaterThanOrEqual(G1_PLATE_COMPACT_SCALES[G1_PLATE_COMPACT_SCALES.length - 1]);
+      expect(r.scale).toBeGreaterThanOrEqual(
+        G1_PLATE_COMPACT_SCALES[G1_PLATE_COMPACT_SCALES.length - 1],
+      );
       expect(r.w).toBeCloseTo(170 * r.scale, 5);
       expect(r.h).toBeCloseTo(44 * r.scale, 5);
       // Vẫn nằm trong bounds ở kích thước hiệu dụng.
@@ -727,7 +767,13 @@ describe('layout plate compact (FIX-V4.1 — cụm quá dày thì THU GỌN, kh�
 
   it('7 thẻ rút gọn dồn một điểm ở sân đầy đủ → scale 1, tách hết (không regress ca FIX-V4)', () => {
     const bounds: G1Rect = { x1: 6, y1: 6, x2: 894, y2: 894 };
-    const items = Array.from({ length: 7 }, (_, i) => ({ id: `t${i}`, x: 500, y: 260, w: 84, h: 22 }));
+    const items = Array.from({ length: 7 }, (_, i) => ({
+      id: `t${i}`,
+      x: 500,
+      y: 260,
+      w: 84,
+      h: 22,
+    }));
     const out = g1LayoutPlatesCompact(items, bounds, 4);
     expect(g1CountOverlappingPairs([...out.values()], 4)).toBe(0);
     for (const r of out.values()) expect(r.scale).toBe(1);

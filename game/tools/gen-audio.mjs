@@ -10,7 +10,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SR = 22050;
-const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/game/audio');
+const outDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../public/game/audio',
+);
 mkdirSync(outDir, { recursive: true });
 
 function wavBuffer(samples) {
@@ -59,7 +62,15 @@ render('punch', 0.18, (t) => {
   return (sine(90, t) * 0.8 + noise() * 0.25 * Math.exp(-t * 60)) * env;
 });
 // Whoosh: nhiễu quét qua, envelope hình chuông.
-render('whoosh', 0.25, (t) => noise() * Math.sin(Math.PI * (t / 0.25)) * 0.5 * (0.4 + 0.6 * Math.sin(2 * Math.PI * 3 * t) ** 2));
+render(
+  'whoosh',
+  0.25,
+  (t) =>
+    noise() *
+    Math.sin(Math.PI * (t / 0.25)) *
+    0.5 *
+    (0.4 + 0.6 * Math.sin(2 * Math.PI * 3 * t) ** 2),
+);
 // Né: sine quét lên 500→900Hz.
 render('dodge', 0.22, (t) => sine(500 + 1800 * t, t) * Math.exp(-t * 6) * 0.45);
 // Tick: click rất ngắn khi mâm qua biên ô (thuần hàm của vận tốc — một âm duy nhất cho mọi ô).

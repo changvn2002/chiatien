@@ -30,33 +30,40 @@ const ALL = [
   { model: 'RogueHooded', src: '/chiatien-game-v2/scratch-a/assets-extra/Rogue_Hooded.glb' },
 ];
 const models = process.env.MODELS
-  ? ALL.filter(m => process.env.MODELS.split(',').includes(m.model))
+  ? ALL.filter((m) => process.env.MODELS.split(',').includes(m.model))
   : ALL;
-const OUT = process.env.OUT ||
+const OUT =
+  process.env.OUT ||
   `${HOME}/workspace/mini-apps/chiatien-game-v2/scratch-a/raw-${CELL}-${FRAMES}${MODE === 'tint' ? '-tint' : ''}`;
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(HOME + '/wtmp', { recursive: true });
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const env = { ...process.env, TMPDIR: HOME + '/wtmp' };
 
 function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: 'inherit', env, ...opts });
-    p.on('exit', code => code === 0 ? resolve() : reject(new Error(cmd + ' exit ' + code)));
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(cmd + ' exit ' + code))));
   });
 }
 
 const server = spawn('python3', ['-m', 'http.server', '9178', '--bind', '127.0.0.1'], {
-  cwd: HOME + '/workspace/mini-apps', env, stdio: 'ignore',
+  cwd: HOME + '/workspace/mini-apps',
+  env,
+  stdio: 'ignore',
 });
 const proxy = spawn('node', [path.join(TOOLS, 'demo-proxy.mjs')], {
-  env: { ...env, STATIC_PORT: '9178' }, stdio: 'ignore',
+  env: { ...env, STATIC_PORT: '9178' },
+  stdio: 'ignore',
 });
 try {
   let up = false;
   for (let i = 0; i < 40 && !up; i++) {
-    try { const r = await fetch('http://127.0.0.1:9178/chiatien/game/tools/render-atlas.html'); up = r.ok; } catch {}
+    try {
+      const r = await fetch('http://127.0.0.1:9178/chiatien/game/tools/render-atlas.html');
+      up = r.ok;
+    } catch {}
     if (!up) await sleep(250);
   }
   if (!up) throw new Error('server tinh khong len duoc');
@@ -66,8 +73,12 @@ try {
     if (m.src) q.set('src', m.src);
     const url = `http://atlas.test/chiatien/game/tools/render-atlas.html?${q}`;
     console.log('== render', m.model, 'cell', CELL, 'frames', FRAMES, MODE);
-    await run('node', [path.join(TOOLS, 'extract-atlas.mjs'), url,
-      `${OUT}/${m.model}.png`, `${OUT}/${m.model}.meta.json`]);
+    await run('node', [
+      path.join(TOOLS, 'extract-atlas.mjs'),
+      url,
+      `${OUT}/${m.model}.png`,
+      `${OUT}/${m.model}.meta.json`,
+    ]);
   }
   console.log('XONG. PNG tho o', OUT);
 } finally {

@@ -104,6 +104,9 @@ function findFallbackOpener(record: OpenerRecord): HTMLElement | null {
  */
 function restoreOpenerFocus(record: OpenerRecord) {
   const attempt = () => {
+    // Nhịp hẹn giờ có thể rơi vào sau khi môi trường đã dỡ (test teardown,
+    // trang đã chuyển) — document không còn thì bỏ qua im lặng.
+    if (typeof document === 'undefined') return;
     const ae = document.activeElement as HTMLElement | null;
     if (ae && ae !== document.body && ae.closest?.(DIALOG_SELECTOR)) return;
     if (record.el?.isConnected) {

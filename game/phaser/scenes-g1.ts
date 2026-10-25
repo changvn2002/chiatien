@@ -801,9 +801,7 @@ export class G1Scene extends Phaser.Scene {
    * 3. Không atlas nào dùng được → giữ key bộ muốn dùng: sprite vô
    *    hình nhưng plate/cột vẫn định danh được người (contract cũ).
    */
-  private modelFor(
-    index: number,
-  ): {
+  private modelFor(index: number): {
     model: string;
     setId: string;
     characterKey: string;
@@ -889,7 +887,8 @@ export class G1Scene extends Phaser.Scene {
     view.body.setTint(view.tintColor);
     this.syncGroundRing(view);
     if (view.alive) this.playIdle(view);
-    else if (this.textures.exists(view.atlasKey)) view.body.setFrame(this.lastFrameName(view, 'fall'));
+    else if (this.textures.exists(view.atlasKey))
+      view.body.setFrame(this.lastFrameName(view, 'fall'));
   }
 
   create(): void {
@@ -1505,7 +1504,17 @@ export class G1Scene extends Phaser.Scene {
     photoRing.lineStyle(2.5, this.colorOf(player), 1);
     photoRing.strokeCircle(metrics.badgeX, 0, 15);
     photoRing.setVisible(false);
-    plate.add([plateBg, badgeCircle, badgeInitials, nameText, hpText, hpBack, ghostBar, hpBar, photoRing]);
+    plate.add([
+      plateBg,
+      badgeCircle,
+      badgeInitials,
+      nameText,
+      hpText,
+      hpBack,
+      ghostBar,
+      hpBar,
+      photoRing,
+    ]);
 
     loadAvatarTexture(this, player, (key) => {
       if (!this.scene.isActive() || !this.textures.exists(key)) return;
@@ -2057,7 +2066,9 @@ export class G1Scene extends Phaser.Scene {
           : view.container.y - view.displaySize * 0.25;
         const edgeY =
           view.plateY +
-          (headY > view.plateY ? (view.plateH * view.plateScale) / 2 : -(view.plateH * view.plateScale) / 2);
+          (headY > view.plateY
+            ? (view.plateH * view.plateScale) / 2
+            : -(view.plateH * view.plateScale) / 2);
         lg.lineBetween(view.plateX, edgeY, headX, headY);
       }
     }
@@ -2143,8 +2154,16 @@ export class G1Scene extends Phaser.Scene {
       for (const view of focus) {
         const anchorY =
           view.container.y + (view.alive ? -view.displaySize - 12 : -view.displaySize * 0.5 - 26);
-        minX = Math.min(minX, view.container.x - view.displaySize / 2, view.container.x - view.plateW / 2);
-        maxX = Math.max(maxX, view.container.x + view.displaySize / 2, view.container.x + view.plateW / 2);
+        minX = Math.min(
+          minX,
+          view.container.x - view.displaySize / 2,
+          view.container.x - view.plateW / 2,
+        );
+        maxX = Math.max(
+          maxX,
+          view.container.x + view.displaySize / 2,
+          view.container.x + view.plateW / 2,
+        );
         minY = Math.min(minY, view.container.y - view.displaySize, anchorY - view.plateH / 2);
         maxY = Math.max(maxY, view.container.y + 12, anchorY + view.plateH / 2);
       }

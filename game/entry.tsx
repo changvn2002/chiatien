@@ -20,7 +20,14 @@ import type { GameSessionInput } from './adapter';
 import { buildIdentityMapCovering, buildIdentityMapFromSessionMembers } from './assets/identity';
 import { loadAvatarPhotos } from './assets/avatar-store';
 import { FALLBACK_SET } from './screens/character-sets';
-import { isGameMuted, setGameMuted, startBgm, stopAllAudio, stopBgm, unlockAudio } from './audio/sound';
+import {
+  isGameMuted,
+  setGameMuted,
+  startBgm,
+  stopAllAudio,
+  stopBgm,
+  unlockAudio,
+} from './audio/sound';
 import { SPLIT_EVEN_LABEL } from './copy';
 import type { GameDraft, PlayerView, ScreenId } from './state';
 import { EMPTY_DRAFT } from './state';
@@ -245,11 +252,16 @@ export function GameEntry({
     (ready: ConsentReady) => {
       const seedFinal = finalizeSeed(ready.seedDevice, ready.chung, ready.paramsHash);
       const code = matchCode(seedFinal);
-      const log = ready.params.game === 'g2' ? runG2(seedFinal, ready.params) : runG1(seedFinal, ready.params);
+      const log =
+        ready.params.game === 'g2'
+          ? runG2(seedFinal, ready.params)
+          : runG1(seedFinal, ready.params);
       const qr = draft.qr;
       const parsed = qr.parsed;
       const matchedMember = parsed?.accountName
-        ? (input.members.find((m) => nameKeyOf(m.displayName) === nameKeyOf(parsed.accountName ?? '')) ?? null)
+        ? (input.members.find(
+            (m) => nameKeyOf(m.displayName) === nameKeyOf(parsed.accountName ?? ''),
+          ) ?? null)
         : null;
       const rec: GameRecord = {
         code,
@@ -386,8 +398,8 @@ export function GameEntry({
             chơi. */}
         {screen === 'm1' ? (
           <p className="mt-1 text-sm text-ink-2">
-            Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không có
-            mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
+            Game mode đảm bảo chạy offline sau lần mở đầu tiên có mạng; nếu lần đầu tiên mở mà không
+            có mạng, game mode không khả dụng — app chính không bị ảnh hưởng.
           </p>
         ) : null}
 
@@ -554,8 +566,8 @@ export function GameEntry({
             «Chia đều cho lành» thật trong khu hành động của chúng. */}
         {screen === 'm1' ? (
           <p className="mt-6 text-xs text-ink-2">
-            Lối thoát luôn mở: bấm «{SPLIT_EVEN_LABEL}» ở bất kỳ màn nào để về quyết toán chia đều bình
-            thường của phiên.
+            Lối thoát luôn mở: bấm «{SPLIT_EVEN_LABEL}» ở bất kỳ màn nào để về quyết toán chia đều
+            bình thường của phiên.
           </p>
         ) : null}
       </div>

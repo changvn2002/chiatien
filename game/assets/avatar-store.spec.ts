@@ -79,7 +79,9 @@ describe('parseAvatarStore — dữ liệu hỏng không làm sập', () => {
   );
 
   it('chỉ giữ các giá trị data:image/* hợp lệ', () => {
-    const map = parseAvatarStore(JSON.stringify({ m1: PHOTO, m2: 'x', m3: 'data:image/png;base64,CC' }));
+    const map = parseAvatarStore(
+      JSON.stringify({ m1: PHOTO, m2: 'x', m3: 'data:image/png;base64,CC' }),
+    );
     expect(map.size).toBe(2);
     expect(map.get('m3')).toBe('data:image/png;base64,CC');
   });

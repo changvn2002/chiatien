@@ -8,15 +8,25 @@ import fs from 'node:fs';
 const [, , url, out] = process.argv;
 const PORT = 19800 + Math.floor(Math.random() * 200);
 const HOME = process.env.HOME;
-const chrome = spawn('/opt/meta-chromium/chrome', [
-  '--headless=new', '--no-sandbox', '--no-first-run', '--hide-scrollbars',
-  '--proxy-server=http://127.0.0.1:18098',
-  '--user-data-dir=' + HOME + '/wtmp/foodprof' + PORT,
-  '--remote-debugging-port=' + PORT, '--window-size=900,700', 'about:blank',
-], { env: { ...process.env, TMPDIR: HOME + '/wtmp' }, stdio: 'ignore' });
+const chrome = spawn(
+  '/opt/meta-chromium/chrome',
+  [
+    '--headless=new',
+    '--no-sandbox',
+    '--no-first-run',
+    '--hide-scrollbars',
+    '--proxy-server=http://127.0.0.1:18098',
+    '--user-data-dir=' + HOME + '/wtmp/foodprof' + PORT,
+    '--remote-debugging-port=' + PORT,
+    '--window-size=900,700',
+    'about:blank',
+  ],
+  { env: { ...process.env, TMPDIR: HOME + '/wtmp' }, stdio: 'ignore' },
+);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-let ws, msgId = 0;
+let ws,
+  msgId = 0;
 const pending = new Map();
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -32,10 +42,21 @@ const evalStr = async (expr) => {
 };
 
 try {
-  for (let i = 0; i < 60; i++) { try { const r = await fetch(`http://localhost:${PORT}/json/version`); if (r.ok) break; } catch {} await sleep(250); }
-  const target = await (await fetch(`http://localhost:${PORT}/json/new?about:blank`, { method: 'PUT' })).json();
+  for (let i = 0; i < 60; i++) {
+    try {
+      const r = await fetch(`http://localhost:${PORT}/json/version`);
+      if (r.ok) break;
+    } catch {}
+    await sleep(250);
+  }
+  const target = await (
+    await fetch(`http://localhost:${PORT}/json/new?about:blank`, { method: 'PUT' })
+  ).json();
   ws = new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  await new Promise((res, rej) => {
+    ws.onopen = res;
+    ws.onerror = rej;
+  });
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.id && pending.has(m.id)) {
@@ -45,7 +66,8 @@ try {
       else p.resolve(m.result);
     }
   };
-  await send('Page.enable'); await send('Runtime.enable');
+  await send('Page.enable');
+  await send('Runtime.enable');
   await send('Page.navigate', { url });
   let title = '';
   const deadline = Date.now() + 120000;
@@ -57,7 +79,9 @@ try {
   if (!title.startsWith('FOOD_DONE')) throw new Error('timeout, title=' + title);
   console.log('title =', title);
   fs.writeFileSync(out + '.meta.json', title.slice('FOOD_DONE '.length));
-  await evalStr('window.__url = document.querySelector("canvas").toDataURL("image/png"); window.__url.length');
+  await evalStr(
+    'window.__url = document.querySelector("canvas").toDataURL("image/png"); window.__url.length',
+  );
   const total = await evalStr('window.__url.length');
   let b64 = '';
   const CH = 800000;
@@ -67,6 +91,8 @@ try {
   fs.writeFileSync(out, Buffer.from(b64, 'base64'));
   console.log('da ghi', out, fs.statSync(out).size, 'bytes');
 } finally {
-  try { if (ws) ws.close(); } catch {}
+  try {
+    if (ws) ws.close();
+  } catch {}
   chrome.kill('SIGKILL');
 }

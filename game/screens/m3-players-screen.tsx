@@ -98,7 +98,9 @@ export function M3PlayersScreen({
                   Màu {identity.strongName}
                 </span>
               ) : null}
-              <span className="text-sm font-semibold text-ink">{on ? 'Đang chọn' : 'Chưa chọn'}</span>
+              <span className="text-sm font-semibold text-ink">
+                {on ? 'Đang chọn' : 'Chưa chọn'}
+              </span>
             </button>
           );
         })}

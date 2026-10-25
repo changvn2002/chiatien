@@ -246,7 +246,17 @@ export function runG1(seedFinal: number, params: MatchParams, overrides?: G1Over
         result = { kind: 'single', payerId: tied[0].id };
         return finish(params, seedFinal, events, result);
       }
-      const sub = runPhase('sub', tied, freshHp(tied, p), subStartTick, p.subTicks, true, p, rand, events);
+      const sub = runPhase(
+        'sub',
+        tied,
+        freshHp(tied, p),
+        subStartTick,
+        p.subTicks,
+        true,
+        p,
+        rand,
+        events,
+      );
       result = settleSub(sub);
       return finish(params, seedFinal, events, result);
     }
@@ -272,7 +282,17 @@ export function runG1(seedFinal: number, params: MatchParams, overrides?: G1Over
       result = { kind: 'single', payerId: tied[0].id };
       return finish(params, seedFinal, events, result);
     }
-    const sub = runPhase('sub', tied, freshHp(tied, p), sudden.nextTick, p.subTicks, true, p, rand, events);
+    const sub = runPhase(
+      'sub',
+      tied,
+      freshHp(tied, p),
+      sudden.nextTick,
+      p.subTicks,
+      true,
+      p,
+      rand,
+      events,
+    );
     result = settleSub(sub);
     return finish(params, seedFinal, events, result);
   }
@@ -322,9 +342,7 @@ function finish(
 export function pickHighlights(events: GameEvent[]): Highlight[] {
   const out: Highlight[] = [];
   const falls = events.filter((e): e is Extract<GameEvent, { type: 'fall' }> => e.type === 'fall');
-  const attacks = events.filter(
-    (e): e is AttackEvent => e.type === 'attack',
-  );
+  const attacks = events.filter((e): e is AttackEvent => e.type === 'attack');
 
   if (falls.length > 0) {
     out.push({ kind: 'first-fall', tick: falls[0].tick, playerId: falls[0].playerId });

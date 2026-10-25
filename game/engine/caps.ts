@@ -34,9 +34,7 @@ export function checkCaps(totalVnd: number, equalShares: number[]): CapsCheck {
   const effCap = effectiveTotalCap(n);
 
   if (totalVnd > TOTAL_CAP_VND) {
-    violations.push(
-      `Vượt trần tổng: tổng hoá đơn ${totalVnd} ₫ > trần tổng ${TOTAL_CAP_VND} ₫.`,
-    );
+    violations.push(`Vượt trần tổng: tổng hoá đơn ${totalVnd} ₫ > trần tổng ${TOTAL_CAP_VND} ₫.`);
   }
   if (totalVnd > effCap) {
     violations.push(

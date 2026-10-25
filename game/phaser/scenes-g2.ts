@@ -434,7 +434,13 @@ export class G2Scene extends Phaser.Scene {
    * không món nào «có bóng món không» như panel v3 chê (ghế 2), và hết
    * cảm giác sticker dán nổi mà panel v4 chê.
    */
-  private foodShadow(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number): void {
+  private foodShadow(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): void {
     g.fillStyle(0x292524, FOOD_SHADOW_ALPHA);
     g.fillEllipse(x + 3, y + 5, w, h);
   }
@@ -538,7 +544,14 @@ export class G2Scene extends Phaser.Scene {
         { dx: -2, dy: 8, r: 7 },
       ]) {
         g.beginPath();
-        g.arc(x + p.dx * scale, y + p.dy * scale, p.r * scale, Math.PI * 0.15, Math.PI * 0.85, false);
+        g.arc(
+          x + p.dx * scale,
+          y + p.dy * scale,
+          p.r * scale,
+          Math.PI * 0.15,
+          Math.PI * 0.85,
+          false,
+        );
         g.strokePath();
       }
     } else {
@@ -606,12 +619,7 @@ export class G2Scene extends Phaser.Scene {
       );
       // Điểm nhấn trên mặt miếng: vệt sáng ngắn + chấm tiêu/hành.
       g.fillStyle(0xd9b48c, 0.9);
-      g.fillEllipse(
-        x + (c.dx - 3) * scale,
-        y + (c.dy - 2) * scale,
-        8 * scale,
-        4 * scale,
-      );
+      g.fillEllipse(x + (c.dx - 3) * scale, y + (c.dy - 2) * scale, 8 * scale, 4 * scale);
     }
     g.fillStyle(0x6f8f5f, 1);
     for (const p of [

@@ -38,7 +38,10 @@ export function buildGameSessionInput(session: Session): GameSessionInput {
   const members = session.members.map((m) => ({ id: m.id, displayName: m.name }));
   const total = session.expenses.reduce((s, e) => s + e.amount, 0);
   const ids = members.map((m) => m.id);
-  const shares = ids.length > 0 && total > 0 ? equalSharesFor(total, ids) : Object.fromEntries(ids.map((id) => [id, 0]));
+  const shares =
+    ids.length > 0 && total > 0
+      ? equalSharesFor(total, ids)
+      : Object.fromEntries(ids.map((id) => [id, 0]));
   return {
     members,
     equalShareByMemberId: shares,
@@ -53,7 +56,10 @@ export function buildGameSessionInput(session: Session): GameSessionInput {
  * 1 ₫ cho người đầu danh sách — cùng luật làm tròn của app chính).
  * Thứ tự `playerIds` quyết định ai nhận phần dư lẻ, giống hệt app.
  */
-export function equalSharesFor(totalVnd: number, playerIds: readonly string[]): Record<string, number> {
+export function equalSharesFor(
+  totalVnd: number,
+  playerIds: readonly string[],
+): Record<string, number> {
   if (playerIds.length === 0) return {};
   if (!Number.isFinite(totalVnd) || totalVnd <= 0) {
     return Object.fromEntries(playerIds.map((id) => [id, 0]));

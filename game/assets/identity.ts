@@ -27,7 +27,12 @@
 //   avatar V4 của app chính nên mắt nối được người ở app chính với
 //   vòng/plate/badge (đậm) của cùng một người trong game.
 
-import { assignIdentityColors, initialsOf, memberNameKey, normalizeMemberName } from '@/lib/identity';
+import {
+  assignIdentityColors,
+  initialsOf,
+  memberNameKey,
+  normalizeMemberName,
+} from '@/lib/identity';
 
 /**
  * Bảng màu đậm theo colorIndex 0..11 — họ màu Material Design công bố

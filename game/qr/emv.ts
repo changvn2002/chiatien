@@ -37,9 +37,7 @@ export interface ParsedShopQr {
   isDynamic: boolean;
 }
 
-export type QrParseResult =
-  | { ok: true; parsed: ParsedShopQr }
-  | { ok: false; reason: string };
+export type QrParseResult = { ok: true; parsed: ParsedShopQr } | { ok: false; reason: string };
 
 /** Đọc các trường TLV liên tiếp; null khi cấu trúc không hợp lệ (độ dài rác/chữ ở trường độ dài…). */
 function readTlvFields(input: string): Map<string, string> | null {
@@ -80,12 +78,17 @@ export function parseShopQrPayload(rawInput: string): QrParseResult {
   const crcGiven = raw.slice(-4).toUpperCase();
   const crcBody = raw.slice(0, -4);
   if (!/^[0-9A-F]{4}$/.test(crcGiven) || crc16(crcBody) !== crcGiven) {
-    return { ok: false, reason: 'Mã kiểm tra (CRC) của QR không khớp — QR có thể bị mờ, cắt góc hoặc không chuẩn EMV.' };
+    return {
+      ok: false,
+      reason:
+        'Mã kiểm tra (CRC) của QR không khớp — QR có thể bị mờ, cắt góc hoặc không chuẩn EMV.',
+    };
   }
 
   const top = readTlvFields(raw);
   if (!top) return { ok: false, reason: 'Cấu trúc QR không đọc được theo chuẩn EMV.' };
-  if (top.get('00') !== '01') return { ok: false, reason: 'Đây không phải mã EMV (thiếu dấu định dạng chuẩn).' };
+  if (top.get('00') !== '01')
+    return { ok: false, reason: 'Đây không phải mã EMV (thiếu dấu định dạng chuẩn).' };
 
   const merchant = top.get('38');
   if (!merchant) return { ok: false, reason: 'QR không chứa tài khoản VietQR (thiếu trường 38).' };
@@ -104,8 +107,7 @@ export function parseShopQrPayload(rawInput: string): QrParseResult {
 
   const bank = findBankByBin(bin);
   const amountText = top.get('54');
-  const amountVnd =
-    amountText && /^\d+$/.test(amountText) ? Number.parseInt(amountText, 10) : null;
+  const amountVnd = amountText && /^\d+$/.test(amountText) ? Number.parseInt(amountText, 10) : null;
   // Tên chủ TK: EMVCo tag 59 (merchant name) khi payload có mang; chuẩn
   // VietQR chuyển khoản thường không mang tên → null (nhánh 2b).
   const nameText = (top.get('59') ?? '').trim();

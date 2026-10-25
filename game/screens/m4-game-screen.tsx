@@ -36,8 +36,8 @@ export function M4GameScreen({
       {n === 2 ? (
         <div className="mt-3">
           <YellowAlert>
-            Nhóm chỉ có 2 người: người được chọn sẽ trả toàn bộ hoá đơn, gánh thêm một nửa hoá đơn so với
-            chia đều.
+            Nhóm chỉ có 2 người: người được chọn sẽ trả toàn bộ hoá đơn, gánh thêm một nửa hoá đơn
+            so với chia đều.
           </YellowAlert>
         </div>
       ) : null}
@@ -59,8 +59,12 @@ export function M4GameScreen({
           </span>
           <span className="flex items-center gap-2">
             <span className="font-display text-[20px] font-extrabold text-ink">Mâm cơm xoay</span>
-            <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-ink-on-seed">VÁN NHANH</span>
-            {chosen === 'g2' ? <span className="text-sm font-semibold text-brand-deep">Đã chọn</span> : null}
+            <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-ink-on-seed">
+              VÁN NHANH
+            </span>
+            {chosen === 'g2' ? (
+              <span className="text-sm font-semibold text-brand-deep">Đã chọn</span>
+            ) : null}
           </span>
           <span className="mt-1 block text-base text-ink">
             Đũa dừng ở ai, người đó đãi · 1 vòng quay, 8–12 giây
@@ -79,8 +83,12 @@ export function M4GameScreen({
             <GameCardArt kind="g1" />
           </span>
           <span className="flex items-center gap-2">
-            <span className="font-display text-[20px] font-extrabold text-ink">Đấu trường tự động</span>
-            {chosen === 'g1' ? <span className="text-sm font-semibold text-brand-deep">Đã chọn</span> : null}
+            <span className="font-display text-[20px] font-extrabold text-ink">
+              Đấu trường tự động
+            </span>
+            {chosen === 'g1' ? (
+              <span className="text-sm font-semibold text-brand-deep">Đã chọn</span>
+            ) : null}
           </span>
           <span className="mt-1 block text-base text-ink">
             Mỗi người một nhân vật, tự đánh nhau · Người đứng vững cuối cùng là người đãi ·{' '}
@@ -238,12 +246,7 @@ function GameCardArt({ kind }: { kind: GameKind }) {
       </span>
     );
   }
-  const seat = (
-    name: string,
-    left: string,
-    top: string,
-    size = 56,
-  ): ReactNode => (
+  const seat = (name: string, left: string, top: string, size = 56): ReactNode => (
     <SpriteCrop
       key={name}
       src="/game/atlas/g2-food.webp"

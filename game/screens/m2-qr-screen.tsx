@@ -15,10 +15,14 @@ import type { QrSourceId } from '../copy';
 import type { GameDraft } from '../state';
 import { GameBadge, InfoBox, RedAlert, ScreenTitle, SplitEvenButton, YellowAlert } from './shared';
 
-export function bankDisplayOf(parsed: { bankName: string | null; bankShortName: string | null; bin: string } | null): string | null {
+export function bankDisplayOf(
+  parsed: { bankName: string | null; bankShortName: string | null; bin: string } | null,
+): string | null {
   if (!parsed) return null;
   // BIN không có trong bảng tra -> hiển thị mã BIN nguyên văn, cấm đoán tên ngân hàng (SPEC §M2).
-  return parsed.bankName ? `${parsed.bankName} (${parsed.bankShortName ?? parsed.bin})` : `Mã ngân hàng (BIN): ${parsed.bin}`;
+  return parsed.bankName
+    ? `${parsed.bankName} (${parsed.bankShortName ?? parsed.bin})`
+    : `Mã ngân hàng (BIN): ${parsed.bin}`;
 }
 
 export function M2QrScreen({
@@ -85,12 +89,12 @@ export function M2QrScreen({
           <YellowAlert>
             <p className="font-bold">Chưa giải mã được QR này.</p>
             <p className="mt-1">
-              Hãy thử lại: chụp gần hơn, đủ sáng, trọn 4 góc của mã; nếu đang dùng ảnh chụp màn hình, hãy
-              quét trực tiếp bằng camera thay vì ảnh chụp màn hình.
+              Hãy thử lại: chụp gần hơn, đủ sáng, trọn 4 góc của mã; nếu đang dùng ảnh chụp màn
+              hình, hãy quét trực tiếp bằng camera thay vì ảnh chụp màn hình.
             </p>
             <p className="mt-1">
-              Nếu vẫn không đọc được, nhóm vẫn chơi để chọn người đãi, nhưng màn kết quả sẽ không hiển
-              thị QR này — người đãi sẽ quét QR gốc tại quầy hoặc trên hoá đơn.
+              Nếu vẫn không đọc được, nhóm vẫn chơi để chọn người đãi, nhưng màn kết quả sẽ không
+              hiển thị QR này — người đãi sẽ quét QR gốc tại quầy hoặc trên hoá đơn.
             </p>
           </YellowAlert>
           <button
@@ -111,8 +115,8 @@ export function M2QrScreen({
       ) : (
         <>
           <p className="mt-1 text-base text-ink-2">
-            Thông tin dưới đây đọc nguyên văn từ mã QR do nhóm cung cấp. Hãy đối chiếu tên người nhận với
-            nguồn của quán trước khi xác nhận.
+            Thông tin dưới đây đọc nguyên văn từ mã QR do nhóm cung cấp. Hãy đối chiếu tên người
+            nhận với nguồn của quán trước khi xác nhận.
           </p>
 
           <div className="mt-4 rounded-lg border border-line-strong bg-card px-4 py-4">
@@ -124,7 +128,9 @@ export function M2QrScreen({
                 </p>
               </>
             ) : (
-              <p className="text-base font-semibold text-ink">QR này không ghi tên chủ tài khoản.</p>
+              <p className="text-base font-semibold text-ink">
+                QR này không ghi tên chủ tài khoản.
+              </p>
             )}
             <p className="mt-2 text-base text-ink">Ngân hàng: {bankDisplayOf(parsed)}</p>
             <p className="mt-1 text-base text-ink">
@@ -140,10 +146,13 @@ export function M2QrScreen({
               </span>
             </p>
             {parsed?.amountVnd !== null && parsed?.amountVnd !== undefined ? (
-              <p className="mt-1 text-base text-ink">QR có ghi sẵn số tiền: {formatMoney(parsed.amountVnd)}</p>
+              <p className="mt-1 text-base text-ink">
+                QR có ghi sẵn số tiền: {formatMoney(parsed.amountVnd)}
+              </p>
             ) : (
               <p className="mt-1 text-base text-ink">
-                QR không ghi sẵn số tiền — người trả tự nhập đúng {formatMoney(totalVnd)} trong app ngân hàng.
+                QR không ghi sẵn số tiền — người trả tự nhập đúng {formatMoney(totalVnd)} trong app
+                ngân hàng.
               </p>
             )}
           </div>
@@ -152,8 +161,8 @@ export function M2QrScreen({
             <div className="mt-3">
               <RedAlert>
                 QR này ghi sẵn số tiền {formatMoney(parsed?.amountVnd ?? 0)}, khác tổng hoá đơn{' '}
-                {formatMoney(totalVnd)}. Chưa thể xác nhận — nhóm cần làm rõ tại bàn: sai hoá đơn hay sai
-                QR, rồi dùng đúng QR của quán.
+                {formatMoney(totalVnd)}. Chưa thể xác nhận — nhóm cần làm rõ tại bàn: sai hoá đơn
+                hay sai QR, rồi dùng đúng QR của quán.
               </RedAlert>
             </div>
           ) : null}
@@ -167,9 +176,9 @@ export function M2QrScreen({
           {branch === '2a' && matchedMember ? (
             <div className="mt-3">
               <RedAlert>
-                Tên người nhận trùng với tên của {matchedMember.displayName} trong nhóm. Bắt buộc đối
-                chiếu bằng nguồn của quán (QR tại quầy, hoá đơn hoặc nhân viên quán) — lời giải thích của
-                chính thành viên đó không đủ để xác nhận.
+                Tên người nhận trùng với tên của {matchedMember.displayName} trong nhóm. Bắt buộc
+                đối chiếu bằng nguồn của quán (QR tại quầy, hoá đơn hoặc nhân viên quán) — lời giải
+                thích của chính thành viên đó không đủ để xác nhận.
               </RedAlert>
             </div>
           ) : null}
@@ -177,15 +186,17 @@ export function M2QrScreen({
           {branch === '2a' && !matchedMember && parsed?.accountName ? (
             <div className="mt-3">
               <YellowAlert>
-                Nhiều quán nhỏ dùng tài khoản cá nhân của chủ quán, nên tên người nhận là tên cá nhân là
-                chuyện thường gặp. Dù vậy, hãy đối chiếu tên này với QR tại quầy hoặc hoá đơn của quán.
-                Nếu không đối chiếu được, hãy trả bằng QR tại quầy thay vì QR này.
+                Nhiều quán nhỏ dùng tài khoản cá nhân của chủ quán, nên tên người nhận là tên cá
+                nhân là chuyện thường gặp. Dù vậy, hãy đối chiếu tên này với QR tại quầy hoặc hoá
+                đơn của quán. Nếu không đối chiếu được, hãy trả bằng QR tại quầy thay vì QR này.
               </YellowAlert>
             </div>
           ) : null}
 
           <fieldset className="mt-5">
-            <legend className="text-base font-semibold text-ink">Ai là người cung cấp QR này?</legend>
+            <legend className="text-base font-semibold text-ink">
+              Ai là người cung cấp QR này?
+            </legend>
             <div className="mt-2 space-y-2">
               {input.members.map((m) => (
                 // F10 (audit PWA native-feel): hàng chọn là label full-row
@@ -237,7 +248,9 @@ export function M2QrScreen({
                   <GameBadge name={m.displayName} colorIndex={colorIndexOf(m.id)} size={28} />
                   <span className="text-base text-ink">{m.displayName}</span>
                   {qr.providerId === m.id ? (
-                    <span className="text-sm text-debt-ink">Người cung cấp không tự xác nhận được</span>
+                    <span className="text-sm text-debt-ink">
+                      Người cung cấp không tự xác nhận được
+                    </span>
                   ) : null}
                   {qr.confirmerId === m.id ? (
                     <span className="ml-auto text-sm font-semibold text-brand-deep">Đã chọn</span>
@@ -247,8 +260,8 @@ export function M2QrScreen({
             </div>
             {providerIsConfirmer ? (
               <p className="mt-1.5 text-base text-debt-ink">
-                Người xác nhận phải là một thành viên khác với người cung cấp QR — một người tự đưa QR rồi
-                tự xác nhận thì không có bước đối chiếu nào cả.
+                Người xác nhận phải là một thành viên khác với người cung cấp QR — một người tự đưa
+                QR rồi tự xác nhận thì không có bước đối chiếu nào cả.
               </p>
             ) : null}
           </fieldset>
@@ -279,8 +292,8 @@ export function M2QrScreen({
             </div>
             {sourceTooWeak ? (
               <p className="mt-1.5 text-base text-debt-ink">
-                Lời cam đoan của người cung cấp một mình không đủ để xác nhận. Hãy đối chiếu với QR tại
-                quầy, hoá đơn/menu hoặc nhân viên quán.
+                Lời cam đoan của người cung cấp một mình không đủ để xác nhận. Hãy đối chiếu với QR
+                tại quầy, hoá đơn/menu hoặc nhân viên quán.
               </p>
             ) : null}
           </fieldset>

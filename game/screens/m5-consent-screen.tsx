@@ -139,15 +139,19 @@ export function M5ConsentScreen({
         <li className="rounded-lg border border-line-strong bg-card px-4 py-3">
           Nếu chia đều như thường: mỗi người{' '}
           <span className="font-display block text-[32px] leading-tight font-extrabold text-ink">
-            {minShare === maxShare ? formatMoney(minShare) : `${formatMoney(minShare)} – ${formatMoney(maxShare)} (lệch tối đa 1 ₫ do làm tròn)`}
+            {minShare === maxShare
+              ? formatMoney(minShare)
+              : `${formatMoney(minShare)} – ${formatMoney(maxShare)} (lệch tối đa 1 ₫ do làm tròn)`}
           </span>
         </li>
         {/* Dòng 6 — hệ quả, chữ không nhỏ hơn các dòng khác, không gấp.
             «Gánh thêm tối đa» là con số nổi bật của dòng, ngay dưới cặp tiền. */}
         <li className="rounded-lg border border-warning-solid bg-warning-bg px-4 py-3 sm:col-span-2">
           Nếu chơi: một người sẽ trả toàn bộ {formatMoney(total)} — tức{' '}
-          <strong className="font-display text-[20px] font-extrabold">gánh thêm tối đa {formatMoney(extra)}</strong> so với chia đều. Những người còn lại không
-          phải trả.
+          <strong className="font-display text-[20px] font-extrabold">
+            gánh thêm tối đa {formatMoney(extra)}
+          </strong>{' '}
+          so với chia đều. Những người còn lại không phải trả.
         </li>
         {n === 2 ? (
           <li className="sm:col-span-2">
@@ -218,9 +222,13 @@ export function M5ConsentScreen({
         <li className="sm:col-span-2">
           {game === 'g1' ? (
             <>
-              Nếu hoà đến cùng, những người đồng hạng sẽ cùng đãi, mỗi người trả một phần bằng nhau của hoá
-              đơn (xem{' '}
-              <button type="button" onClick={onOpenRules} className="font-semibold text-brand-deep underline">
+              Nếu hoà đến cùng, những người đồng hạng sẽ cùng đãi, mỗi người trả một phần bằng nhau
+              của hoá đơn (xem{' '}
+              <button
+                type="button"
+                onClick={onOpenRules}
+                className="font-semibold text-brand-deep underline"
+              >
                 luật hoà
               </button>
               ). Ván chính tối đa 40 giây.
@@ -231,13 +239,19 @@ export function M5ConsentScreen({
         </li>
         {/* Dòng 8 — mô hình tin cậy. */}
         <li className="sm:col-span-2">
-          Ván chạy trên máy của một thành viên trong nhóm. Cả nhóm cùng xem từ lúc bấm bắt đầu tới khi có
-          kết quả. Nếu máy bị đóng giữa ván, app khôi phục đúng ván này, không quay ván khác thay thế.
+          Ván chạy trên máy của một thành viên trong nhóm. Cả nhóm cùng xem từ lúc bấm bắt đầu tới
+          khi có kết quả. Nếu máy bị đóng giữa ván, app khôi phục đúng ván này, không quay ván khác
+          thay thế.
         </li>
         {/* Dòng 9 — mã ván. */}
-        <li className="sm:col-span-2">Mã ván sẽ hiện ngay khi bấm Bắt đầu, trước khi game chạy — dùng để nhận diện và xem lại đúng ván này.</li>
+        <li className="sm:col-span-2">
+          Mã ván sẽ hiện ngay khi bấm Bắt đầu, trước khi game chạy — dùng để nhận diện và xem lại
+          đúng ván này.
+        </li>
         {/* Dòng 10 — nhắc đồng thuận. */}
-        <li className="sm:col-span-2">Chỉ bấm Bắt đầu khi từng người trong nhóm đã thấy màn hình này và đồng ý.</li>
+        <li className="sm:col-span-2">
+          Chỉ bấm Bắt đầu khi từng người trong nhóm đã thấy màn hình này và đồng ý.
+        </li>
       </ol>
 
       {/* Thông tin QR đã xác nhận lặp lại nguyên vẹn (R2-3 Bước 2). */}
@@ -245,8 +259,8 @@ export function M5ConsentScreen({
         <InfoBox>
           {qr.parseFailed || !qr.parsed ? (
             <p>
-              QR của quán chưa giải mã được ở bước đối chiếu — màn kết quả sẽ hướng dẫn người đãi quét QR
-              gốc tại quầy hoặc trên hoá đơn.
+              QR của quán chưa giải mã được ở bước đối chiếu — màn kết quả sẽ hướng dẫn người đãi
+              quét QR gốc tại quầy hoặc trên hoá đơn.
             </p>
           ) : (
             <>
@@ -281,8 +295,8 @@ export function M5ConsentScreen({
 
       {abandonedCount > 0 ? (
         <p className="mt-3 text-sm text-ink-2">
-          Trong phiên này đã có {abandonedCount} cam kết bị bỏ (đã hiện mã cam kết rồi không chơi tiếp) —
-          con số này được ghi công khai trong nhật ký phiên.
+          Trong phiên này đã có {abandonedCount} cam kết bị bỏ (đã hiện mã cam kết rồi không chơi
+          tiếp) — con số này được ghi công khai trong nhật ký phiên.
         </p>
       ) : null}
 
@@ -306,15 +320,16 @@ export function M5ConsentScreen({
           <GroupedTechString value={commit.c1} className="font-mono font-bold" />
         </p>
         <p className="mt-1 text-sm text-ink-2">
-          Mã này được tạo và hiển thị trước khi số chung được nhập, để cả nhóm nhận diện đúng ván này.
+          Mã này được tạo và hiển thị trước khi số chung được nhập, để cả nhóm nhận diện đúng ván
+          này.
         </p>
         <div className="mt-5 border-t border-line pt-4">
           <p className="text-sm font-bold tracking-wide text-brand-deep uppercase">
             Bước 2 · Một thành viên khác nhập số chung
           </p>
           <p className="mt-1 text-sm text-ink-2">
-            Người làm bước này: một thành viên khác trong nhóm, tự tay nhập trên máy sau khi đã thấy mã
-            cam kết ở bước 1.
+            Người làm bước này: một thành viên khác trong nhóm, tự tay nhập trên máy sau khi đã thấy
+            mã cam kết ở bước 1.
           </p>
         </div>
         <label className="mt-3 mb-1.5 block text-base font-semibold text-ink" htmlFor="m5-chung">
@@ -341,8 +356,8 @@ export function M5ConsentScreen({
           onChange={(e) => setChung(e.target.value.replace(/\D/g, ''))}
         />
         <p className="mt-1.5 text-sm text-ink-2">
-          Đừng dùng ngày sinh, số may mắn hay số tròn — hãy chọn một dãy số bất kỳ mà cả nhóm cùng thấy
-          lúc nhập.
+          Đừng dùng ngày sinh, số may mắn hay số tròn — hãy chọn một dãy số bất kỳ mà cả nhóm cùng
+          thấy lúc nhập.
         </p>
         {chung && !chungValid ? (
           <p className="mt-1 text-sm text-debt-ink">Số chung cần ít nhất 6 chữ số.</p>
@@ -390,7 +405,12 @@ export function M5ConsentScreen({
 
 /** Tên người đãi của một bản ghi cũ — cho dòng bổ sung bắt buộc của luồng chơi lại. */
 export function resultPayerNames(
-  record: { log: { result: { kind: string; payerId?: string; payerIds?: string[] }; params: { players: { id: string; name: string }[] } } },
+  record: {
+    log: {
+      result: { kind: string; payerId?: string; payerIds?: string[] };
+      params: { players: { id: string; name: string }[] };
+    };
+  },
   input: GameSessionInput,
 ): string {
   const nameOf = (id: string) =>
