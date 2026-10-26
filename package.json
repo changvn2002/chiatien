@@ -13,7 +13,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "web-vitals": "^5.3.0"
+    "web-vitals": "^6.2.3"
   },
   "description": "Chia Tiền — chia tiền nhóm kiểu Việt Nam: ghi khoản chi, chia đều/tuỳ chỉnh/theo phần, quyết toán ít giao dịch nhất kèm VietQR. Không cần đăng nhập, dữ liệu lưu ngay trên máy bạn.",
   "devDependencies": {
