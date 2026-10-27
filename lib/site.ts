@@ -26,31 +26,31 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: 'Chia tiền nhóm thế nào cho công bằng?',
     answer:
-      'Ghi lại đầy đủ từng khoản chi — ai đã trả và khoản đó dành cho những ai — rồi để app tính số dư của từng người: tổng đã trả trừ tổng phải chịu. Người dư dương được nhận lại, người dư âm trả thêm, và các khoản nợ chồng chéo tự triệt tiêu nhau. Chia Tiền hỗ trợ ba cách chia cho từng khoản: chia đều, tuỳ chỉnh số tiền từng người, hoặc chia theo phần — chọn cách nào khớp với thực tế của khoản đó là công bằng nhất.',
+      'Ghi lại từng khoản chi: ai đã trả, khoản đó cho những ai. App cộng số tiền mỗi người đã trả và số tiền mỗi người phải chịu, rồi ra số dư của mỗi người. Ai đang dư thì được nhận lại, ai đang thiếu thì trả thêm. Các khoản nợ chồng chéo được trừ qua lại cho nhau, nên cuối cùng chỉ còn vài lần chuyển. Mỗi khoản có ba cách chia — chia đều, nhập đúng số tiền từng người, hoặc chia theo phần — cứ chọn cách khớp với khoản đó.',
   },
   {
     question: 'Mỗi người ăn uống khác nhau thì tính tiền thế nào?',
     answer:
-      'Có hai cách. Nếu một khoản chỉ liên quan vài người (ví dụ chỉ 3 người uống rượu), bỏ chọn những người còn lại khỏi khoản chi đó. Nếu mọi người cùng ăn nhưng mức khác nhau, dùng kiểu "Tuỳ chỉnh số tiền" và nhập đúng số tiền từng người phải chịu — app bắt tổng phải khớp với số tiền của khoản chi nên không lệch một đồng.',
+      'Tuỳ khoản mà chọn. Khoản chỉ liên quan tới vài người — như chỉ 3 người uống rượu — thì bỏ chọn những người còn lại khỏi khoản đó. Còn khi mọi người cùng dùng mà mức khác nhau, chọn kiểu "Tuỳ chỉnh số tiền" và nhập đúng phần từng người phải chịu; tổng các phần phải khớp số tiền của khoản nên không lệch đồng nào.',
   },
   {
     question: 'VietQR là gì? Vì sao app tạo được mã QR chuyển tiền?',
     answer:
-      'VietQR là chuẩn mã QR chuyển khoản do NAPAS vận hành, dùng chung cho mọi app ngân hàng tại Việt Nam. Khi tài khoản của người nhận đã được lưu trên máy đang xem, mỗi lần chuyển tiền tới người đó sẽ kèm một mã VietQR chứa đúng số tiền và nội dung chuyển khoản — mở app ngân hàng, quét mã là chuyển, không phải gõ số tài khoản hay sợ nhầm số tiền.',
+      'Mã QR chuyển khoản dùng chung cho mọi app ngân hàng ở Việt Nam. Máy bạn đã lưu tài khoản người nhận thì mỗi lệnh chuyển có sẵn mã QR ghi đúng số tiền — mở app ngân hàng, quét là chuyển, khỏi gõ số tài khoản.',
   },
   {
     question: 'Có cần cài app hay đăng ký tài khoản để dùng Chia Tiền không?',
     answer:
-      'Không cần cả hai. Khác với các app chia tiền phải tải từ App Store hay CH Play rồi đăng ký tài khoản, Chia Tiền chạy ngay trên trình duyệt: mở link là dùng, không cài đặt, không đăng nhập, không thu thập dữ liệu — mọi cuộc chia lưu ngay trên máy của bạn. Cần gửi cho cả nhóm thì bấm "Chia sẻ link": link chứa thành viên, khoản chi và kết quả ai nợ ai; ai mở link cũng xem và sửa tiếp được trên máy của họ, cũng không phải cài gì thêm. Thông tin ngân hàng không đi theo link — mã QR của mỗi người chỉ hiện trên máy đã lưu tài khoản của chính họ.',
+      'Không cần. Chia Tiền chạy ngay trên trình duyệt, mở link là dùng. Mọi cuộc chia được lưu ngay trên máy của bạn. Muốn gửi cho cả nhóm thì bấm "Chia sẻ link": link gồm thành viên, khoản chi và kết quả ai nợ ai, ai mở cũng xem và sửa tiếp được trên máy của họ. Thông tin ngân hàng không đi theo link — mã QR của mỗi người chỉ hiện trên máy đã lưu tài khoản của chính họ.',
   },
   {
     question: 'Nhóm đông người thì phải chuyển tiền bao nhiêu lần?',
     answer:
-      'Rất ít. Thay vì từng cặp một trả qua trả lại, app ghép người đang nợ nhiều nhất với người cần được nhận nhiều nhất, nên một nhóm n người chỉ cần tối đa n−1 lần chuyển là hết nợ. Ví dụ nhóm 6 người đi du lịch thường chỉ còn khoảng 3–5 lần chuyển thay vì hàng chục lần nếu tự tính tay.',
+      'Ít hơn bạn nghĩ. Thay vì từng cặp một trả qua trả lại, app ghép người đang nợ nhiều nhất với người cần được nhận nhiều nhất, nên nhóm n người tối đa chỉ cần n−1 lần chuyển là hết nợ. Nhóm 6 người đi chơi thường chỉ còn khoảng 3–5 lần chuyển, thay vì hàng chục lần nếu tự tính tay.',
   },
   {
     question: 'Chia Tiền có miễn phí không?',
     answer:
-      'Miễn phí hoàn toàn, không tài khoản, không quảng cáo chen ngang lúc chốt tiền. Mở trang là dùng ngay cho chuyến đi, bữa nhậu hay tiền trọ của nhóm bạn.',
+      'Miễn phí. Không quảng cáo chen ngang lúc chốt tiền — mở trang là dùng ngay cho chuyến đi, bữa nhậu hay tiền trọ của nhóm bạn.',
   },
 ];

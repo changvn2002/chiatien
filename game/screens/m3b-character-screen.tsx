@@ -1,20 +1,26 @@
 // M3B — Chọn nhân vật (FIX-V3 N2b + N3, lane F): bước THÊM vào luồng
 // sau M3 (đã chọn người chơi) và trước M4 (chọn game). Gồm:
-// 1) Chọn BỘ cho cả bàn — thẻ từng bộ: tên + ảnh xem trước THẬT (crop
-//    từ sheet xem trước riêng của bộ — nhân vật 3/4 hướng mặt về phía
-//    người xem; bộ không có sheet xem trước thì crop frame idle từ
-//    atlas như cũ) + số nhân vật. Bộ lấy từ manifest của lane A3;
-//    đang tải → khung chờ rõ ràng; vắng/lỗi → bộ dự phòng Adventurers
-//    tích hợp kèm ghi chú nhỏ (xem character-sets.ts).
-// 2) Gán nhân vật TỪNG NGƯỜI — chọn người (PlayerAvatar + tên +
-//    strongHex) rồi chạm nhân vật trong lưới LỚN của bộ; nhân vật đã
-//    có người khác giữ thì mờ + nhãn «Đã có người chọn» (một ván
-//    không trùng nhân vật khi bộ còn đủ). Có lối «Để app tự chọn».
-// 3) Chụp ảnh làm avatar (N3): camera getUserMedia CHỈ mở khi người
-//    dùng bấm, dừng track ngay sau khi chụp; không mở được/quyền bị
-//    từ chối → rơi về chọn file ảnh (input có capture). Ảnh cắt VUÔNG
-//    ở giữa ngay trên máy (canvas), hiện TRÒN, lưu ở kho riêng trên
-//    máy `ct-game-avatars-v1` — KHÔNG tải lên, KHÔNG vào ván/log/link.
+// 1) Chọn BỘ cho cả bàn — hàng chip bộ (chỉ tên bộ, không mô tả; chip
+//    đang chọn = nền neutral-900 + chữ trắng, mẫu segmented). Bộ lấy
+//    từ manifest của lane A3; đang tải → khung chờ rõ ràng; vắng/lỗi →
+//    bộ dự phòng Adventurers tích hợp kèm ghi chú nhỏ (xem
+//    character-sets.ts). ĐỔI BỘ KHÔNG XOÁ GÁN CỦA BỘ KHÁC: gán được
+//    nhớ theo từng bộ trong phiên mở sheet (bản đồ theo setId ở dưới),
+//    lưới chỉ hiện gán của bộ đang xem (SPEC step23 §2.1, F-20).
+// 2) Gán nhân vật TỪNG NGƯỜI — hàng chip người cuộn ngang (đĩa
+//    PlayerAvatar + tên + tên nhân vật hiện tại) rồi chạm nhân vật
+//    trong lưới 3×4 của bộ; trạng thái ô đọc bằng HÌNH (huy hiệu ✓ đặc
+//    brand-500 khi gán cho người đang chọn; đĩa danh tính của chủ sở
+//    hữu khi đã gán cho người khác — sprite giữ nguyên sắc, cấm
+//    opacity; nhãn chữ trạng thái chỉ còn ở aria-label). Có lối
+//    «Tự chọn» ở footer sheet (cơ chế gán mặc định cũ).
+// 3) Ảnh avatar (N3) rút gọn thành 1 hàng: đĩa của người đang chọn +
+//    nhãn «Ảnh đại diện» + icon-button ghost Camera / ImagePlus
+//    (aria-label giữ nguyên văn). Camera getUserMedia CHỈ mở khi
+//    người dùng bấm, dừng track ngay sau khi chụp; không mở được/quyền
+//    bị từ chối → rơi về chọn file ảnh (input có capture). Ảnh cắt
+//    VUÔNG ở giữa ngay trên máy (canvas), hiện TRÒN, lưu ở kho riêng
+//    trên máy `ct-game-avatars-v1` — KHÔNG tải lên, KHÔNG vào ván/log/link.
 //
 // BẤT BIẾN: setId / characterKey sống trong draft (state.ts), ảnh sống
 // trong kho ảnh riêng — cả hai là tầng trình diễn thuần, không vào
@@ -23,7 +29,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { GameSessionInput } from '../adapter';
 import { buildIdentityMapFromSessionMembers } from '../assets/identity';
 import {
@@ -47,9 +53,98 @@ import {
 import type { CharacterDef, CharacterSetDef } from './character-sets';
 import { PlayerAvatar, ScreenTitle, SplitEvenButton } from './shared';
 
-/** Dòng riêng tư BẮT BUỘC của N3 — giữ đúng ý, không yếu đi. */
+/**
+ * Dòng riêng tư của N3 — SPEC step23 §5.4 (2V-21) BỎ khỏi sheet nhân
+ * vật; nơi ở đúng của nó là sheet «Luật chơi & chi tiết» của
+ * setup-screen. Hằng giữ nguyên văn tại đây (API cũ) nhưng KHÔNG còn
+ * render trong màn này.
+ */
 export const AVATAR_PRIVACY_LINE =
   'Ảnh chỉ lưu trên máy này — không tải lên máy chủ, không gắn vào link chia sẻ.';
+
+/* ------------------------------------------------------------------ */
+/* Icon Lucide (vẽ inline đúng path Lucide — lucide-react không phải  */
+/* dependency trực tiếp của app nên không import được; nét 2, stroke  */
+/* currentColor như hệ icon của app).                                 */
+/* ------------------------------------------------------------------ */
+
+function LucideGlyph({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable={false}
+      className="shrink-0"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <LucideGlyph>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </LucideGlyph>
+  );
+}
+
+function ImagePlusIcon() {
+  return (
+    <LucideGlyph>
+      <path d="M16 5h6" />
+      <path d="M19 2v6" />
+      <path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+      <circle cx="9" cy="9" r="2" />
+    </LucideGlyph>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <LucideGlyph>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </LucideGlyph>
+  );
+}
+
+/** Huy hiệu ✓ trắng trên đĩa đặc brand-500 20px (góc ô lưới). */
+function CheckBadge() {
+  return (
+    <span
+      aria-hidden
+      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500"
+    >
+      <svg
+        width={12}
+        height={12}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        focusable={false}
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Crop frame idle THẬT từ atlas của nhân vật (kỹ thuật M4/P6).        */
@@ -246,7 +341,11 @@ export function M3BCharacterScreen({
   /**
    * FIX-UX-GAME: nhúng vào màn thiết lập gộp (nút «Đổi nhân vật») — ẩn
    * tiêu đề + đoạn mô tả dài + hàng nút điều hướng; đổi bộ/gán áp ngay
-   * vào draft, không cần bấm Tiếp tục riêng.
+   * vào draft, không cần bấm Tiếp tục riêng. Footer của sheet («Tự
+   * chọn» / «Xong») KHÔNG render trong thân này nữa: setup-screen
+   * dựng footer và truyền vào GameSheet qua prop `footer` (sibling
+   * ngoài div cuộn, SPEC step23 §2.1) bằng đúng các hàm gán mặc
+   * định/chốt gán mà màn này dùng nội bộ.
    */
   embedded?: boolean;
 }) {
@@ -272,6 +371,16 @@ export function M3BCharacterScreen({
     () => ensureAssignments(draft.selectedPlayerIds, set, draft.characterAssignments),
     [draft.selectedPlayerIds, draft.characterAssignments, set],
   );
+
+  // Gán theo TỪNG BỘ (SPEC step23 §2.1 F-20): draft chỉ giữ gán của bộ
+  // đang chọn, nên màn này nhớ thêm bản đồ setId → gán của mọi bộ đã
+  // xem trong phiên mở màn/sheet. Đổi bộ = cất gán bộ hiện tại vào bản
+  // đồ rồi khôi phục gán đã nhớ của bộ đích (chưa từng xem → gán mặc
+  // định của bộ đó); lưới luôn chỉ hiện gán của bộ đang xem.
+  const assignmentsBySetRef = useRef<Record<string, Record<string, string>>>({});
+  useEffect(() => {
+    assignmentsBySetRef.current[set.setId] = assignments;
+  }, [assignments, set.setId]);
 
   // Tải manifest các bộ (lane A3) — đang tải giữ trạng thái chờ;
   // vắng/lỗi mới dùng bộ dự phòng (kèm cờ để hiện ghi chú trung tính).
@@ -302,11 +411,16 @@ export function M3BCharacterScreen({
   }, [draft, set, assignments, onDraft, sets]);
 
   function chooseSet(next: CharacterSetDef) {
-    // Đổi bộ → gán lại mặc định của bộ mới (phân biệt theo thứ tự bộ).
+    if (next.setId === set.setId) return;
+    // Cất gán của bộ đang xem trước khi chuyển (không xoá gán bộ khác).
+    assignmentsBySetRef.current[set.setId] = assignments;
+    const saved = assignmentsBySetRef.current[next.setId];
     onDraft({
       ...draft,
       characterSetId: next.setId,
-      characterAssignments: defaultAssignments(draft.selectedPlayerIds, next),
+      characterAssignments: saved
+        ? ensureAssignments(draft.selectedPlayerIds, next, saved)
+        : defaultAssignments(draft.selectedPlayerIds, next),
     });
   }
 
@@ -434,9 +548,13 @@ export function M3BCharacterScreen({
   }
 
   const activeIdentity = active ? identityMap.get(active.id) : undefined;
-  const activeCharacter = active ? characterByKey(set, assignments[active.id]) : undefined;
   const activePhoto = active ? photos.get(active.id) : undefined;
 
+  // Màu SPEC §1.3 (tokens v4): thang «neutral» của SPEC = thang grey
+  // Material của app (grey-700 #616161 = neutral-700, grey-900 #212121
+  // = neutral-900, grey-300 #E0E0E0 = neutral-300, grey-100 #F5F5F5 =
+  // neutral-100) — dùng class grey-* để trúng hex, vì @theme chỉ khai
+  // neutral tới bậc 500 (neutral-700/900 của Tailwind mặc định lệch hex).
   return (
     <div>
       {embedded ? null : (
@@ -449,25 +567,32 @@ export function M3BCharacterScreen({
         </>
       )}
 
-      {/* --- Chọn bộ --- */}
-      <h3 className="mt-5 text-base font-bold text-ink">1 · Chọn bộ cho cả bàn</h3>
+      {/* --- Chọn bộ: nhãn 20 + gap 8 + chip 44 = khối 72px --- */}
+      <div className={`flex h-5 items-center gap-1.5 ${embedded ? '' : 'mt-5'}`}>
+        <h3 className="text-[12px] leading-[1.2] font-semibold text-grey-700">BỘ NHÂN VẬT</h3>
+        {sets ? (
+          <span className="text-[12px] leading-[1.2] text-grey-700">· {set.characters.length}</span>
+        ) : null}
+      </div>
       {!sets ? (
         <div
           role="status"
           aria-live="polite"
-          className="mt-2 rounded-lg border border-line bg-grey-50 px-4 py-6"
+          className="mt-2 rounded-xl border border-grey-300 bg-grey-100 px-4 py-6"
         >
-          <p className="text-base font-semibold text-ink">Đang tải bộ nhân vật…</p>
-          <p className="mt-1 text-sm text-ink-2">Danh sách bộ sẽ hiện ngay khi tải xong.</p>
+          <p className="text-[14px] leading-[1.35] font-semibold text-ink">Đang tải bộ nhân vật…</p>
+          <p className="mt-1 text-[13px] leading-[1.35] text-grey-700">
+            Danh sách bộ sẽ hiện ngay khi tải xong.
+          </p>
           <div aria-hidden className="mt-4 space-y-2">
-            <div className="h-4 w-2/3 animate-pulse rounded bg-line" />
-            <div className="h-4 w-1/2 animate-pulse rounded bg-line" />
-            <div className="h-4 w-3/5 animate-pulse rounded bg-line" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-grey-300" />
+            <div className="h-4 w-1/2 animate-pulse rounded bg-grey-300" />
+            <div className="h-4 w-3/5 animate-pulse rounded bg-grey-300" />
           </div>
         </div>
       ) : (
         <>
-          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-2 flex gap-2">
             {sets.map((s) => {
               const chosen = s.setId === set.setId;
               return (
@@ -476,51 +601,26 @@ export function M3BCharacterScreen({
                   type="button"
                   aria-pressed={chosen}
                   onClick={() => chooseSet(s)}
-                  className={`rounded-lg border-2 px-3 py-3 text-left transition ${
-                    chosen ? 'border-brand bg-brand-50' : 'border-line-strong bg-card'
+                  className={`flex h-11 flex-1 items-center justify-center rounded-full px-[14px] text-[14px] leading-[1.2] font-semibold transition ${
+                    chosen ? 'bg-grey-900 text-white' : 'border border-grey-300 bg-card text-ink'
                   }`}
                 >
-                  <span className="flex flex-wrap gap-1.5" aria-hidden>
-                    {s.characters.slice(0, 4).map((c, idx) => (
-                      <CharacterCrop
-                        key={c.characterKey}
-                        character={c}
-                        characterSet={s}
-                        index={idx}
-                        size={52}
-                      />
-                    ))}
-                  </span>
-                  <span className="mt-2 flex items-center gap-2">
-                    <span className="font-display text-[18px] font-extrabold text-ink">
-                      {s.name}
-                    </span>
-                    {chosen ? (
-                      <span className="text-sm font-semibold text-brand-deep">Đã chọn</span>
-                    ) : null}
-                  </span>
-                  <span className="mt-0.5 block text-sm text-ink-2">
-                    {s.characters.length} nhân vật{s.theme ? ` · ${s.theme}` : ''}
-                  </span>
+                  {s.name}
                 </button>
               );
             })}
           </div>
           {setsFromFallback ? (
-            <p className="mt-2 text-sm text-ink-2">
+            <p className="mt-2 text-[13px] leading-[1.35] text-grey-700">
               Không tải được danh sách bộ nhân vật — đang dùng bộ có sẵn trên máy.
             </p>
           ) : null}
-        </>
-      )}
 
-      {sets ? (
-        <>
-          {/* --- Chọn người --- */}
-          <h3 className="mt-6 text-base font-bold text-ink">
-            2 · Chọn từng người rồi chạm nhân vật
+          {/* --- Chọn người: nhãn 20 + gap 8 + chip 56 --- */}
+          <h3 className="mt-4 flex h-5 items-center text-[12px] leading-[1.2] font-semibold text-grey-700">
+            CHỌN NGƯỜI
           </h3>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex h-14 gap-2 overflow-x-auto">
             {players.map((p) => {
               const identity = identityMap.get(p.id);
               const isActive = active?.id === p.id;
@@ -534,56 +634,37 @@ export function M3BCharacterScreen({
                     stopCamera();
                     setActiveId(p.id);
                   }}
-                  className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
-                    isActive ? 'border-brand bg-brand-50' : 'border-line bg-card'
+                  className={`flex h-14 shrink-0 items-center gap-2 rounded-full py-2 pr-4 pl-3 text-left transition ${
+                    isActive
+                      ? 'border-2 border-brand-500 bg-card'
+                      : 'border-2 border-transparent bg-grey-100'
                   }`}
                 >
                   <PlayerAvatar
                     name={p.displayName}
                     colorIndex={identity?.colorIndex ?? 0}
-                    size={32}
+                    size={28}
                     photoDataUrl={photos.get(p.id)}
-                    ringHex={identity?.strongHex}
                   />
-                  <span className="text-base font-semibold text-ink">{p.displayName}</span>
-                  {identity ? (
+                  <span className="flex flex-col">
                     <span
-                      aria-hidden
-                      className="inline-block h-4 w-4 rounded-full border border-line-strong"
-                      style={{ backgroundColor: identity.strongHex }}
-                    />
-                  ) : null}
-                  <span className="text-sm text-ink-2">{ch ? ch.name : 'Chưa có nhân vật'}</span>
+                      className={`text-[14px] leading-[1.2] font-semibold ${
+                        isActive ? 'text-brand-950' : 'text-ink'
+                      }`}
+                    >
+                      {p.displayName}
+                    </span>
+                    <span className="text-[13px] leading-[1.35] text-grey-700">
+                      {ch ? ch.name : 'Chưa có nhân vật'}
+                    </span>
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* --- Xem trước người đang chọn --- */}
-          {active && activeCharacter ? (
-            <div className="mt-4 flex items-center gap-4 rounded-lg border border-line bg-grey-50 px-4 py-3">
-              <CharacterCrop
-                character={activeCharacter}
-                characterSet={set}
-                index={set.characters.findIndex(
-                  (c) => c.characterKey === activeCharacter.characterKey,
-                )}
-                size={96}
-              />
-              <div>
-                <p className="text-sm text-ink-2">Đang chọn cho</p>
-                <p className="font-display text-[20px] font-extrabold text-ink">
-                  {active.displayName}
-                </p>
-                <p className="text-base text-ink">
-                  Nhân vật: <strong>{activeCharacter.name}</strong> · Bộ {set.name}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* --- Lưới nhân vật LỚN --- */}
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {/* --- Lưới nhân vật: 4 hàng × 108 + 3 gap 8 = 456px (bộ 12) --- */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
             {set.characters.map((c, idx) => {
               const mine = active ? assignments[active.id] === c.characterKey : false;
               const taken = active ? takenByOther(assignments, c.characterKey, active.id) : false;
@@ -594,81 +675,109 @@ export function M3BCharacterScreen({
                   ? !canAssignCharacter(assignments, active.id, c.characterKey, set)
                   : false;
               const blocked = taken || modelBlocked;
-              // F7 (VERIFY-2026-10-25 C-06, phần chữ): ô bị chặn phải
-              // nói TRẠNG THÁI trực tiếp trên chính ô (mờ + nhãn ngắn)
-              // — người đã chọn thì ghi TÊN người đó; mẫu đã đủ người
-              // thì ghi đúng thế. Câu giải thích dài bắt user đoán
-              // («Mẫu này đã có N người chọn — chọn mẫu khác…») đã bỏ.
-              const takerName = taken
+              const owner = taken
                 ? players.find((p) => p.id !== active?.id && assignments[p.id] === c.characterKey)
-                    ?.displayName
                 : undefined;
+              const ownerIdentity = owner ? identityMap.get(owner.id) : undefined;
               return (
                 <button
                   key={c.characterKey}
                   type="button"
                   disabled={blocked}
+                  aria-disabled={blocked || undefined}
                   aria-pressed={mine}
+                  aria-label={
+                    taken
+                      ? `${c.name} — ${owner?.displayName ?? 'Người khác'} đã chọn, không chọn được`
+                      : modelBlocked
+                        ? `${c.name} — mẫu này đã đủ người, không chọn được`
+                        : undefined
+                  }
                   onClick={() => assign(c.characterKey)}
-                  className={`flex min-h-11 flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 transition ${
+                  className={`relative flex h-[108px] flex-col items-center rounded-xl p-2 text-center transition ${
                     mine
-                      ? 'border-brand bg-brand-50'
+                      ? 'border-2 border-brand-500 bg-card'
                       : blocked
-                        ? 'border-line bg-grey-50'
-                        : 'border-line-strong bg-card'
+                        ? 'border border-grey-300 bg-grey-100'
+                        : 'border border-grey-300 bg-card'
                   }`}
                 >
-                  <span className={blocked ? 'opacity-40' : undefined}>
-                    <CharacterCrop character={c} characterSet={set} index={idx} size={72} />
-                  </span>
-                  <span className={`text-sm font-semibold ${blocked ? 'text-ink-2' : 'text-ink'}`}>
-                    {c.name}
-                  </span>
-                  {mine ? (
-                    <span className="text-xs font-semibold text-brand-deep">Đang chọn</span>
-                  ) : null}
-                  {taken ? (
-                    <span className="text-xs font-semibold text-ink-2">
-                      {takerName ? `${takerName} đã chọn` : 'Đã có người chọn'}
+                  {mine ? <CheckBadge /> : null}
+                  {owner ? (
+                    <span aria-hidden className="absolute top-1 right-1">
+                      <PlayerAvatar
+                        name={owner.displayName}
+                        colorIndex={ownerIdentity?.colorIndex ?? 0}
+                        size={20}
+                        photoDataUrl={photos.get(owner.id)}
+                      />
                     </span>
                   ) : null}
-                  {modelBlocked ? (
-                    <span className="text-xs font-semibold text-ink-2">Mẫu này đã đủ người</span>
-                  ) : null}
+                  <CharacterCrop character={c} characterSet={set} index={idx} size={56} />
+                  <span className="mt-1.5 flex h-[30px] w-full items-start justify-center text-center text-[12px] leading-[15px] font-semibold text-ink">
+                    {c.name}
+                  </span>
                 </button>
               );
             })}
           </div>
           {set.characters.length < players.length ? (
-            <p className="mt-2 text-sm text-ink-2">
+            <p className="mt-2 text-[13px] leading-[1.35] text-grey-700">
               Bộ có {set.characters.length} nhân vật cho {players.length} người — hết nhân vật
               trống, app gán lặp, ưu tiên mẫu ít người chọn nhất.
             </p>
           ) : null}
 
-          {/* --- Ảnh avatar của người đang chọn (N3) --- */}
+          {/* --- Hàng avatar gọn 56px (N3) --- */}
           {active ? (
-            <div className="mt-6 rounded-lg border border-line-strong bg-card px-4 py-4">
-              <h3 className="text-base font-bold text-ink">
-                Ảnh đại diện của {active.displayName}
-              </h3>
-              <div className="mt-3 flex items-center gap-3">
+            <>
+              <div className="mt-4 flex h-14 items-center gap-3">
                 <PlayerAvatar
                   name={active.displayName}
                   colorIndex={activeIdentity?.colorIndex ?? 0}
-                  size={72}
+                  size={32}
                   photoDataUrl={activePhoto}
-                  ringHex={activeIdentity?.strongHex}
                 />
-                <p className="text-sm text-ink-2">
-                  {activePhoto
-                    ? 'Đang dùng ảnh chụp — hiện ở các màn game thay ký tự viết tắt.'
-                    : 'Chưa có ảnh — đang hiện ký tự viết tắt. Chụp hoặc chọn ảnh để thay.'}
-                </p>
+                <span className="text-[14px] leading-[1.2] font-semibold text-ink">
+                  Ảnh đại diện
+                </span>
+                {!cameraOn ? (
+                  <span className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Chụp ảnh làm avatar"
+                      onClick={() => void startCamera()}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink transition hover:bg-grey-100"
+                    >
+                      <CameraIcon />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Chọn ảnh có sẵn"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink transition hover:bg-grey-100"
+                    >
+                      <ImagePlusIcon />
+                    </button>
+                    {activePhoto ? (
+                      <button
+                        type="button"
+                        aria-label="Xoá ảnh"
+                        onClick={() => {
+                          onPhotosChanged(removeAvatarPhoto(active.id));
+                          setPhotoNote('Đã xoá ảnh đại diện — quay về ký tự viết tắt.');
+                        }}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full text-debt-ink transition hover:bg-grey-100"
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : null}
+                  </span>
+                ) : null}
               </div>
 
               {cameraOn ? (
-                <div className="mt-3">
+                <div className="mt-2">
                   <video
                     ref={videoRef}
                     playsInline
@@ -693,42 +802,12 @@ export function M3BCharacterScreen({
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void startCamera()}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
-                  >
-                    Chụp ảnh làm avatar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-                  >
-                    Chọn ảnh có sẵn
-                  </button>
-                  {activePhoto ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onPhotosChanged(removeAvatarPhoto(active.id));
-                        setPhotoNote('Đã xoá ảnh đại diện — quay về ký tự viết tắt.');
-                      }}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-debt-ink"
-                    >
-                      Xoá ảnh
-                    </button>
-                  ) : null}
-                </div>
-              )}
+              ) : null}
               {photoNote ? (
-                <p role="status" className="mt-2 text-sm text-ink-2">
+                <p role="status" className="mt-2 text-[13px] leading-[1.35] text-grey-700">
                   {photoNote}
                 </p>
               ) : null}
-              <p className="mt-3 text-sm font-semibold text-ink">{AVATAR_PRIVACY_LINE}</p>
               <input
                 ref={captureInputRef}
                 type="file"
@@ -754,18 +833,10 @@ export function M3BCharacterScreen({
                   e.target.value = '';
                 }}
               />
-            </div>
+            </>
           ) : null}
 
-          {embedded ? (
-            <button
-              type="button"
-              onClick={skipAutoAssign}
-              className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-            >
-              Để app tự chọn
-            </button>
-          ) : (
+          {embedded ? null : (
             <>
               <button
                 type="button"
@@ -786,7 +857,7 @@ export function M3BCharacterScreen({
                 onClick={skipAutoAssign}
                 className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
               >
-                Để app tự chọn
+                Tự chọn
               </button>
               <button
                 type="button"
@@ -799,7 +870,7 @@ export function M3BCharacterScreen({
             </>
           )}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

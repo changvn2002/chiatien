@@ -130,7 +130,7 @@ const session: Session = {
   updatedAt: 1,
 };
 
-describe('SettlementPanel mount points', () => {
+describe('SettlementPanel — Q1 (REDESIGN Pha 1): không còn lớp phiếu thường trực', () => {
   beforeEach(() => {
     mockMatchMedia(true);
   });
@@ -139,53 +139,30 @@ describe('SettlementPanel mount points', () => {
     vi.restoreAllMocks();
   });
 
-  it('mounts CompletionMark in panel body for both variants, label hidden before trigger', () => {
-    for (const variant of ['row', 'stacked'] as const) {
-      const { container, unmount } = render(
-        <SettlementPanel
-          session={session}
-          balances={{ a: 50000, b: -50000 }}
-          transfers={[{ fromId: 'b', toId: 'a', amount: 50000 }]}
-          copied={false}
-          copyFailed={false}
-          onCopy={() => {}}
-          onShare={() => {}}
-          onEditMember={() => {}}
-          variant={variant}
-        />,
-      );
-      expect(container.querySelector('[data-completion-mark]')).toBeNull();
-      unmount();
-    }
-  });
-
-  it('triggers exactly once when copied flips true; share also triggers', async () => {
-    const { rerender, container } = render(
+  // THAY ĐỔI THEO SPEC Q1: panel quyết toán KHÔNG còn mount
+  // CompletionMark/CompletionCard và không còn CTA Sao chép/Chia sẻ
+  // ở chân (đã gỡ về Sheet 4; phiếu chỉ dựng khi bấm «Xuất phiếu»).
+  // Hai test cũ khoá đúng hành vi bị SPEC cắt nên được thay bằng
+  // khẳng định ngược dưới đây; test logic/component của
+  // CompletionMark ở trên giữ nguyên (component vẫn dùng cho phiếu).
+  it('panel render 1 bản duy nhất: 0 completion mark, 0 completion card, 0 nút Copy/Chia sẻ', () => {
+    const { container } = render(
       <SettlementPanel
         session={session}
         balances={{ a: 50000, b: -50000 }}
         transfers={[{ fromId: 'b', toId: 'a', amount: 50000 }]}
-        copied={false}
-        copyFailed={false}
-        onCopy={() => {}}
-        onShare={() => {}}
+        paidKeys={new Set()}
+        onOpenPayment={() => {}}
         onEditMember={() => {}}
+        gamePanel={null}
       />,
     );
-    rerender(
-      <SettlementPanel
-        session={session}
-        balances={{ a: 50000, b: -50000 }}
-        transfers={[{ fromId: 'b', toId: 'a', amount: 50000 }]}
-        copied
-        copyFailed={false}
-        onCopy={() => {}}
-        onShare={() => {}}
-        onEditMember={() => {}}
-      />,
-    );
-    expect(container.querySelectorAll('[data-completion-mark]')).toHaveLength(1);
-    expect(container.textContent).toContain('Đã chốt chia');
-    expect(container.textContent).not.toContain('đã thanh toán');
+    expect(container.querySelector('[data-completion-mark]')).toBeNull();
+    expect(container.querySelector('[data-completion-card]')).toBeNull();
+    expect(container.querySelector('[data-slip]')).toBeNull();
+    expect(container.textContent).not.toContain('Đã chốt chia');
+    expect(screen.queryByRole('button', { name: /Copy tóm tắt|Chia sẻ link/ })).toBeNull();
+    // Hàng lệnh vẫn có mặt đúng 1 lần (không nhân bản DOM).
+    expect(container.querySelectorAll('[data-transfer-row]')).toHaveLength(1);
   });
 });

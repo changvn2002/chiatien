@@ -247,19 +247,20 @@ describe('FIX-V4 — họ xanh ở tông mạnh phải tách nhau bằng số đ
   });
 });
 
-describe('FIX-V4 — GameBadge ở tầng DOM dùng ĐÚNG tông mạnh như plate trong sân', () => {
+describe('SPEC step23 — GameBadge ở tầng DOM dùng đĩa pastel bậc 100 như workspace', () => {
   function badgeMarkup(name: string, colorIndex: number): string {
     return renderToStaticMarkup(createElement(GameBadge, { name, colorIndex, size: 32 }));
   }
 
-  it('đĩa nền = strongHex theo colorIndex và glyph TRẮNG, không còn nền pastel bậc 100', () => {
+  it('đĩa nền = pastel 100 theo colorIndex và initials LUÔN #212121, không còn đĩa strong ở DOM', () => {
     const dung = badgeMarkup('Dũng', 1).toLowerCase();
-    expect(dung).toContain('#0d47a1'); // strongHex index 1
-    expect(dung).toContain('fill="#ffffff"'); // glyph trắng trên đĩa mạnh
-    expect(dung).not.toContain('#bbdefb'); // nền pastel blue 100 của app chính — KHÔNG được rò vào game
+    expect(dung).toContain('#bbdefb'); // blue 100 — AVATAR_BACKGROUNDS_V4 index 1
+    expect(dung).toContain('fill="#212121"'); // initials luôn mực trên mọi đĩa pastel
+    expect(dung).not.toContain('#0d47a1'); // strongHex index 1 chỉ còn ở plate/canvas, không ở đĩa DOM
     const chi = badgeMarkup('Chi', 7).toLowerCase();
-    expect(chi).toContain('#00b0ff'); // strongHex index 7 — khác hẳn đĩa của Dũng
-    expect(chi).not.toContain('#0d47a1');
+    expect(chi).toContain('#b3e5fc'); // light-blue 100 — AVATAR_BACKGROUNDS_V4 index 7, khác hẳn đĩa của Dũng
+    expect(chi).toContain('fill="#212121"');
+    expect(chi).not.toContain('#00b0ff');
   });
 
   it('glyph trên badge DOM vẫn bằng initialsOf của lib (tên một từ → 1 ký tự)', () => {
@@ -332,7 +333,9 @@ describe('A11Y-FIX — glyph theo đĩa (SPEC A11Y-FIX §4)', () => {
     expect(avatarDiceBearOptions('An', '#0D47A1').textColor).toEqual(['FFFFFF']);
   });
 
-  it('bề mặt DOM: GameBadge vẽ glyph theo bảng (idx 7 mực, idx 1 trắng)', () => {
+  it('bề mặt DOM: GameBadge KHÔNG theo bảng glyph STRONG — initials luôn #212121 trên pastel (SPEC step23)', () => {
+    // Bảng glyph ở describe này vẫn khoá cho bề mặt texture/plate
+    // STRONG; riêng đĩa DOM đã chuyển sang pastel 100 + mực cố định.
     const chi = renderToStaticMarkup(
       createElement(GameBadge, { name: 'Chi', colorIndex: 7, size: 32 }),
     ).toLowerCase();
@@ -340,6 +343,7 @@ describe('A11Y-FIX — glyph theo đĩa (SPEC A11Y-FIX §4)', () => {
     const dung = renderToStaticMarkup(
       createElement(GameBadge, { name: 'Dũng', colorIndex: 1, size: 32 }),
     ).toLowerCase();
-    expect(dung).toContain('fill="#ffffff"');
+    expect(dung).toContain('fill="#212121"');
+    expect(dung).not.toContain('fill="#ffffff"');
   });
 });

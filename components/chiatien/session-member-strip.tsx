@@ -81,39 +81,29 @@ export function SessionMemberStrip({
   );
 
   return (
-    // R4 (mục 1): dải thành viên giữ z-20 (nổi trên panel, như
-    // AppBar) — chip giữ mực đầy đủ khi panel quyết toán mở.
-    // R5 (mục 3): scrim phủ workspace đã xoá hẳn ở SessionView.
-    <div
-      ref={stripRef}
-      tabIndex={-1}
-      aria-label="Thành viên"
-      className={cn(
-        // R10 (việc 1): z-20 → z-30 — dải thành viên là CHROME ĐỤC
-        // 100%: pill không bao giờ bị sheet hay bóng của sheet sơn
-        // đè (panel R9 bắt vệt mờ tan nửa dưới pill trong chính dải).
-        'relative z-30 flex shrink-0 items-center gap-2 outline-none',
-        // R8 (việc 1): vùng DẢI THÀNH VIÊN mang nền BÀN xám trung
-        // tính trên mobile (tràn mép như section sheet ở dưới, đệm
-        // ngang trả lại đúng vị trí chip cũ) — cấu trúc cột đọc
-        // thành AppBar / workspace-bàn-xám / sheet trắng / dock:
-        // sheet trắng bo góc + bóng đổ lên nổi rõ trên nền bàn này.
-        // Desktop ≥900px: trả về trong suốt, không tràn mép (cột
-        // trái của lưới desktop giữ nguyên như R2–R7).
-        '-mx-4 bg-[#e8e8e9] px-4 sm:-mx-6 sm:px-6 min-[900px]:mx-0 min-[900px]:bg-transparent min-[900px]:px-0',
-        wrapMode ? 'min-h-14' : 'h-14',
-        flash && 'rounded-lg outline-2 outline-brand-deep',
-      )}
-    >
-      {wrapMode ? (
-        <>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 py-1">
-            {members.map(chip)}
-          </div>
-          {addButton}
-        </>
-      ) : (
-        /* R5 (mục 4): nhóm đông — MỘT hàng cuộn ngang, nút «+ Thêm»
+    // REDESIGN Pha 1: mục «Người» của S2 — canvas trung tính (bỏ nền
+    // bàn xám của thời strip/sheet), nhãn mục 12px uppercase như mọi mục.
+    <div className="grid gap-1">
+      <h2 className="text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">Người</h2>
+      <div
+        ref={stripRef}
+        tabIndex={-1}
+        aria-label="Thành viên"
+        className={cn(
+          'relative flex shrink-0 items-center gap-2 outline-none',
+          wrapMode ? 'min-h-14' : 'h-14',
+          flash && 'rounded-lg outline-2 outline-brand-deep',
+        )}
+      >
+        {wrapMode ? (
+          <>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 py-1">
+              {members.map(chip)}
+            </div>
+            {addButton}
+          </>
+        ) : (
+          /* R5 (mục 4): nhóm đông — MỘT hàng cuộn ngang, nút «+ Thêm»
            nằm Ở CUỐI HÀNG CUỘN (sau chip cuối). R10 (việc 2): panel
            R4–R9 liên tiếp đọc chip thứ ba bị CẮT DỞ là LỖI TRÀN dù
            đó là tín hiệu cuộn có chủ ý — nay tín hiệu chính là CHIP
@@ -121,8 +111,9 @@ export function SessionMemberStrip({
            hiện TRỌN ở phía phải vị trí cuộn hiện tại, đo bằng rect
            thật; bấm chip cuộn tiếp 85% bề rộng. Fade-x giữ nguyên
            làm lớp phụ. */
-        <MemberScrollRow members={members} renderChip={chip} addButton={addButton} />
-      )}
+          <MemberScrollRow members={members} renderChip={chip} addButton={addButton} />
+        )}
+      </div>
     </div>
   );
 }

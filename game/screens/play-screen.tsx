@@ -20,13 +20,14 @@
 
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GameRecord } from '../store';
 import type { PlayerView } from '../state';
 import { GameStage } from '../phaser/stage';
 import { gameSound } from '../audio/sound';
 import { GameSheet, MuteButton } from './shared';
 import { SPLIT_EVEN_LABEL } from '../copy';
+import { presentationGate } from '../play-duration';
 
 export function PlayScreen({
   record,
@@ -35,6 +36,7 @@ export function PlayScreen({
   onToggleMute,
   onFinished,
   onPublicCancel,
+  onDiscardAndNew,
   onDegrade,
   onFinalFrame,
 }: {
@@ -45,6 +47,12 @@ export function PlayScreen({
   onFinished: () => void;
   /** Cả nhóm đồng ý huỷ công khai — entry ghi trạng thái + thoát về chia đều. */
   onPublicCancel: () => void;
+  /**
+   * Chỉ có khi ván đang diễn là ván KHÔI PHỤC từ lần mở trước (SPEC
+   * C1.5): «Bỏ ván cũ, chơi ván mới» ngay tại màn chơi — entry đóng
+   * status ván cũ rồi về setup ván mới, không kẹt diễn lại ván cũ.
+   */
+  onDiscardAndNew?: () => void;
   onDegrade: (level: number) => void;
   onFinalFrame?: (dataUrl: string) => void;
 }) {
@@ -56,14 +64,43 @@ export function PlayScreen({
   // đấu trường thì «Đánh nhanh» (giữ đúng nhãn gốc của G1).
   const fastLabel = isG2 ? 'Quay nhanh' : 'Đánh nhanh';
 
+  // SÀN THỜI LƯỢNG TRÌNH DIỄN (SPEC §C2/P-10, game/play-duration.ts):
+  // mốc bắt đầu pha diễn = lúc màn chơi mount; onFinished từ scene
+  // chỉ được chấp nhận khi đã qua sàn của trò — scene báo sớm hơn
+  // (vd log hỏng báo finished ngay) thì HOÃN công bố tới đủ sàn bằng
+  // timer, không huỷ ván, không gọi onFinished hai lần.
+  const startedAtRef = useRef<number>(0);
+  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishSentRef = useRef(false);
+  useEffect(() => {
+    // Mốc bắt đầu pha diễn = lúc màn chơi mount (ghi trong effect —
+    // scene Phaser chỉ báo finished sau khi boot xong, luôn sau mốc này).
+    startedAtRef.current = Date.now();
+    const timer = finishTimerRef;
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+  const handleFinished = () => {
+    if (finishSentRef.current || finishTimerRef.current) return;
+    const gate = presentationGate(record.log.params.game, startedAtRef.current, Date.now());
+    if (gate.ready) {
+      finishSentRef.current = true;
+      onFinished();
+      return;
+    }
+    finishTimerRef.current = setTimeout(() => {
+      finishTimerRef.current = null;
+      if (finishSentRef.current) return;
+      finishSentRef.current = true;
+      onFinished();
+    }, gate.waitMs);
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-display text-[22px] font-extrabold text-ink">
-          {isG2 ? 'Mâm cơm xoay' : 'Đấu trường tự động'}
-        </h2>
-        <span className="font-mono text-base font-bold text-ink">Ván {record.code}</span>
-      </div>
+      {/* Header sân chơi tối giản 1 hàng (tên trò + Thoát) do entry
+          render — màn này không còn hàng tiêu đề riêng (Pha 2 §8). */}
 
       {/* UIUX-GAME-V2: BỎ lưới 2 cột + cột phụ — màn chơi chỉ còn sân
           (giới hạn bề rộng như cột chính cũ ở desktop), 1 HÀNG CHIP
@@ -82,7 +119,7 @@ export function PlayScreen({
           speed={speed}
           muted={muted}
           sound={gameSound}
-          onFinished={onFinished}
+          onFinished={handleFinished}
           onDegrade={onDegrade}
           onFinalFrame={onFinalFrame}
         />
@@ -129,6 +166,15 @@ export function PlayScreen({
           >
             {fastLabel}
           </button>
+          {onDiscardAndNew ? (
+            <button
+              type="button"
+              onClick={onDiscardAndNew}
+              className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-3 py-2 text-sm font-semibold text-ink"
+            >
+              Bỏ ván cũ, chơi ván mới
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setCancelOpen(true)}

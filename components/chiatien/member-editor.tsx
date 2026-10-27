@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconCheck, IconBank, IconTrash, IconX } from './icons';
+import { IconCheck, IconBank, IconChevronDown, IconTrash, IconX } from './icons';
 import {
   findDuplicateMember,
   memberNameKey,
@@ -242,23 +242,29 @@ export function MemberEditor({
 
       {!isBulk && (
         <div>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-base font-medium text-ink">
-            <input
-              type="checkbox"
-              checked={wantsBank}
-              onChange={(e) => setWantsBank(e.target.checked)}
-              className="h-4 w-4 shrink-0 accent-brand"
-            />
+          {/* REDESIGN Pha 1 (Sheet 2): khối «Tài khoản (không bắt
+              buộc)» là DISCLOSURE thu gọn — chính disclosure là công
+              tắc (bỏ checkbox riêng + 2 đoạn văn giải thích ngân hàng,
+              còn đúng 1 dòng DATA-04). Mở disclosure = wantsBank. */}
+          <button
+            type="button"
+            aria-expanded={wantsBank}
+            onClick={() => setWantsBank((v) => !v)}
+            className="flex min-h-11 w-full items-center gap-2 text-left text-base font-semibold text-ink"
+          >
             <IconBank size={16} className="shrink-0 text-brand-deep" aria-hidden />
-            <span>Lưu tài khoản trên máy này để tạo VietQR</span>
-          </label>
-          <p className="mt-1 text-xs leading-relaxed text-ink-2">
-            Chỉ lưu trên máy này, không theo link chia sẻ. Ai nhận tiền qua QR thì lưu tài khoản
-            trên máy mình.
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-ink-2">
-            Chỉ nhập tài khoản của chính người này, khi họ đồng ý lưu trên máy này để nhận VietQR.
-          </p>
+            <span className="flex-1">Tài khoản (không bắt buộc)</span>
+            <IconChevronDown
+              size={16}
+              aria-hidden
+              className={`shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] ${wantsBank ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {wantsBank && (
+            <p className="mt-1 text-xs leading-relaxed text-ink-2">
+              Chỉ lưu trên máy này, không theo link chia sẻ.
+            </p>
+          )}
         </div>
       )}
 

@@ -424,29 +424,18 @@ export function Sheet({
   if (!mounted || !portalReady) return null;
 
   return createPortal(
-    // Finding E (Panel #03): đáy của lớp phủ dừng ở đỉnh Settlement
-    // Strip thay vì phủ kín màn hình — session-view xuất bản biến
-    // --strip-h trên gốc Màn B = khoảng đáy viewport phải chừa (từ
-    // đỉnh dock của Strip — StatusLine + tóm tắt + Action Deck — tới
-    // đáy viewport, ĐÃ tính phần khung app-shell dưới gốc Màn B);
-    // biến được xuất bản ĐỒNG THỜI lên documentElement nên Sheet vẫn
-    // kế thừa được dù render qua portal (v1.9.1); ngoài Màn B (không
-    // có Strip) biến vắng mặt và fallback 0px giữ nguyên hành vi phủ
-    // đầy. Nhờ vậy «Settlement in Sight» đứng cả khi sheet mở: Strip
-    // vẫn nhìn thấy nguyên vẹn bên dưới sheet (điều kiện chấm lại
-    // §9.7 của Panel #03).
+    // Addendum §4 (Fix Wave 2) ĐẢO NGƯỢC Finding E của Panel #03: lớp
+    // phủ nay phủ KÍN toàn viewport (inset-0, gồm cả dock) như
+    // GameSheet — điều kiện cũ «sheet dừng ở đỉnh Strip để Strip vẫn
+    // nhìn thấy» làm dock rò sáng dưới cả 5 sheet của app, tạo 2 CTA
+    // cam cùng lúc và đảo phân cấp của sheet. Biến --strip-h vẫn được
+    // session-view xuất bản cho các cơ chế khác, Sheet không còn đọc.
     //
-    // D4-CT-5 (phát hiện thêm của Verifier B, sửa W3): trần chiều cao
-    // của panel là min(92dvh, 100%) — 100% là chiều cao VÙNG CHỨA
-    // (lớp phủ đã dừng ở đỉnh Strip). Chỉ 92dvh thì form dài (khoản
-    // chi ≥4 thành viên ở viewport 844) cao hơn vùng chứa 696px, flex
-    // items-end đẩy đỉnh panel lên −79px và header (gồm nút đóng)
-    // khuất khỏi màn hình. Bị chặn bởi vùng chứa, panel cuộn nội bộ
-    // (overflow-y-auto sẵn có) và header sticky luôn trong khung.
-    <div
-      className="fixed inset-x-0 top-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
-      style={{ bottom: 'var(--strip-h, 0px)' }}
-    >
+    // D4-CT-5 (giữ nguyên): trần chiều cao của panel là
+    // min(92dvh, 100%) — 100% nay là chiều cao viewport đầy; panel
+    // cuộn nội bộ (overflow-y-auto sẵn có) và header sticky luôn
+    // trong khung kể cả form dài.
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Đóng"
@@ -464,14 +453,14 @@ export function Sheet({
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
         className={cn(
-          'relative max-h-[min(92dvh,100%)] w-full overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl',
+          'app-sheet-panel relative max-h-[min(92dvh,100%)] w-full overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl',
           closing ? 'animate-sheet-out' : 'animate-sheet-in',
           wide ? 'sm:max-w-[640px]' : 'sm:max-w-lg',
           tinted ? 'bg-editor' : 'bg-card',
         )}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
-          <h2 className="min-w-0 truncate font-display text-[25px] font-extrabold text-ink">
+          <h2 className="min-w-0 truncate font-display text-2xl font-extrabold text-ink">
             {title}
           </h2>
           <button
@@ -483,7 +472,10 @@ export function Sheet({
             <IconX size={18} />
           </button>
         </div>
-        <div className="px-4 pb-5 sm:px-5">{children}</div>
+        {/* Addendum §4 / S5-1: đệm đáy = max(đệm chuẩn 1.25rem,
+            env(safe-area-inset-bottom)) để nội dung cuối sheet không
+            nằm dưới thanh cử chỉ/home-indicator trên máy có inset. */}
+        <div className="px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5">{children}</div>
       </div>
     </div>,
     document.body,

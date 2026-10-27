@@ -87,11 +87,14 @@ describe('masking ngân hàng (DATA-03) ở tầng component', () => {
     expect(screen.getAllByRole('button', { name: /VietQR/ }).length).toBeGreaterThan(0);
   });
 
-  it('QR Sheet: số tài khoản CHỈ xuất hiện tại đây, kèm câu nhắc kiểm tra khớp tên chủ tài khoản (SEC-12.6)', async () => {
+  it('Sheet 3 Thanh toán: số tài khoản hiện CHE GIỮA (SPEC Pha 1), tên chủ tài khoản + câu nhắc kiểm tra khớp tên (SEC-12.6)', async () => {
+    // THAY ĐỔI THEO SPEC Sheet 3: số TK không còn hiện đầy đủ kể cả
+    // trong sheet thanh toán — chỉ lộ 4 số đầu + 3 số cuối.
     renderView(true);
     fireEvent.click(screen.getAllByRole('button', { name: /VietQR/ })[0]);
-    const numberEl = await screen.findByText(ACCOUNT_NUMBER);
-    expect(numberEl).toBeTruthy();
+    const maskedEl = await screen.findByText('0123••••789');
+    expect(maskedEl).toBeTruthy();
+    expect(document.body.textContent).not.toContain(ACCOUNT_NUMBER);
     expect(screen.getByText(ACCOUNT_NAME)).toBeTruthy();
     expect(document.body.textContent).toContain('kiểm tra tên chủ tài khoản');
   });
@@ -103,13 +106,20 @@ describe('masking ngân hàng (DATA-03) ở tầng component', () => {
     expect(acctInput.value).toBe(ACCOUNT_NUMBER);
   });
 
-  it('ShareSheet có preview số liệu cụ thể + dòng không thu hồi được (UI-11 / DATA-04(ii))', async () => {
+  it('Sheet 4 Chia sẻ: link phiên + 1 dòng DATA-04; link không chứa số tài khoản/tên chủ tài khoản', async () => {
+    // THAY ĐỔI THEO SPEC Sheet 4 (Pha 1): sheet chia sẻ 2 lớp cảnh
+    // báo cũ (preview số liệu + «không thu hồi được») được thay bằng
+    // đúng: link + «Sao chép link» + 1 dòng «Link không chứa thông
+    // tin ngân hàng». DATA-04 vẫn khẳng định ở tầng payload.
     renderView(true);
-    fireEvent.click(screen.getAllByRole('button', { name: /Chia sẻ link/ })[0]);
-    const text = document.body.textContent ?? '';
-    expect(text).toContain('2 thành viên');
-    expect(text).toContain('1 khoản chi');
-    expect(text).toContain('100.000');
-    expect(text).toContain('không thu hồi được');
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ' }));
+    const dataLine = await screen.findByText('Link không chứa thông tin ngân hàng.');
+    const dialog = dataLine.closest('[role="dialog"]');
+    expect(dialog).toBeTruthy();
+    const linkBox = screen.getByLabelText('Link chia sẻ phiên') as HTMLTextAreaElement;
+    expect(linkBox.value).toContain('#chia=');
+    expect(linkBox.value).not.toContain(ACCOUNT_NUMBER);
+    expect(linkBox.value).not.toContain(ACCOUNT_NAME);
   });
 });

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { IconChevronDown, IconChevronLeft, IconAlertTriangle, IconUndo, IconX } from './icons';
-import { FAQ_ITEMS } from '@/lib/site';
+import { IconAlertTriangle, IconUndo, IconX } from './icons';
 import { RecipientLayer1 } from './recipient-layer1';
 import { SessionList } from './session-list';
 import { SessionView } from './session-view';
@@ -10,11 +9,13 @@ import { useSessions } from './use-sessions';
 import { WebVitalsReporter } from './web-vitals';
 
 /**
- * Gốc của app Chia Tiền — thuần trình bày (ARC-11 khoản 2): AppBar rút
- * gọn, danh sách cuộc chia / chi tiết cuộc chia, các banner trạng thái và
- * nội dung giới thiệu/FAQ dạng accordion. Toàn bộ wiring storage (nạp,
- * lưu bền, đồng bộ xuyên tab, import share link, hoàn tác) nằm ở
- * use-sessions.ts; component này chỉ nhận state + handler từ hook đó.
+ * Gốc của app Chia Tiền — REDESIGN Pha 1: AppBar rút gọn, S1 danh
+ * sách / S2 workspace, và lớp thông báo rút về đúng luật SPEC §2:
+ *  - lưu lỗi + nhập link xong + link hỏng -> TOAST 1 dòng (đáy màn);
+ *  - xung đột tab ngoài -> tối đa 1 banner 1 hàng;
+ *  - accordion FAQ 3 mục ở chân ĐÃ CẮT — nội dung sống trong Sheet 5
+ *    «Hướng dẫn & dữ liệu» (mở từ nút «?»/menu của từng màn).
+ * Toàn bộ wiring storage nằm ở use-sessions.ts.
  */
 export function ChiaTienApp() {
   const {
@@ -26,7 +27,6 @@ export function ChiaTienApp() {
     importedTitle,
     importedDropped,
     importedStrippedBank,
-    importedStep,
     layer1Active,
     importedSeal,
     qrRequest,
@@ -54,24 +54,10 @@ export function ChiaTienApp() {
     });
   }, []);
 
-  /* ---------------------------------------------------------------- */
-  /* Chẩn đoán link hỏng (D-4, LAYOUT-SPEC §5.1): use-sessions KHÔNG   */
-  /* phơi tín hiệu lỗi import — readShareFromHashWithReport() nuốt    */
-  /* mọi lỗi giải mã thành session=null (đã đọc lib/share.ts), nên    */
-  /* tầng shell tự suy chẩn đoán an toàn như sau: bootstrap của hook  */
-  /* chạy TRƯỚC effect này (hook đăng ký effect trước trong cùng      */
-  /* component); import thành công thì hook đã mở phiên, hiện banner */
-  /* nhập (importedTitle) và XOÁ hash khỏi URL bằng replaceState.     */
-  /* Vậy khi app đã loaded mà URL vẫn còn hash #chia= và không có     */
-  /* banner nhập nào, hash đó chắc chắn không giải mã/sanitize thành  */
-  /* phiên được -> hiện chẩn đoán ở Màn A, không bỏ qua im lặng.      */
-  /* Kiểm tra chỉ chạy một lần sau khi loaded (cờ ref): đóng chẩn     */
-  /* đoán hoặc đóng banner nhập không kích hoạt lại. Giới hạn còn     */
-  /* lại: ca hash #chia= hợp lệ nhưng người dùng đã đóng banner nhập  */
-  /* ở một lần mở trước trong cùng phiên trang là không thể xảy ra   */
-  /* vì kiểm tra chốt ngay sau lần loaded đầu tiên, trước mọi thao    */
-  /* tác đóng.                                                         */
-  /* ---------------------------------------------------------------- */
+  /* Chẩn đoán link hỏng (giữ cơ chế suy luận cũ): bootstrap của hook
+     chạy trước effect này; import thành công thì hook đã mở phiên +
+     hiện thông báo nhập và XOÁ hash. Vậy khi đã loaded mà URL vẫn còn
+     #chia= và không có thông báo nhập nào -> hash không giải mã được. */
   const [brokenLink, setBrokenLink] = useState(false);
   const brokenLinkCheckedRef = useRef(false);
   useEffect(() => {
@@ -83,22 +69,25 @@ export function ChiaTienApp() {
     }
   }, [loaded, importedTitle]);
 
+  const toastClass =
+    'animate-fade-in fixed inset-x-4 bottom-6 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-lg bg-ink px-4 py-3 text-sm text-white';
+
+  /* Workspace S2 đang mở (không phải lớp 1): main bỏ đệm đáy pb-10 —
+     S2 tự quản mép đáy bằng dock neo đáy viewport (SessionView root
+     flex-1 + dock mt-auto). S1 và lớp 1 giữ pb-10 như cũ. */
+  const workspaceOpen = Boolean(active && !layer1Active);
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[1200px] flex-col px-4 sm:px-6">
       <WebVitalsReporter />
       <header className="flex h-12 items-center gap-3">
-        {/* Logo là SVG tĩnh của chính app trong /public — next/image không
-            thêm lợi ích (không cần tối ưu/không đổi kích thước theo thiết
-            bị) nên dùng <img> thường; lý do cho eslint-disable ở dòng dưới
-            (CQ-02). */}
         {/* eslint-disable-next-line @next/next/no-img-element -- logo là SVG tĩnh của chính app, kích thước cố định; next/image không thêm lợi ích */}
         <img src="/products/brand/chiatien-logo.svg" alt="" aria-hidden width={28} height={28} />
         {/* Màn A: H1 duy nhất là "Chia Tiền" ở đây. Khi một cuộc chia
-            đang mở, H1 duy nhất của workspace là tiêu đề cuộc chia trong
-            SessionView, nên chữ này hạ xuống <p> với y hệt class — chỉ
-            đổi thẻ, không đổi chữ/kích thước. Chỉ báo lưu thường trực
-            KHÔNG còn là span "Đã lưu" opacity thoáng qua ở đây — nó
-            sống ở StatusLine tại các bề mặt theo LAYOUT-SPEC §6.3. */}
+            đang mở, H1 duy nhất của workspace là tiêu đề cuộc chia
+            trong SessionView, nên chữ này hạ xuống <p>. Back về danh
+            sách nay ở header của chính S2 (SPEC §2 — 1 nút back duy
+            nhất), app-shell không còn nút back riêng. */}
         {active ? (
           <p className="whitespace-nowrap font-display text-[32px] leading-none font-extrabold text-ink">
             Chia Tiền
@@ -108,116 +97,30 @@ export function ChiaTienApp() {
             Chia Tiền
           </h1>
         )}
-        {active && (
-          <button
-            type="button"
-            onClick={goBackToList}
-            className="ml-auto inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg px-1.5 text-sm font-semibold whitespace-nowrap text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink min-[431px]:px-2 min-[431px]:text-base"
-          >
-            <IconChevronLeft size={16} aria-hidden />
-            <span className="hidden min-[391px]:inline">Tất cả cuộc chia</span>
-            <span className="inline min-[391px]:hidden">Tất cả</span>
-          </button>
-        )}
       </header>
 
-      {saveFailed && (
-        <p
-          role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
-        >
-          <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
-          <span>
-            Trình duyệt đang chặn lưu trữ — dữ liệu chỉ giữ trong lần mở này. Hãy copy link để mang
-            đi.
-          </span>
-        </p>
-      )}
-      {brokenLink && !active && (
-        <div
-          role="alert"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-debt-bg px-4 py-3 text-base font-medium text-debt-ink"
-        >
-          <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
-          {/* eslint-disable-next-line @next/next/no-img-element -- art loi link V4 (Kenh Cat Dut) la SVG tinh, aspect-ratio khai truoc, <=120x80 */}
-          <img
-            src="/products/brand/hero-broken.svg"
-            alt=""
-            aria-hidden
-            width={240}
-            height={160}
-            style={{ aspectRatio: '240 / 160' }}
-            className="max-h-[80px] w-[120px] shrink-0"
-            loading="lazy"
-          />
-          <p className="min-w-0 flex-1">
-            Link không mở được — có thể bị cắt ngắn khi gửi hoặc sai định dạng. Nhờ người gửi copy
-            lại link đầy đủ.
-          </p>
-          <button
-            type="button"
-            aria-label="Đóng thông báo"
-            onClick={() => setBrokenLink(false)}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
-          >
-            <IconX size={16} />
-          </button>
-        </div>
-      )}
-      {importedTitle && (
-        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-50 px-4 py-3 text-base font-medium text-brand-deep">
-          <div className="min-w-0 flex-1">
-            <p>
-              Đã nhập cuộc chia “{importedTitle}” — bản sao này nằm trên máy của bạn, cứ sửa thoải
-              mái.
-              {importedDropped > 0 &&
-                ` Có ${importedDropped} khoản chi trong link không hợp lệ đã bị loại bỏ — kiểm tra lại danh sách khoản chi.`}
-            </p>
-            {/* Nhãn chuẩn của DATA-04(iii)/SEC-12.6: nội dung link là do
-                người gửi cung cấp, app không xác thực được danh tính. */}
-            <p className="mt-1 font-semibold">
-              Lưu ý: dữ liệu do người gửi cung cấp, chưa xác thực — đối chiếu thành viên và khoản
-              chi trước khi thanh toán.
-            </p>
-            {importedStrippedBank && (
-              <p className="mt-1">
-                Link bản cũ — thông tin ngân hàng trong link (nếu có) đã bị bỏ, không lưu vào máy
-                này.
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            aria-label="Đóng thông báo"
-            onClick={dismissImport}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
-          >
-            <IconX size={16} />
-          </button>
-        </div>
-      )}
-
+      {/* Xung đột tab ngoài: banner DUY NHẤT được phép ở dạng hàng. */}
       {externalChange && (
         <div
           role="status"
-          className="mt-2 mb-4 flex items-start gap-2 rounded-lg bg-brand-50 px-4 py-3 text-base font-medium text-brand-deep"
+          className="mt-2 mb-4 flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-deep"
         >
           <p className="min-w-0 flex-1">
-            Dữ liệu vừa thay đổi ở tab khác — app đã tải bản mới nhất để các tab không ghi đè nhau.
-            Nếu đang nhập dở ở tab này, kiểm tra lại trước khi bấm lưu.
+            Dữ liệu vừa thay đổi ở tab khác — app đã tải bản mới nhất. Kiểm tra lại nếu đang nhập dở
+            ở tab này.
           </p>
           <button
             type="button"
             aria-label="Đóng thông báo"
             onClick={dismissExternalChange}
-            className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
+            className="-my-1 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-white/60"
           >
             <IconX size={16} />
           </button>
         </div>
       )}
 
-      <main className="flex-1 pt-4 pb-10">
+      <main className={`flex flex-1 flex-col pt-4 ${workspaceOpen ? 'pb-0' : 'pb-10'}`}>
         {!loaded ? (
           <p
             role="status"
@@ -228,8 +131,7 @@ export function ChiaTienApp() {
         ) : active && layer1Active ? (
           // LỚP 1 (v1.8.0, §2): chỉ ở lần import đầu từ link — tóm tắt
           // trung tính + phiếu đóng của mọi thành viên + «Bảng đầy đủ»
-          // 1 chạm về workspace nguyên vẹn. Mở lại từ danh sách không
-          // qua lớp này (layer1Active chỉ set ở bootstrap import).
+          // 1 chạm về workspace nguyên vẹn.
           <RecipientLayer1
             session={active}
             seal={importedSeal}
@@ -241,13 +143,6 @@ export function ChiaTienApp() {
             key={active.id}
             session={active}
             qrRequest={qrRequest}
-            // startExpanded: người nhận link đến để xem kết quả — dải
-            // quyết toán tự mở rộng khi phiên VỪA ĐƯỢC NHẬP (importedStep
-            // đã set) và đã có khoản chi (LAYOUT-SPEC §5.1). importedStep
-            // của hook dùng undefined cho "không phải import" nên so
-            // sánh != null (bắt cả undefined) — dùng !== null sẽ true
-            // cả với phiên tự mở từ danh sách.
-            startExpanded={importedStep != null && (active?.expenses.length ?? 0) > 0}
             onBack={goBackToList}
             onChange={updateSession}
             onDelete={() => deleteSession(active.id)}
@@ -263,12 +158,8 @@ export function ChiaTienApp() {
         )}
       </main>
 
-      {/* R4 (mục 6): lớp 1 người nhận trên desktop phải KẾT THÚC bằng
-          chân trang chuẩn của app (đường kẻ + dòng đóng mang logo
-          mono) — trang không còn tan vào sa mạc trắng vô chủ sau lưới
-          phiếu. Chỉ dòng đóng chuẩn, không lặp khối FAQ của màn danh
-          sách. main flex-1 đẩy footer xuống đáy khung khi nội dung
-          ngắn. */}
+      {/* Chân trang chuẩn khi ở lớp 1 người nhận (giữ từ R4): chỉ dòng
+          đóng mang logo mono, không lặp nội dung Sheet 5. */}
       {active && layer1Active && loaded && (
         <footer className="border-t border-line py-6">
           <p className="flex items-center justify-center gap-2 text-center text-xs text-muted">
@@ -280,12 +171,6 @@ export function ChiaTienApp() {
               width={16}
               height={16}
             />
-            {/* R7 (mục 4c): dòng đóng gói trong span text-balance —
-                bản cũ ở 390px gãy để «Việt.» mồ côi một mình một
-                dòng (zero-slip-open); cân dòng chia chữ thành các
-                dòng tương đương, không đổi nội dung chữ. Ở bề rộng
-                lớn chữ vẫn một dòng như cũ (balance không ép gãy
-                khi đã vừa một dòng). */}
             <span className="text-balance">
               Chia Tiền — công cụ chia tiền nhóm miễn phí cho người Việt.
             </span>
@@ -293,124 +178,57 @@ export function ChiaTienApp() {
         </footer>
       )}
 
-      {/* Nội dung giới thiệu/FAQ chỉ ở màn danh sách, dạng accordion đóng mặc
-          định — không lặp dưới một cuộc chia đang mở (panel §7.4). */}
-      {!active && loaded && (
-        <footer className="border-t border-line py-6">
-          <div className="grid gap-2">
-            <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-[25px] font-extrabold text-ink">
-                  Chia Tiền là gì?
-                </h2>
-                <IconChevronDown
-                  size={16}
-                  aria-hidden
-                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
-                />
-              </summary>
-              <p className="max-w-[72ch] pb-4 text-base leading-relaxed text-muted">
-                Chia Tiền là công cụ chia tiền nhóm miễn phí cho người Việt. Mỗi chuyến đi, bữa ăn
-                hay kỳ ở trọ chung là một “cuộc chia”: ghi ai đã trả khoản nào, app tự chia cho đúng
-                người liên quan, triệt tiêu nợ chồng chéo và cho ra danh sách “ai trả ai bao nhiêu”
-                với ít lần chuyển nhất — kèm VietQR để quét chuyển ngay. Không cần cài app hay đăng
-                nhập, không có máy chủ: dữ liệu nằm trên máy của bạn; gửi cả nhóm bằng link chia sẻ
-                — thông tin ngân hàng không nằm trong link.
-              </p>
-            </details>
-
-            <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-[25px] font-extrabold text-ink">
-                  Cách dùng Chia Tiền
-                </h2>
-                <IconChevronDown
-                  size={16}
-                  aria-hidden
-                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
-                />
-              </summary>
-              <ol className="grid gap-4 pb-4 sm:grid-cols-3">
-                <li>
-                  <h3 className="mb-1 text-xl font-bold text-ink">Thêm người của nhóm</h3>
-                  <p className="text-base leading-relaxed text-muted">
-                    Đặt tên cuộc chia rồi thêm từng người. Ai nhận tiền qua VietQR thì lưu tài khoản
-                    trên máy của họ.
-                  </p>
-                </li>
-                <li>
-                  <h3 className="mb-1 text-xl font-bold text-ink">
-                    Ghi khoản chi khi có người trả
-                  </h3>
-                  <p className="text-base leading-relaxed text-muted">
-                    Ai trả, bao nhiêu, chia cho ai — chia đều, tuỳ chỉnh từng người, hoặc chia theo
-                    phần (mấy đêm, mấy bữa).
-                  </p>
-                </li>
-                <li>
-                  <h3 className="mb-1 text-xl font-bold text-ink">
-                    Mở quyết toán, quét VietQR hoặc copy cho Zalo
-                  </h3>
-                  <p className="text-base leading-relaxed text-muted">
-                    App tính số dư và rút gọn thành ít lần chuyển nhất. Quét VietQR để trả ngay,
-                    hoặc copy quyết toán gửi Zalo, Messenger.
-                  </p>
-                </li>
-              </ol>
-            </details>
-
-            <details className="group rounded-2xl border border-line bg-card px-4 sm:px-5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                <h2 className="font-display text-[25px] font-extrabold text-ink">
-                  Câu hỏi thường gặp
-                </h2>
-                <IconChevronDown
-                  size={16}
-                  aria-hidden
-                  className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open:rotate-180"
-                />
-              </summary>
-              <div className="grid gap-2 pb-4">
-                {FAQ_ITEMS.map((item) => (
-                  <details key={item.question} className="group/faq rounded-lg bg-paper px-3">
-                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 [&::-webkit-details-marker]:hidden">
-                      <h3 className="text-xl font-bold text-ink">{item.question}</h3>
-                      <IconChevronDown
-                        size={14}
-                        aria-hidden
-                        className="shrink-0 text-muted transition-transform duration-100 ease-[var(--ease-lock)] group-open/faq:rotate-180"
-                      />
-                    </summary>
-                    <p className="max-w-[72ch] pb-3 text-base leading-relaxed text-muted">
-                      {item.answer}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            </details>
-          </div>
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted">
-            {/* Logo mono ở footer cũng là SVG tĩnh của chính app — cùng lý
-                do <img> thường như logo header (CQ-02). */}
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo là SVG tĩnh của chính app, kích thước cố định; next/image không thêm lợi ích */}
-            <img
-              src="/products/brand/chiatien-logo-mono.svg"
-              alt=""
-              aria-hidden
-              width={16}
-              height={16}
-            />
-            Chia Tiền — công cụ chia tiền nhóm miễn phí cho người Việt.
-          </p>
-        </footer>
+      {/* Toast 1 dòng: lưu lỗi. */}
+      {saveFailed && (
+        <div role="alert" className={toastClass}>
+          <IconAlertTriangle size={15} className="shrink-0" aria-hidden />
+          <span className="min-w-0">
+            Trình duyệt đang chặn lưu trữ — dữ liệu chỉ giữ trong lần mở này. Hãy copy link để mang
+            đi.
+          </span>
+        </div>
       )}
 
-      {/* Toast Hoàn tác cho thao tác xoá — thay cho việc xoá là mất hẳn. */}
+      {/* Toast 1 dòng: link hỏng (chỉ ở S1). */}
+      {brokenLink && !active && (
+        <div role="alert" className={toastClass}>
+          <IconAlertTriangle size={15} className="shrink-0" aria-hidden />
+          <span className="min-w-0">Link không mở được — nhờ người gửi copy lại link đầy đủ.</span>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={() => setBrokenLink(false)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+          >
+            <IconX size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* Toast 1 dòng: nhập link xong. Chi tiết cảnh báo DATA-04(iii)
+          giữ trong Sheet 5/dòng dữ liệu — toast chỉ báo kết quả. */}
+      {importedTitle && (
+        <div role="status" className={toastClass}>
+          <span className="min-w-0">
+            Đã nhập cuộc chia “{importedTitle}” — bản sao nằm trên máy của bạn.
+            {importedDropped > 0 &&
+              ` ${importedDropped} khoản trong link không hợp lệ đã bị loại bỏ.`}
+            {importedStrippedBank && ' Thông tin ngân hàng trong link đã bị bỏ.'}
+          </span>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={dismissImport}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+          >
+            <IconX size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* Toast Hoàn tác cho thao tác xoá. */}
       {undoToast && (
-        <div
-          role="status"
-          className="animate-fade-in fixed inset-x-4 bottom-24 z-[60] mx-auto flex w-fit max-w-full items-center gap-3 rounded-lg bg-ink px-4 py-3 text-base text-white lg:bottom-6"
-        >
+        <div role="status" className={toastClass}>
           <span className="min-w-0 truncate">{undoToast.label}</span>
           <button
             type="button"

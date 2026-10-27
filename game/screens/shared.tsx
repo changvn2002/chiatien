@@ -10,26 +10,64 @@ import { createPortal } from 'react-dom';
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { memberNameKey, normalizeMemberName } from '@/lib/identity';
-import { GLYPH_HEX_BY_COLOR_INDEX, STRONG_HEX_BY_COLOR_INDEX } from '../assets/identity';
 import { SPLIT_EVEN_LABEL } from '../copy';
+
+/**
+ * Bảng nền đĩa danh tính bậc 100 — MIRROR của `AVATAR_BACKGROUNDS_V4`
+ * (components/chiatien/ui-bits.tsx:51-68, nguồn sự thật ở tầng app
+ * chính; mirror tại đây kèm ghi nguồn để game không import ngược
+ * component của app chính). Thứ tự họ giữ nguyên bảng nguồn:
+ * amber, blue, cyan, deep-orange, deep-purple, green, indigo,
+ * light-blue, light-green, lime, orange, pink, purple, red, teal,
+ * yellow. colorIndex do cơ chế gán hiện hành (lib/identity) cấp
+ * 0..11; các ô 12..15 tới được qua guard modulo như bảng nguồn.
+ */
+const AVATAR_BACKGROUNDS_V4: readonly string[] = [
+  '#FFECB3', // amber 100
+  '#BBDEFB', // blue 100
+  '#B2EBF2', // cyan 100
+  '#FFCCBC', // deep-orange 100
+  '#D1C4E9', // deep-purple 100
+  '#C8E6C9', // green 100
+  '#C5CAE9', // indigo 100
+  '#B3E5FC', // light-blue 100
+  '#DCEDC8', // light-green 100
+  '#F0F4C3', // lime 100
+  '#FFE0B2', // orange 100
+  '#F8BBD0', // pink 100
+  '#E1BEE7', // purple 100
+  '#FFCDD2', // red 100
+  '#B2DFDB', // teal 100
+  '#FFF9C4', // yellow 100
+];
+
+/**
+ * Tên hiển thị ngân hàng từ QR đã giải mã (trước đây ở
+ * m2-qr-screen.tsx — file màn chết, D12: helper đưa về đây).
+ * BIN không có trong bảng tra -> hiển thị mã BIN nguyên văn, cấm đoán
+ * tên ngân hàng (SPEC §M2).
+ */
+export function bankDisplayOf(
+  parsed: { bankName: string | null; bankShortName: string | null; bin: string } | null,
+): string | null {
+  if (!parsed) return null;
+  return parsed.bankName
+    ? `${parsed.bankName} (${parsed.bankShortName ?? parsed.bin})`
+    : `Mã ngân hàng (BIN): ${parsed.bin}`;
+}
 
 const gameBadgeSvgCache = new Map<string, string>();
 
 /**
- * Sinh SVG badge của game — ĐÚNG cơ chế DiceBear của app chính và của
- * lớp texture Phaser (game/phaser/textures.ts `avatarDiceBearOptions`):
+ * Sinh SVG badge của game — ĐÚNG cơ chế DiceBear của app chính:
  * seed = memberNameKey(tên), font Be Vietnam Pro 700 / cỡ 46, tên một
- * từ ép `chars: 1` cho glyph luôn bằng initialsOf của lib. KHÁC hai
- * bề mặt kia ở MÀU (FIX-V4 Cụm 2): nền là ĐÚNG MỘT ô strongHex của
- * identity map (bảng dùng chung ở game/assets/identity.ts, không chép
- * lại bảng ở đây) — tức cùng tông mạnh với đĩa plate trong sân, thay
- * cho nền pastel bậc 100 của Avatar app chính. MÀU GLYPH theo bảng
- * GLYPH_HEX_BY_COLOR_INDEX khoá theo colorIndex (A11Y-FIX, SPEC
- * A11Y-FIX §4): mỗi idx dùng trắng #FFFFFF hoặc mực #212121 — màu cho
- * tỉ lệ tương phản WCAG cao hơn trên đĩa STRONG đó — sau sửa mọi
- * đĩa ≥ 3:1 (sàn WCAG đồ hoạ/chữ lớn), 10/12 đĩa ≥ 4,5:1, toàn
- * bảng ≥ 4,11:1; glyph trắng ghim cho mọi đĩa từng chỉ đạt
- * 2,04–2,43:1 trên các đĩa sáng idx 0/7/9.
+ * từ ép `chars: 1` cho glyph luôn bằng initialsOf của lib. MÀU theo
+ * SPEC step23 §1.2-M6 / §1.3 (sink đĩa DOM): nền là ĐÚNG MỘT ô pastel
+ * bậc 100 của bảng AVATAR_BACKGROUNDS_V4 theo colorIndex đã gán
+ * (mirror ở đầu file, nguồn components/chiatien/ui-bits.tsx:51-68),
+ * và initials LUÔN là mực neutral-900 #212121 trên mọi nền — đĩa đặc
+ * bão hoà + initial trắng bị cấm ở tầng DOM. (Plate/canvas trong sân
+ * Phaser là bề mặt khác, ngoài phạm vi sink này.)
  *
  * Bằng chứng schema (kiểm tại node_modules, @dicebear/initials
  * 9.4.3 lib/types.d.ts + lib/schema.js): Options của style initials
@@ -37,11 +75,10 @@ const gameBadgeSvgCache = new Map<string, string>();
  * fontWeight } — KHÔNG có `fontColor`; màu chữ đi qua `textColor`
  * (pattern hex 6 ký tự không '#', mặc định ['ffffff']), nền qua
  * `backgroundColor` (cùng pattern). Nên ở đây: backgroundColor =
- * [strongHex bỏ '#'], textColor = [GLYPH_HEX_BY_COLOR_INDEX[idx]
- * bỏ '#'].
+ * [ô pastel bỏ '#'], textColor = ['212121'].
  */
 function gameBadgeSvg(name: string, colorIndex: number): string {
-  const paletteSize = STRONG_HEX_BY_COLOR_INDEX.length;
+  const paletteSize = AVATAR_BACKGROUNDS_V4.length;
   // Guard runtime như Avatar của app chính: colorIndex lạ/undefined
   // rơi về màu đầu palette thay vì làm sập màn hình.
   const safeIndex = Number.isFinite(colorIndex) ? Math.trunc(colorIndex) : 0;
@@ -53,8 +90,8 @@ function gameBadgeSvg(name: string, colorIndex: number): string {
   const wordCount = normalizeMemberName(name).split(' ').filter(Boolean).length;
   const rawSvg = createAvatar(initials, {
     seed: nameKey,
-    backgroundColor: [STRONG_HEX_BY_COLOR_INDEX[idx].replace('#', '')],
-    textColor: [GLYPH_HEX_BY_COLOR_INDEX[idx].replace('#', '')],
+    backgroundColor: [AVATAR_BACKGROUNDS_V4[idx].replace('#', '')],
+    textColor: ['212121'],
     fontFamily: ['Be Vietnam Pro', 'sans-serif'],
     fontWeight: 700,
     fontSize: 46,
@@ -75,12 +112,10 @@ function gameBadgeSvg(name: string, colorIndex: number): string {
 
 /**
  * Badge danh tính DUY NHẤT của game mode ở tầng DOM (FIX-V3 P0.4,
- * tông đổi ở FIX-V4 Cụm 2): DiceBear `initials` sinh TRỰC TIẾP tại
- * đây (không qua Avatar của app chính nữa) — seed = nameKey, đĩa nền
- * = strongHex theo colorIndex, glyph trắng = initialsOf của lib.
- * Nhờ vậy badge DOM và plate trong sân Phaser (cùng strongHex, glyph
- * trắng) là MỘT tông duy nhất; phạm vi chỉ bề mặt game — app chính
- * ngoài game vẫn dùng Avatar pastel bậc 100 như cũ. Mọi màn game
+ * tông đổi theo SPEC step23 §1.2-M6): DiceBear `initials` sinh TRỰC
+ * TIẾP tại đây (không qua Avatar của app chính nữa) — seed = nameKey,
+ * đĩa nền = pastel bậc 100 theo colorIndex, glyph initials LUÔN
+ * #212121 — khớp đĩa của Avatar app chính ở workspace. Mọi màn game
  * (M2/M3/M5/M7…) phải dùng component này với colorIndex lấy từ
  * identity map duy nhất (game/assets/identity.ts, dựng trên roster
  * ĐẦY ĐỦ của phiên) — không màn nào tự sinh badge bằng tham số
@@ -205,7 +240,7 @@ export function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () =
       className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand-deep"
     >
       <SpeakerIcon muted={muted} />
-      {muted ? 'Đã tắt tiếng' : 'Đang có tiếng'}
+      {muted ? 'Tiếng: tắt' : 'Tiếng: bật'}
     </button>
   );
 }
@@ -244,7 +279,7 @@ export function InfoBox({ children }: { children: React.ReactNode }) {
 }
 
 export function ScreenTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-display text-[22px] font-extrabold text-ink">{children}</h2>;
+  return <h2 className="font-display text-2xl font-extrabold text-ink">{children}</h2>;
 }
 
 /**
@@ -296,11 +331,26 @@ export function GameSheet({
   onClose,
   title,
   children,
+  footer,
+  compactHeader = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /**
+   * Khối chân sheet render NGOÀI (sibling dưới) div thân cuộn — cấu
+   * trúc 3 khối riêng header / thân / footer theo SPEC step23 §2.1.
+   * Vắng prop này thì sheet giữ nguyên hành vi cũ (không footer).
+   */
+  footer?: React.ReactNode;
+  /**
+   * SPEC step23 §2.1: biến thể header GỌN tuỳ chọn — tiêu đề 19px
+   * (thang app), khối header ~52px, nút × giữ vùng chạm 44px. Mặc
+   * định (false) giữ nguyên hành vi/kích thước hiện tại cho mọi
+   * sheet khác; trần max-h của sheet KHÔNG đổi ở cả hai biến thể.
+   */
+  compactHeader?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -365,17 +415,35 @@ export function GameSheet({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
+        // Addendum §4 / S5-1: đệm safe-area đáy cho TOÀN panel —
+        // footer (vd thanh 72px của sheet nhân vật) và thân sheet
+        // không còn chui vào vùng home-indicator trên máy có tai thỏ.
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         className="animate-sheet-in relative flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden rounded-t-2xl bg-card outline-none sm:max-w-lg sm:rounded-2xl"
       >
-        <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
-          <h2 className="min-w-0 truncate font-display text-[25px] font-extrabold text-ink">
+        <div
+          className={
+            compactHeader
+              ? 'flex items-center justify-between gap-3 px-4 py-1 sm:px-5'
+              : 'flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5'
+          }
+        >
+          <h2
+            className={
+              compactHeader
+                ? 'min-w-0 truncate text-[19px] leading-[1.2] font-bold text-ink'
+                : 'min-w-0 truncate font-display text-2xl font-extrabold text-ink'
+            }
+          >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={`Đóng ${title}`}
-            className="-mt-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition duration-100 ease-[var(--ease-lock)] hover:bg-grey-50 hover:text-ink"
+            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition duration-100 ease-[var(--ease-lock)] hover:bg-grey-50 hover:text-ink ${
+              compactHeader ? '' : '-mt-2 -mr-2'
+            }`}
           >
             <svg
               width="18"
@@ -392,7 +460,19 @@ export function GameSheet({
             </svg>
           </button>
         </div>
-        <div className="min-h-0 overflow-y-auto px-4 pb-5 sm:px-5">{children}</div>
+        <div
+          className={
+            compactHeader
+              ? // Biến thể wizard (SPEC step23 §2.1): đệm trên/dưới của
+                // thân = 0 — thân sheet đo đúng theo công thức SPEC,
+                // không cộng thêm pb-5 của biến thể mặc định.
+                'min-h-0 overflow-y-auto px-4 sm:px-5'
+              : 'min-h-0 overflow-y-auto px-4 pb-5 sm:px-5'
+          }
+        >
+          {children}
+        </div>
+        {footer ? <div className="shrink-0">{footer}</div> : null}
       </div>
     </div>,
     document.body,

@@ -69,7 +69,12 @@ describe('draft thiết lập bền — vòng đời trên máy', () => {
     expect(raw).not.toContain('0123456789');
     expect(raw).not.toContain('chung');
     expect(raw).not.toContain('replayOf');
-    expect(Object.keys(JSON.parse(raw)).sort()).toEqual(
+    // SPEC redesign C2: kho draft nay là BẢN ĐỒ theo sessionKey — tầng
+    // ngoài chỉ có khoá phiên; schema đóng 8 trường áp cho TỪNG draft
+    // bên trong bản đồ (trước C2 tầng ngoài chính là draft trần).
+    const map = JSON.parse(raw) as Record<string, unknown>;
+    expect(Object.keys(map)).toEqual([DRAFT.sessionKey]);
+    expect(Object.keys(map[DRAFT.sessionKey] as Record<string, unknown>).sort()).toEqual(
       [
         'characterAssignments',
         'characterSetId',

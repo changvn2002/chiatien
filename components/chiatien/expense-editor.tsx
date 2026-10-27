@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconCheck, IconChevronDown, IconX } from './icons';
+import { IconCheck, IconX } from './icons';
 import { assignIdentityColors } from '@/lib/identity';
 import { formatVND } from '@/lib/money';
 import { computeShares, validateExpenseDraft, type ExpenseDraft } from '@/lib/split';
@@ -17,9 +17,12 @@ const MODE_LABELS: Record<SplitMode, string> = {
   shares: 'Theo phần',
 };
 
-/** Giải thích 1 dòng TẠI ĐIỂM CHỌN cho cả 3 kiểu chia (COPY-DIET §2 dòng 11). */
-const MODE_HINTS: Record<SplitMode, string> = {
-  equal: 'Chia đều cho những người được chọn.',
+/**
+ * Giải thích 1 dòng TẠI ĐIỂM CHỌN cho 2 kiểu chia phụ (COPY-DIET §2
+ * dòng 11). Mode equal KHÔNG còn hint: «Chia đều cho những người được
+ * chọn.» chỉ nói lại nhãn + danh sách ngay trên (Seat 3 N10) — đã xoá.
+ */
+const MODE_HINTS: Partial<Record<SplitMode, string>> = {
   custom: 'Nhập đúng số tiền từng người chịu — tổng phải khớp.',
   shares: 'Ví dụ: ở 2/3 đêm thì nhập 2 phần.',
 };
@@ -42,6 +45,7 @@ export function ExpenseEditor({
   members,
   initial,
   draftKey,
+  defaultPayerId,
   onSave,
   onSaveAndMore,
   onCancel,
@@ -49,8 +53,16 @@ export function ExpenseEditor({
   members: Member[];
   initial?: Expense;
   draftKey?: string;
+  /**
+   * Người trả mặc định cho khoản MỚI (SPEC Sheet 1): người trả gần
+   * nhất của phiên do SessionView suy từ sổ; vắng -> thành viên đầu.
+   */
+  defaultPayerId?: string;
   onSave: (draft: ExpenseSave) => void;
-  /** "Lưu & thêm nữa": lưu nhưng sheet Ở LẠI (session-view không đóng). */
+  /**
+   * Lưu nhưng sheet Ở LẠI ở trạng thái sau-Lưu («Đã lưu — Thêm khoản
+   * nữa») — REDESIGN Pha 1 thay nút «Lưu & thêm nữa» ngang hàng cũ.
+   */
   onSaveAndMore?: (draft: ExpenseSave) => void;
   onCancel: () => void;
 }) {
@@ -60,22 +72,25 @@ export function ExpenseEditor({
   const [title, setTitle] = useState(restoredDraft?.title ?? initial?.title ?? '');
   const [amount, setAmount] = useState(restoredDraft?.amount ?? initial?.amount ?? 0);
   const [payerId, setPayerId] = useState(
-    restoredDraft?.payerId ?? initial?.payerId ?? members[0]?.id ?? '',
+    restoredDraft?.payerId ?? initial?.payerId ?? defaultPayerId ?? members[0]?.id ?? '',
   );
   const [participantIds, setParticipantIds] = useState<string[]>(
     restoredDraft?.participantIds ?? initial?.participantIds ?? members.map((m) => m.id),
   );
   const [mode, setMode] = useState<SplitMode>(restoredDraft?.mode ?? initial?.mode ?? 'equal');
+  // Addendum §6: kiểu chia mặc định thu gọn 1 lớp — chỉ hiện cách đang
+  // dùng + nút «Chia khác»; bung ra mới thấy đủ 3 lựa chọn.
+  const [modeExpanded, setModeExpanded] = useState(false);
   const [custom, setCustom] = useState<Record<string, number>>(
     restoredDraft?.custom ?? initial?.custom ?? {},
   );
   const [weights, setWeights] = useState<Record<string, number>>(
     restoredDraft?.weights ?? initial?.weights ?? {},
   );
-  const [touched, setTouched] = useState(false);
   const [capError, setCapError] = useState(false);
-  const [savedMoreNotice, setSavedMoreNotice] = useState('');
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  // Trạng thái sau-Lưu trong cùng sheet (SPEC Sheet 1): tên khoản vừa lưu.
+  const [savedTitle, setSavedTitle] = useState<string | null>(null);
+  const amountWrapRef = useRef<HTMLDivElement>(null);
 
   const colors = useMemo(() => assignIdentityColors(members), [members]);
   const colorOf = (id: string) => {
@@ -149,27 +164,27 @@ export function ExpenseEditor({
   function handleSave() {
     if (errors.length > 0) return;
     if (draftKey) clearExpenseDraft(draftKey);
+    if (!initial && onSaveAndMore) {
+      // Khoản mới + cha giữ sheet: lưu xong sheet chuyển sang trạng
+      // thái sau-Lưu «Đã lưu — Thêm khoản nữa» (SPEC Sheet 1), không
+      // còn nút «Lưu & thêm nữa» ngang hàng như bản cũ.
+      onSaveAndMore({ ...draft });
+      setSavedTitle(title);
+      return;
+    }
     onSave({ ...draft, id: initial?.id });
   }
 
-  function handleSaveAndMore() {
-    if (errors.length > 0) return;
-    const savedTitle = title;
-    if (draftKey) clearExpenseDraft(draftKey);
-    if (onSaveAndMore) onSaveAndMore({ ...draft, id: initial?.id });
-    else onSave({ ...draft, id: initial?.id });
-    // Reset tên khoản + số tiền; GIỮ người trả / kiểu chia / người cùng chia.
-    // Cả cờ touched: form mới phải mở SẠCH — nếu giữ touched, tóm tắt lỗi
-    // của form vừa lưu (tên trống + số tiền 0) hiện ngay khi chưa chạm ô
-    // nào (Panel #03, MINOR R3-F3: mở ra đã sẵn 2 lỗi chưa chạm).
+  function handleAddMore() {
+    // Reset tên khoản + số tiền; GIỮ người trả / kiểu chia / người cùng
+    // chia (mặc định khoản sau kế thừa khoản trước — SPEC §1.1).
     setTitle('');
     setAmount(0);
     setCustom({});
     setWeights({});
-    setTouched(false);
     setCapError(false);
-    setSavedMoreNotice(`Đã lưu khoản ${savedTitle} — ghi tiếp khoản mới`);
-    requestAnimationFrame(() => titleInputRef.current?.focus());
+    setSavedTitle(null);
+    requestAnimationFrame(() => amountWrapRef.current?.querySelector('input')?.focus());
   }
 
   function handleCancel() {
@@ -182,9 +197,6 @@ export function ExpenseEditor({
   }
 
   const allSelected = participantIds.length === members.length;
-  const equalShareValues =
-    preview?.kind === 'computed' && mode === 'equal' ? Object.values(preview.shares) : [];
-  const equalShare = equalShareValues.length > 0 ? Math.max(...equalShareValues) : 0;
   const hasRemainder =
     mode === 'equal' && participantIds.length > 0 && amount % participantIds.length !== 0;
 
@@ -196,36 +208,20 @@ export function ExpenseEditor({
     // ngang ở mọi bề rộng máy (đo thật: dialog scrollWidth 440 ở cả 320
     // lẫn 390). minmax(0,1fr) biến cột thành bề rộng xác định theo
     // container, chip mới co lại bằng flex + truncate như thiết kế.
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4" onChange={() => setTouched(true)}>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       {restoredDraft && (
         <p role="status" className="text-base font-medium text-brand-deep">
           Đã khôi phục nội dung bạn nhập dở — kiểm tra lại rồi bấm lưu, hoặc bấm Huỷ để bỏ nháp này.
         </p>
       )}
-      {savedMoreNotice && (
-        <p role="status" aria-live="polite" className="text-base font-medium text-brand-deep">
-          {savedMoreNotice}
-        </p>
-      )}
+      {/* SPEC Sheet 1: ô TIỀN focus đầu tiên + bàn phím số; tên khoản
+          tuỳ chọn ở dưới. */}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div>
-          <label className={labelClass} htmlFor="expense-title">
-            Khoản chi
-          </label>
-          <input
-            ref={titleInputRef}
-            id="expense-title"
-            className={inputClass}
-            placeholder="Ví dụ: Tiền phòng, Ăn tối, Xăng xe…"
-            value={title}
-            autoFocus
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div>
+        <div ref={amountWrapRef}>
           <span className={labelClass}>Số tiền</span>
           <MoneyInput
             value={amount}
+            autoFocus
             onChange={(v) => {
               setAmount(v);
               setCapError(false);
@@ -238,6 +234,18 @@ export function ExpenseEditor({
               {AMOUNT_CAP_MESSAGE}
             </p>
           )}
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="expense-title">
+            Khoản chi
+          </label>
+          <input
+            id="expense-title"
+            className={inputClass}
+            placeholder="Ví dụ: Tiền phòng, Ăn tối, Xăng xe…"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
       </div>
 
@@ -254,14 +262,22 @@ export function ExpenseEditor({
               aria-checked={payerId === m.id}
               onClick={() => setPayerId(m.id)}
               className={cn(
-                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                // Addendum §4: trạng thái CHỌN = nền trung tính + viền
+                // brand 2px + chữ ink (cấm tô cam đặc); chưa chọn giữ
+                // viền 1px như cũ để layout không nhảy.
                 payerId === m.id
-                  ? 'border-brand bg-brand text-ink-on-seed'
-                  : 'border-line-strong bg-card text-ink hover:border-brand-deep',
+                  ? 'border-2 border-brand-500 bg-card text-ink'
+                  : 'border border-line-strong bg-card text-ink hover:border-brand-deep',
               )}
             >
               <Avatar name={m.name} colorIndex={colorOf(m.id)} size={24} />
               <span className="min-w-0 truncate">{m.name}</span>
+              {/* S5-6: chip người trả đang chọn có dấu ✓ như chip
+                  người cùng chia ngay bên dưới. */}
+              {payerId === m.id && (
+                <IconCheck size={14} aria-hidden className="shrink-0 text-brand-950" />
+              )}
             </button>
           ))}
         </div>
@@ -288,15 +304,17 @@ export function ExpenseEditor({
                 aria-pressed={active}
                 onClick={() => toggleParticipant(m.id)}
                 className={cn(
-                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                  'inline-flex min-h-11 max-w-full min-w-0 items-center gap-2 rounded-full px-3 py-2 text-base font-semibold transition duration-100 ease-[var(--ease-lock)]',
+                  // Addendum §4: cùng chuẩn chọn với chip người trả —
+                  // nền trung tính + viền brand 2px + chữ ink.
                   active
-                    ? 'border-brand bg-brand-soft text-brand-950'
-                    : 'border-line-strong bg-card text-ink hover:border-brand-deep',
+                    ? 'border-2 border-brand-500 bg-card text-ink'
+                    : 'border border-line-strong bg-card text-ink hover:border-brand-deep',
                 )}
               >
                 <Avatar name={m.name} colorIndex={colorOf(m.id)} size={24} />
                 <span className="min-w-0 truncate">{m.name}</span>
-                {active && <IconCheck size={14} aria-hidden className="shrink-0" />}
+                {active && <IconCheck size={14} aria-hidden className="shrink-0 text-brand-950" />}
               </button>
             );
           })}
@@ -307,28 +325,51 @@ export function ExpenseEditor({
         <span className={labelClass} id="split-mode-label">
           Kiểu chia
         </span>
-        <div
-          className="grid grid-cols-3 gap-1 rounded-lg border border-line-strong bg-card p-1"
-          role="radiogroup"
-          aria-labelledby="split-mode-label"
-        >
-          {(Object.keys(MODE_LABELS) as SplitMode[]).map((m) => (
+        {/* Addendum §6 — cách chia 1 lớp: mặc định chỉ hiện cách đang
+            dùng + 1 nút «Chia khác»; bấm mới bung đủ 3 lựa chọn, chọn
+            xong thu gọn về tóm tắt. Mở sửa khoản có mode != equal thì
+            tóm tắt hiện ngay mode hiện tại của khoản đó. */}
+        {modeExpanded ? (
+          <div
+            className="grid grid-cols-3 gap-1 rounded-lg border border-line-strong bg-card p-1"
+            role="radiogroup"
+            aria-labelledby="split-mode-label"
+          >
+            {(Object.keys(MODE_LABELS) as SplitMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                onClick={() => {
+                  setMode(m);
+                  setModeExpanded(false);
+                }}
+                className={cn(
+                  'inline-flex min-h-11 items-center justify-center rounded-lg px-2 text-base font-bold transition duration-100 ease-[var(--ease-lock)]',
+                  mode === m ? 'bg-ink text-white' : 'text-ink hover:bg-brand-soft/60',
+                )}
+              >
+                {MODE_LABELS[m]}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-3 text-base font-bold text-ink">
+              {MODE_LABELS[mode]}
+            </span>
             <button
-              key={m}
               type="button"
-              role="radio"
-              aria-checked={mode === m}
-              onClick={() => setMode(m)}
-              className={cn(
-                'inline-flex min-h-11 items-center justify-center rounded-lg px-2 text-base font-bold transition duration-100 ease-[var(--ease-lock)]',
-                mode === m ? 'bg-ink text-white' : 'text-ink hover:bg-brand-soft/60',
-              )}
+              aria-expanded={false}
+              onClick={() => setModeExpanded(true)}
+              className="inline-flex min-h-11 items-center px-2 text-base font-semibold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:text-ink"
             >
-              {MODE_LABELS[m]}
+              Chia khác
             </button>
-          ))}
-        </div>
-        <p className="mt-2 text-base text-ink-2">{MODE_HINTS[mode]}</p>
+          </div>
+        )}
+        {MODE_HINTS[mode] && <p className="mt-2 text-base text-ink-2">{MODE_HINTS[mode]}</p>}
       </div>
 
       {mode === 'custom' && participantIds.length > 0 && (
@@ -406,47 +447,39 @@ export function ExpenseEditor({
         </div>
       )}
 
-      {mode === 'equal' && preview?.kind === 'computed' && (
-        <div className="text-base text-ink-2">
-          <p>
-            Mỗi người chịu{' '}
-            <span className="font-figure font-bold text-ink">{formatVND(equalShare)}</span>
+      {/* SPEC Sheet 1: khối xem trước dài + details «Vì sao có người
+          hơn vài đồng?» đã CẮT — chỉ còn 1 dòng tĩnh khi có phần lẻ.
+          Danh sách lỗi liệt kê trùng cũng đã cắt: lỗi tại trường +
+          1 lý do cạnh nút Lưu (saveReason) là đủ. */}
+      {mode === 'equal' && hasRemainder && (
+        <p className="text-base text-ink-2">
+          Phần lẻ vài đồng dồn cho người đầu danh sách để tổng khớp tuyệt đối.
+        </p>
+      )}
+
+      {savedTitle !== null ? (
+        // Trạng thái sau-Lưu trong cùng sheet: «Đã lưu — Thêm khoản nữa».
+        <div className="flex flex-wrap items-center gap-2">
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-1.5 text-base font-semibold text-credit-ink"
+          >
+            <IconCheck size={16} aria-hidden /> Đã lưu khoản “{savedTitle}”
           </p>
-          {hasRemainder && (
-            <details className="mt-1">
-              <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-medium text-brand-deep">
-                Vì sao có người hơn vài đồng? <IconChevronDown size={14} aria-hidden />
-              </summary>
-              <p className="pt-1">
-                Phần lẻ vài đồng dồn cho người đầu danh sách để tổng khớp tuyệt đối.
-              </p>
-            </details>
-          )}
+          <PrimaryButton onClick={handleAddMore}>Thêm khoản nữa</PrimaryButton>
+          <GhostButton onClick={handleCancel}>Xong</GhostButton>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-start gap-2">
+          <PrimaryButton disabledReason={saveReason} onClick={handleSave}>
+            <IconCheck size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
+          </PrimaryButton>
+          <GhostButton onClick={handleCancel}>
+            <IconX size={16} /> Huỷ
+          </GhostButton>
         </div>
       )}
-
-      {/* Tóm tắt validation ngay trên nút Lưu (Mẫu Validation Thống Nhất). */}
-      {touched && errors.length > 0 && (
-        <ul role="alert" className="grid gap-1 text-base font-medium text-debt-ink">
-          {errors.map((e) => (
-            <li key={e}>• {e}</li>
-          ))}
-        </ul>
-      )}
-
-      <div className="flex flex-wrap items-start gap-2">
-        <PrimaryButton disabledReason={saveReason} onClick={handleSave}>
-          <IconCheck size={16} /> {initial ? 'Lưu thay đổi' : 'Thêm khoản chi'}
-        </PrimaryButton>
-        {!initial && (
-          <GhostButton disabled={errors.length > 0} onClick={handleSaveAndMore}>
-            Lưu &amp; thêm nữa
-          </GhostButton>
-        )}
-        <GhostButton onClick={handleCancel}>
-          <IconX size={16} /> Huỷ
-        </GhostButton>
-      </div>
     </div>
   );
 }

@@ -31,10 +31,12 @@ import type { GameSessionInput } from '../adapter';
 import { buildIdentityMapCovering } from '../assets/identity';
 import { QR_FINAL_CHECK_LINE, QR_NO_NAME_WARNING } from '../copy';
 import type { GameRecord } from '../store';
-import type { GameDraft } from '../state';
-import { playSfx } from '../audio/sound';
+import type { GameDraft, PlayerView } from '../state';
+import { playSfx, gameSound } from '../audio/sound';
 import type { AvatarPhotoMap } from '../assets/avatar-store';
-import { PlayerAvatar, ScreenTitle, YellowAlert } from './shared';
+import { GameStage } from '../phaser/stage';
+import type { StageSpeed } from '../phaser/bridge';
+import { GroupedTechString, MuteButton, PlayerAvatar, ScreenTitle, YellowAlert } from './shared';
 
 /**
  * Badge người đãi ở M7 — PlayerAvatar dùng chung toàn game (FIX-V3
@@ -77,12 +79,13 @@ export function M7ResultScreen({
   draft,
   finalFrameUrl,
   onComplete,
-  onDiscardToSplitEven,
-  onReplayView,
+  onRecordAndComplete,
   onPlayAgain,
   photos,
+  players,
+  muted,
+  onToggleMute,
   ledgerRecorded = false,
-  onRecordToLedger,
   onOpenRules,
 }: {
   input: GameSessionInput;
@@ -93,18 +96,23 @@ export function M7ResultScreen({
   photos?: AvatarPhotoMap;
   /** Frame cuối của ván (CẢ G1 lẫn G2) chụp ở màn chơi — chỉ ở bộ nhớ phiên, có thể null (vd khôi phục ván). */
   finalFrameUrl?: string | null;
+  /** Thoát kết quả KHÔNG ghi sổ («Xong» khi không có đường ghi sổ, hoặc đã ghi rồi). */
   onComplete: () => void;
-  onDiscardToSplitEven: () => void;
-  onReplayView: () => void;
-  onPlayAgain: () => void;
   /**
-   * FIX-UX-GAME (F6): kết quả game KHÔNG tự ghi vào sổ — màn này nói
-   * rõ 1 dòng và, khi app chính cấp callback ghi sổ, hiện nút «Ghi
-   * vào sổ» để người dùng chủ động ghi. ledgerRecorded = đã ghi rồi.
+   * REDESIGN Pha 2 §8: CTA chính DUY NHẤT «Ghi vào sổ & Xong» — entry
+   * ghi khoản (onRecordLedgerPayments) + đóng status + thoát về S2
+   * trong 1 bấm. Có prop này và chưa ghi thì CTA là «Ghi vào sổ &
+   * Xong»; thiếu prop (ván không có đường ghi sổ) CTA là «Xong».
    */
+  onRecordAndComplete?: () => void;
+  onPlayAgain: () => void;
+  /** Cho khối «Xem lại» nhúng trong khung kết quả (chỉ G1 — như cũ). */
+  players?: PlayerView[];
+  muted?: boolean;
+  onToggleMute?: () => void;
+  /** Đã ghi vào sổ trong lần mở này rồi (chống ghi trùng). */
   ledgerRecorded?: boolean;
-  onRecordToLedger?: () => void;
-  /** Mở màn luật đầy đủ (luật hoà/đột tử) — từ mục «Chi tiết ván». */
+  /** Mở Sheet «Luật & chi tiết» — từ mục «Chi tiết ván». */
   onOpenRules?: () => void;
 }) {
   const log = record.log;
@@ -149,8 +157,6 @@ export function M7ResultScreen({
         : [],
     [log],
   );
-  const spinEvent = log.events.find((e) => e.type === 'spin');
-
   // QR hiển thị được: payload trong bộ nhớ khớp hash đã khoá vào ván.
   const inMemoryPayload =
     draft.qr.payload && record.qrHash && fnv1a64(draft.qr.payload) === record.qrHash
@@ -184,7 +190,8 @@ export function M7ResultScreen({
   }, [shownPayload, draft.qr.imageDataUrl]);
 
   const [seedOpen, setSeedOpen] = useState(false);
-  const [discardOpen, setDiscardOpen] = useState(false);
+  // «Xem lại» chạy TRONG khung kết quả (Pha 2 §8 — màn M8 riêng đã cắt).
+  const [replayOpen, setReplayOpen] = useState(false);
   // UIUX-GAME-V2: «Diễn biến đáng nhớ» THU GỌN mặc định — hiện 1 dòng
   // đầu, bấm «Xem thêm» mới mở hết.
   const [hlOpen, setHlOpen] = useState(false);
@@ -211,18 +218,18 @@ export function M7ResultScreen({
           mức (lg: khôi phục nguyên) để phiếu + TOÀN BỘ QR + CTA cùng
           nằm trong khung nhìn đầu 390×844 — panel v4 frame 09a/15a/33
           CTA sticky cắt mất phần dưới mã QR. Cấu trúc «ai → ai» +
-          MỞ PHIẾU giữ nguyên. */}
+          PHIẾU ĐÃI giữ nguyên. */}
       <div className="paper-grain sheet-shadow relative mt-2 rounded-[4px] border border-line-strong bg-card px-4 py-2 lg:col-start-1 lg:mt-4 lg:py-3">
         <span
           aria-hidden
-          className="absolute top-3 right-3 -rotate-6 rounded border-2 border-brand px-1.5 py-0.5 text-[11px] font-extrabold tracking-widest text-brand-deep"
+          className="absolute top-3 right-3 -rotate-6 rounded border-2 border-brand px-1.5 py-0.5 text-[12px] font-extrabold tracking-widest text-brand-deep"
         >
-          MỞ PHIẾU
+          PHIẾU ĐÃI
         </span>
         {result.kind === 'single' ? (
           <>
             <p className="text-sm leading-snug font-semibold tracking-wide text-brand-deep uppercase">
-              Nhà vô địch đãi
+              Người đãi
             </p>
             <div className="mt-2 flex items-center gap-3 lg:mt-3">
               <PayerBadge
@@ -232,18 +239,19 @@ export function M7ResultScreen({
                 photoDataUrl={photos?.get(result.payerId)}
                 ringHex={strongHexOf(result.payerId)}
               />
-              <span aria-hidden className="font-display text-[28px] font-extrabold text-ink">
+              <span aria-hidden className="font-display text-[32px] font-extrabold text-ink">
                 →
               </span>
               <div className="min-w-0">
                 <p className="text-sm leading-snug text-ink-2">Trả cho</p>
-                <p className="font-display text-[20px] leading-tight font-extrabold break-words text-ink">
+                <p className="font-display text-[19px] leading-tight font-extrabold break-words text-ink">
                   {shopName}
                 </p>
               </div>
             </div>
+            {/* D4: số tiền chỉ giữ ở số lớn khối chính + khối QR — câu này không lặp số. */}
             <p className="mt-2 text-base text-ink lg:mt-3">
-              <strong>{nameOf(result.payerId)}</strong> đãi cả bàn {formatMoney(total)}
+              <strong>{nameOf(result.payerId)}</strong> đãi cả bàn
             </p>
           </>
         ) : (
@@ -264,19 +272,19 @@ export function M7ResultScreen({
                   />
                 ))}
               </span>
-              <span aria-hidden className="font-display text-[28px] font-extrabold text-ink">
+              <span aria-hidden className="font-display text-[32px] font-extrabold text-ink">
                 →
               </span>
               <div className="min-w-0">
                 <p className="text-sm leading-snug text-ink-2">Trả cho</p>
-                <p className="font-display text-[20px] leading-tight font-extrabold break-words text-ink">
+                <p className="font-display text-[19px] leading-tight font-extrabold break-words text-ink">
                   {shopName}
                 </p>
               </div>
             </div>
+            {/* D4: không lặp số trong câu — số lớn ở khối chính + khối QR là đủ. */}
             <p className="mt-2 text-base text-ink lg:mt-3">
-              <strong>{payerIds.map(nameOf).join(' và ')}</strong> cùng đãi cả bàn{' '}
-              {formatMoney(total)} — mỗi người trả {formatMoney(coPayerShare ?? 0)}.
+              <strong>{payerIds.map(nameOf).join(' và ')}</strong> cùng đãi cả bàn.
             </p>
           </>
         )}
@@ -286,7 +294,7 @@ export function M7ResultScreen({
           <span className="block text-[13px] whitespace-nowrap text-ink-2 lg:text-sm lg:whitespace-normal">
             {result.kind === 'single' ? 'Số tiền người đãi trả' : 'Tổng hoá đơn cả bàn'}
           </span>
-          <span className="font-display text-[26px] leading-tight font-extrabold text-ink lg:text-[30px]">
+          <span className="font-display text-[24px] leading-tight font-extrabold text-ink lg:text-[32px]">
             {formatMoney(total)}
           </span>
         </p>
@@ -318,42 +326,28 @@ export function M7ResultScreen({
                 size={32}
                 photoDataUrl={photos?.get(id)}
               />
+              {/* D4: hàng người cùng đãi không còn lặp số tiền (trước đây
+                  số phần hiện 2 lần trong cùng hàng) — chỉ tên + trạng thái. */}
               <span className="flex-1 text-base text-ink">
-                <strong>{nameOf(id)}</strong> trả {formatMoney(coPayerShare ?? 0)}
+                <strong>{nameOf(id)}</strong>
                 <span className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-brand-deep">
                   <span aria-hidden>✓</span> Cùng đãi
                 </span>
-              </span>
-              <span className="font-display text-[20px] font-extrabold text-ink">
-                {formatMoney(coPayerShare ?? 0)}
               </span>
             </li>
           ))}
         </ul>
       ) : null}
 
-      {/* FIX-UX-GAME (F6): nói rõ 1 dòng — game chỉ chọn người đãi,
-          kết quả CHƯA tự ghi vào sổ của phiên; ghi hay không là chọn
-          của nhóm qua nút ghi (app chính ghi khoản «Game đãi»). */}
+      {/* Trạng thái ghi sổ 1 dòng — hành động ghi nằm ở CTA chính duy
+          nhất «Ghi vào sổ & Xong» phía dưới (Pha 2 §8, D4: nhãn nút
+          không lặp số tiền). */}
       <div className="mt-3 lg:col-start-1">
         {ledgerRecorded ? (
-          <p className="text-base font-semibold text-ink">
-            ✓ Đã ghi vào sổ: {payerIds.map(nameOf).join(' và ')} đã trả {formatMoney(total)}.
-          </p>
-        ) : (
-          <>
-            <p className="text-base text-ink">Kết quả này chưa ghi vào sổ.</p>
-            {onRecordToLedger ? (
-              <button
-                type="button"
-                onClick={onRecordToLedger}
-                className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-brand bg-card px-4 py-2.5 text-base font-bold text-brand-deep"
-              >
-                Ghi vào sổ: {payerIds.map(nameOf).join(' và ')} đã trả {formatMoney(total)}
-              </button>
-            ) : null}
-          </>
-        )}
+          <p className="text-base font-semibold text-ink">✓ Đã ghi vào sổ.</p>
+        ) : onRecordAndComplete ? (
+          <p className="text-base text-ink">Kết quả này chưa ghi vào sổ.</p>
+        ) : null}
       </div>
 
       {/* QR của quán */}
@@ -387,7 +381,7 @@ export function M7ResultScreen({
           </p>
           <p className="mt-1 text-base text-ink lg:mt-2">
             Số tiền phải trả:{' '}
-            <strong className="font-display text-[22px] font-extrabold lg:text-[24px]">
+            <strong className="font-display text-[24px] font-extrabold lg:text-[24px]">
               {formatMoney(payAmount)}
             </strong>
             {result.kind === 'co-payers' ? (
@@ -508,17 +502,18 @@ export function M7ResultScreen({
             }
             className="mx-auto h-[180px] w-[180px] rounded-lg border border-line-strong object-cover"
           />
-          <figcaption className="mt-2 text-center text-sm text-ink-2">
-            {log.params.game === 'g2'
-              ? `Mâm dừng ở phần của ${nameOf(result.kind === 'single' ? result.payerId : '')}.`
-              : 'Khung hình cuối của ván.'}
-          </figcaption>
+          {/* Seat 1 N-3: caption G2 cũ («Mâm dừng ở phần của …») lặp
+              đúng kết luận người đãi của khối chính phía trên — bỏ
+              chữ, giữ hình. Caption G1 trung tính giữ nguyên. */}
+          {log.params.game !== 'g2' ? (
+            <figcaption className="mt-2 text-center text-sm text-ink-2">
+              Khung hình cuối của ván.
+            </figcaption>
+          ) : null}
         </figure>
-      ) : log.params.game === 'g2' && spinEvent && spinEvent.type === 'spin' ? (
-        <p className="mt-4 text-base text-ink lg:col-span-2">
-          Mâm đã dừng ở vị trí của {nameOf(result.kind === 'single' ? result.payerId : '')}.
-        </p>
       ) : null}
+      {/* D15: nhánh chữ «Mâm đã dừng ở vị trí của…» khi không có frame
+          đã CẮT — nó lặp đúng thông tin khối kết quả chính phía trên. */}
 
       {/* Chi tiết ván — kỹ thuật + luật hoà/đột tử thu gọn mặc định
           (SPEC §M7/§5.2e; FIX-UX-GAME mục 3: thông tin kỹ thuật không
@@ -539,7 +534,8 @@ export function M7ResultScreen({
             <div>Số chung: {record.chung}</div>
             <div>Seed cuối: {record.seedFinal}</div>
             <div>Thuật toán: {record.algo}</div>
-            <div>C1: {record.c1}</div>
+            {/* D13: C1 gọi đúng «Mã cam kết» — «Mã ván» chỉ là record.code ở dòng đầu. */}
+            <div>Mã cam kết (C1): {record.c1}</div>
             <div>logHash: {log.logHash}</div>
           </dl>
           {/* UIUX-GAME-V2: đoạn luật hoà KHÔNG còn lặp ở đây — luật
@@ -556,65 +552,200 @@ export function M7ResultScreen({
         </div>
       ) : null}
 
-      {/* Thứ tự hành động chốt cứng (SPEC §M7 / D5 màn 4).
-          FIX-V3 P1.7: «Hoàn tất» neo CỐ ĐỊNH ở đáy màn (pattern 7). */}
-      <div className="sticky bottom-0 z-20 mt-6 bg-canvas/95 py-2 backdrop-blur lg:col-span-2">
-        <button
-          type="button"
-          onClick={onComplete}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
-        >
-          Hoàn tất
-        </button>
-      </div>
-
-      {discardOpen ? (
-        <div className="mt-3 rounded-lg border border-line-strong bg-card px-4 py-4 lg:col-span-2">
-          <p className="text-base text-ink">Bỏ kết quả ván {record.code} và chia đều?</p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={onDiscardToSplitEven}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
-            >
-              Chia đều
-            </button>
-            <button
-              type="button"
-              onClick={() => setDiscardOpen(false)}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-line-strong bg-card px-4 py-2.5 text-base font-semibold text-ink"
-            >
-              Giữ kết quả
-            </button>
-          </div>
+      {/* «Xem lại» nhúng TRONG khung kết quả (Pha 2 §8): nội dung M8
+          cũ (sân replay + tường thuật + kiểm chứng) chạy tại đây —
+          màn M8 riêng và điều hướng 'm8' đã cắt. Chỉ G1 như cũ (M8
+          chỉ hỗ trợ G1); G2 không hiện nút. */}
+      {replayOpen && log.params.game === 'g1' && players ? (
+        <div className="mt-4 lg:col-span-2">
+          <ReplayEmbed
+            record={record}
+            players={players}
+            muted={muted ?? false}
+            onToggleMute={onToggleMute ?? (() => undefined)}
+          />
+          <button
+            type="button"
+            onClick={() => setReplayOpen(false)}
+            className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
+          >
+            Đóng xem lại
+          </button>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setDiscardOpen(true)}
-          className="mt-1 inline-flex min-h-11 w-full items-center justify-center px-3 py-1.5 text-base font-semibold text-ink-2 underline underline-offset-2 lg:col-span-2"
-        >
-          Chia đều cho lành
-        </button>
-      )}
-
-      {log.params.game === 'g1' ? (
-        <button
-          type="button"
-          onClick={onReplayView}
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink lg:col-span-2"
-        >
-          Xem lại ván này
-        </button>
       ) : null}
 
+      {/* Hành động kết quả (Pha 2 §8, D3): CTA chính DUY NHẤT —
+          «Ghi vào sổ & Xong» (ghi sổ + đóng status + về S2 trong 1
+          bấm) khi ván có đường ghi sổ và chưa ghi; ngoài ra «Xong».
+          Hai nút «Ghi vào sổ»/«Hoàn tất» tách rời và nhãn thoát trùng
+          đã bỏ. Nút phụ: «Chơi lại», «Xem lại» (chỉ G1). */}
+      <div className="sticky bottom-0 z-20 mt-6 bg-canvas/95 py-2 backdrop-blur lg:col-span-2">
+        {onRecordAndComplete && !ledgerRecorded ? (
+          <button
+            type="button"
+            onClick={onRecordAndComplete}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
+          >
+            Ghi vào sổ & Xong
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onComplete}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-base font-bold text-ink-on-seed transition duration-100 ease-[var(--ease-lock)] hover:bg-brand-600 active:bg-brand-600"
+          >
+            Xong
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 lg:col-span-2">
+        <button
+          type="button"
+          onClick={onPlayAgain}
+          className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
+        >
+          Chơi lại
+        </button>
+        {log.params.game === 'g1' ? (
+          <button
+            type="button"
+            aria-expanded={replayOpen}
+            onClick={() => setReplayOpen(!replayOpen)}
+            className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 py-2.5 text-base font-semibold text-ink"
+          >
+            Xem lại
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Nội dung xem lại ván (trước đây là màn M8 riêng — SPEC §M8 cũ):
+ * phát lại từ EVENT LOG đã lưu qua GameStage ở chế độ replay, tốc độ
+ * 0.5×/1×, tường thuật cùng câu chữ với khối «Diễn biến đáng nhớ»,
+ * mục «Kiểm chứng ván» thu gọn. Nay nhúng trong khung kết quả M7.
+ * Chỉ G1 (điều kiện render ở nơi gọi).
+ */
+function ReplayEmbed({
+  record,
+  players,
+  muted,
+  onToggleMute,
+}: {
+  record: GameRecord;
+  players: PlayerView[];
+  muted: boolean;
+  onToggleMute: () => void;
+}) {
+  const [rate, setRate] = useState<0.5 | 1>(1);
+  const [runId, setRunId] = useState(0);
+  const [done, setDone] = useState(false);
+  const [techOpen, setTechOpen] = useState(false);
+  const nameOf = (id: string) =>
+    record.log.params.players.find((pl) => pl.id === id)?.name ?? 'Người chơi';
+  const highlights = useMemo(
+    () => [...pickHighlights(record.log.events)].sort((a, b) => a.tick - b.tick),
+    [record.log],
+  );
+
+  return (
+    <div>
+      <h3 className="font-display text-[19px] font-extrabold text-ink">
+        Xem lại ván {record.code}
+      </h3>
+      <div className="mt-3" key={`${record.code}-${runId}-${rate}`}>
+        <GameStage
+          log={record.log}
+          players={players}
+          speed={rate as unknown as StageSpeed}
+          muted={muted}
+          sound={gameSound}
+          onFinished={() => setDone(true)}
+        />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <MuteButton muted={muted} onToggle={onToggleMute} />
+        <button
+          type="button"
+          aria-pressed={rate === 0.5}
+          onClick={() => {
+            setRate(0.5);
+            setDone(false);
+            setRunId((v) => v + 1);
+          }}
+          className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
+        >
+          Tốc độ 0.5×
+        </button>
+        <button
+          type="button"
+          aria-pressed={rate === 1}
+          onClick={() => {
+            setRate(1);
+            setDone(false);
+            setRunId((v) => v + 1);
+          }}
+          className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
+        >
+          Tốc độ 1×
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setDone(false);
+            setRunId((v) => v + 1);
+          }}
+          className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
+        >
+          Phát lại từ đầu
+        </button>
+      </div>
+      {done ? <p className="mt-2 text-base text-ink">Đã phát lại hết ván {record.code}.</p> : null}
+      {highlights.length > 0 ? (
+        <div className="mt-3">
+          <h4 className="text-base font-semibold text-ink">Tường thuật ván</h4>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-ink">
+            {highlights.map((h, i) => (
+              <li key={i}>{highlightText(h, nameOf)}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <button
         type="button"
-        onClick={onPlayAgain}
-        className="mt-3 inline-flex min-h-9 items-center rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 underline lg:col-span-2 lg:justify-self-start"
+        aria-expanded={techOpen}
+        onClick={() => setTechOpen(!techOpen)}
+        className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
       >
-        Chơi lại
+        {techOpen ? 'Thu gọn mục kiểm chứng ván' : 'Kiểm chứng ván (thuật toán, seed, số chung)'}
       </button>
+      {techOpen ? (
+        <dl className="mt-2 space-y-1.5 text-sm">
+          <div>
+            <dt className="font-semibold text-ink">Thuật toán</dt>
+            <dd className="font-mono break-words text-ink-2">{record.algo}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink">Seed cuối</dt>
+            <dd className="font-mono text-ink-2">
+              <GroupedTechString value={String(record.seedFinal)} />
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink">seed_device</dt>
+            <dd className="font-mono text-ink-2">
+              <GroupedTechString value={String(record.seedDevice)} />
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink">Số chung</dt>
+            <dd className="font-mono text-ink-2">{record.chung}</dd>
+          </div>
+        </dl>
+      ) : null}
     </div>
   );
 }

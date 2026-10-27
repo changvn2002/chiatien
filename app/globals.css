@@ -512,30 +512,8 @@ body {
   pointer-events: none;
 }
 
-/* R11 (việc 1): NEO ĐỆM CUỐI của panel sheet (session-settlement-
-   strip.tsx) — thay công thức đệm đáy var(--strip-h) + 24 (hằng
-   191px ở mọi trạng thái panel của R10). Chiều cao neo tính theo
-   % chiều cao hộp nội dung của chính panel (panel pb = 0 nên
-   100% = chiều cao panel − đệm trên 12px): maxScroll của panel
-   do đó luôn bằng (điểm cuối nội dung − một hằng số đuôi) trong
-   MỌI trạng thái, bất kể chiều cao panel là 460 hay 508px:
-   - 278px => maxScroll rơi đúng ĐỈNH HÀNG SỐ DƯ «Chi» (từ đó tới
-     cuối nội dung là 290px bất biến) khi panel KHÔNG có thẻ hoàn
-     tất;
-   - 394px (khi panel chứa [data-completion-card], qua :has) =>
-     maxScroll rơi đúng ĐỈNH HÀNG PHIẾU CUỐI của thẻ (từ đó tới
-     cuối nội dung là 406px bất biến).
-   Điểm dừng đáy tuyệt đối vì vậy là một vị trí snap đã thiết kế
-   trùng biên hàng — 0 ký tự bị cắt giữa thân ở biên trên, không
-   phiếu nào bị chặt đôi; hàng cuối + CTA vẫn nguyên vẹn phía
-   trên dock với đệm thật bằng đúng chiều cao neo (170px không
-   thẻ / 54–102px có thẻ, đo ở pack R11). */
-.sheet-end-spacer {
-  height: max(0px, calc(100% - 278px));
-}
-[data-sheet-panel]:has([data-completion-card]) .sheet-end-spacer {
-  height: max(0px, calc(100% - 394px));
-}
+/* REDESIGN Pha 1: .sheet-end-spacer của panel sheet cũ đã XOÁ cùng
+   strip thu/mở — S2 là một màn cuộn duy nhất, không còn panel sheet. */
 
 /* R6 (mục 4): .torn-edge (sóng tam giác đều bằng gradient) ĐÃ XOÁ —
    chân phiếu nay là SVG silhouette xé bất quy tắc theo member.id
@@ -557,6 +535,17 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand-900);
   outline-offset: 2px;
+}
+
+/* Fix Wave 2 (A12): ô nhập TRONG app Sheet chỉ hiện ĐÚNG 1 khung focus.
+   Các ô này (inputClass / MoneyInput) đã tự báo focus bằng viền đổi màu
+   (focus:border-brand-deep / focus-within), nên outline toàn cục ở trên
+   chồng thành vòng kép đồng tâm (ảnh Sheet thành viên) hoặc lệch khung
+   (ô tiền). Scope chặt trong panel của app Sheet (.app-sheet-panel —
+   GameSheet của game không mang class này, không bị đụng): tắt outline
+   cho riêng input/textarea/select ở đó, viền là khung focus duy nhất. */
+.app-sheet-panel :is(input, textarea, select):focus-visible {
+  outline: none;
 }
 
 /* R7 (mục 4a): ngoại lệ TRUNG TÍNH cho nút «…» của AppBar phiên —

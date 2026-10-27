@@ -1,28 +1,36 @@
 'use client';
 
-import { IconCheck, IconCopy, IconLink, IconList, IconPencil, IconTrash, IconUsers } from './icons';
-import { formatVND } from '@/lib/money';
+import { IconCheck, IconLink, IconList, IconPencil, IconReceipt, IconTrash } from './icons';
+import { buildShareUrl } from '@/lib/share';
 import { expenseDraftKey } from '@/lib/storage';
-import type { Expense, Member, Session } from '@/lib/types';
-import { GhostButton, PrimaryButton } from './ui-bits';
+import type { Expense, Member, Session, Transfer } from '@/lib/types';
+import { GhostButton, PrimaryButton, copyText } from './ui-bits';
 import { ExpenseEditor, type ExpenseSave } from './expense-editor';
 import { MemberEditor, type MemberDraft } from './member-editor';
+import { PaymentSheet } from './payment-sheet';
+import { transferKey } from './session-progress';
+import { SlipGrid } from './slip-card';
 import { ConfirmDialog, Sheet } from './sheet';
 import type { MemberEditState } from './session-view-helpers';
+import { useState } from 'react';
 
 export type SessionSheetsProps = {
   session: Session;
-  total: number;
+  balances: Record<string, number>;
+  transfers: Transfer[];
   memberEditing: MemberEditState;
   expenseEditing: Expense | 'new' | null;
   expenseAction: Expense | null;
   sessionActionOpen: boolean;
   shareOpen: boolean;
-  shareState: 'idle' | 'copied' | 'failed';
-  shareUrl: string;
+  exportOpen: boolean;
+  paymentIndex: number | null;
+  paidKeys: Set<string>;
   confirmDeleteSession: boolean;
   pendingDeleteMember: Member | null;
   pendingDeleteExpense: Expense | null;
+  /** Người trả mặc định cho khoản mới: người trả gần nhất của phiên. */
+  defaultPayerId?: string;
   saveMember: (draft: MemberDraft) => void;
   saveBulkMembers: (names: string[]) => void;
   openMember: (member: Member, focusBank?: boolean) => void;
@@ -31,7 +39,7 @@ export type SessionSheetsProps = {
   applyExpenseDraft: (draft: ExpenseSave) => void;
   confirmDeleteMember: () => void;
   confirmDeleteExpense: () => void;
-  handleCopyShareLink: () => Promise<void>;
+  setTransferPaid: (transfer: Transfer, paid: boolean) => void;
   onCloseMemberEditor: () => void;
   onCloseExpenseEditor: () => void;
   onCloseExpenseAction: () => void;
@@ -39,20 +47,13 @@ export type SessionSheetsProps = {
   onExpandExpenseAction: (id: string) => void;
   onDeleteExpenseAction: (expense: Expense) => void;
   onCloseSessionActions: () => void;
-  onSessionBack: () => void;
   onSessionShare: () => void;
-  onSessionCopy: () => void;
-  /** Lớp phiếu (v1.8.0, §3): trạng thái công tắc hiệu lực (đã qua bộ lọc tĩnh). */
-  slipsOn: boolean;
-  /** Tên phiên khớp bộ lọc bối cảnh -> tĩnh cứng, công tắc khoá tắt + 1 dòng tĩnh. */
-  slipsStaticForced: boolean;
-  /** 1 chạm bật/tắt lớp phiếu cho phiên này (tắt = kill switch, được nhớ). */
-  onToggleSlips: () => void;
-  /** Hành động tường minh «Sao chép chi tiết đầy đủ» (§4). */
-  onSessionCopyDetailed: () => void;
-  onSessionRename: () => void;
+  onSessionExport: () => void;
   onSessionDeleteRequest: () => void;
   onCloseShare: () => void;
+  onCloseExport: () => void;
+  onClosePayment: () => void;
+  onOpenPayment: (index: number) => void;
   onCancelDeleteSession: () => void;
   onConfirmDeleteSession: () => void;
   onCancelDeleteMember: () => void;
@@ -60,26 +61,29 @@ export type SessionSheetsProps = {
 };
 
 /**
- * Toàn bộ lớp phủ của Màn B (ARC-11): Member Sheet, Expense Sheet,
- * bảng hành động của hàng sổ, bảng hành động của cuộc chia (nơi duy
- * nhất chứa Xoá cuộc chia), Share Sheet cảnh báo 2 lớp và ba hộp
- * thoại xác nhận xoá. State + handler vẫn thuộc SessionView; module
- * này chỉ wiring trình bày.
+ * Toàn bộ lớp phủ của S2 — REDESIGN Pha 1 (SPEC §2): Sheet 1 Khoản
+ * chi, Sheet 2 Người, Sheet 3 Thanh toán (payment-sheet.tsx), Sheet 4
+ * Chia sẻ, sheet «Xuất phiếu» (Q1 — phiếu chỉ dựng khi bấm), menu «⋯»
+ * của phiên và ba hộp xác nhận xoá. State + handler thuộc SessionView;
+ * module này chỉ wiring trình bày.
  */
 export function SessionSheets(props: SessionSheetsProps) {
   const {
     session,
-    total,
+    balances,
+    transfers,
     memberEditing,
     expenseEditing,
     expenseAction,
     sessionActionOpen,
     shareOpen,
-    shareState,
-    shareUrl,
+    exportOpen,
+    paymentIndex,
+    paidKeys,
     confirmDeleteSession,
     pendingDeleteMember,
     pendingDeleteExpense,
+    defaultPayerId,
     saveMember,
     saveBulkMembers,
     openMember,
@@ -88,7 +92,7 @@ export function SessionSheets(props: SessionSheetsProps) {
     applyExpenseDraft,
     confirmDeleteMember,
     confirmDeleteExpense,
-    handleCopyShareLink,
+    setTransferPaid,
     onCloseMemberEditor,
     onCloseExpenseEditor,
     onCloseExpenseAction,
@@ -96,24 +100,24 @@ export function SessionSheets(props: SessionSheetsProps) {
     onExpandExpenseAction,
     onDeleteExpenseAction,
     onCloseSessionActions,
-    onSessionBack,
     onSessionShare,
-    onSessionCopy,
-    slipsOn,
-    slipsStaticForced,
-    onToggleSlips,
-    onSessionCopyDetailed,
-    onSessionRename,
+    onSessionExport,
     onSessionDeleteRequest,
     onCloseShare,
+    onCloseExport,
+    onClosePayment,
+    onOpenPayment,
     onCancelDeleteSession,
     onConfirmDeleteSession,
     onCancelDeleteMember,
     onCancelDeleteExpense,
   } = props;
+
+  const paymentTransfer = paymentIndex !== null ? (transfers[paymentIndex] ?? null) : null;
+
   return (
     <>
-      {/* Member Sheet */}
+      {/* Sheet 2 — Người */}
       <Sheet
         open={memberEditing !== null}
         onClose={onCloseMemberEditor}
@@ -138,7 +142,7 @@ export function SessionSheets(props: SessionSheetsProps) {
         )}
       </Sheet>
 
-      {/* Expense Sheet */}
+      {/* Sheet 1 — Khoản chi */}
       <Sheet
         open={expenseEditing !== null}
         onClose={onCloseExpenseEditor}
@@ -150,6 +154,7 @@ export function SessionSheets(props: SessionSheetsProps) {
             key={expenseEditing === 'new' ? 'new' : expenseEditing.id}
             members={session.members}
             initial={expenseEditing === 'new' ? undefined : expenseEditing}
+            defaultPayerId={defaultPayerId}
             draftKey={expenseDraftKey(
               session.id,
               expenseEditing === 'new' ? null : expenseEditing.id,
@@ -161,7 +166,7 @@ export function SessionSheets(props: SessionSheetsProps) {
         )}
       </Sheet>
 
-      {/* Expense Action Sheet — bảng hành động của hàng ledger */}
+      {/* Expense Action Sheet — bảng hành động của hàng sổ */}
       <Sheet
         open={expenseAction !== null}
         onClose={onCloseExpenseAction}
@@ -194,80 +199,24 @@ export function SessionSheets(props: SessionSheetsProps) {
         )}
       </Sheet>
 
-      {/* Session Action Sheet — nơi DUY NHẤT chứa Xoá cuộc chia */}
+      {/* Menu «⋯» của S2 (SPEC §2): Chia sẻ -> Sheet 4 · Xuất phiếu ->
+          dựng phiếu khi bấm (Q1) · Xoá phiên (giữ hộp xác nhận). Mọi
+          nút sao chép/chia sẻ rải rác khác đã gỡ về Sheet 4/Sheet 3. */}
       <Sheet open={sessionActionOpen} onClose={onCloseSessionActions} title="Cuộc chia này">
         <div className="grid">
-          <button
-            type="button"
-            onClick={onSessionBack}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
-          >
-            <IconUsers size={16} aria-hidden /> Tất cả cuộc chia
-          </button>
           <button
             type="button"
             onClick={onSessionShare}
             className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <IconLink size={16} aria-hidden /> Chia sẻ link
+            <IconLink size={16} aria-hidden /> Chia sẻ
           </button>
           <button
             type="button"
-            onClick={onSessionCopy}
+            onClick={onSessionExport}
             className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
           >
-            <IconCopy size={16} aria-hidden /> Copy tóm tắt
-          </button>
-          {/* Hành động TƯỜNG MINH duy nhất cho copy toàn văn chi tiết
-              (§4): chuỗi lệnh đầy đủ chỉ rời app qua nút riêng này,
-              không bao giờ qua đường Copy/Chia sẻ mặc định. */}
-          <button
-            type="button"
-            onClick={onSessionCopyDetailed}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
-          >
-            <IconCopy size={16} aria-hidden /> Sao chép chi tiết đầy đủ
-          </button>
-          {/* Công tắc lớp phiếu (§3): nhãn trung tính, opt-in theo
-              phiên, mặc định TẮT; 1 chạm tại đây cũng là kill switch
-              cho mọi thành viên trên máy mình. Khi bộ lọc tên phiên
-              kích hoạt: công tắc hiện tắt + đúng một dòng tĩnh. */}
-          <div className="border-t border-line">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={slipsOn}
-              aria-disabled={slipsStaticForced || undefined}
-              onClick={onToggleSlips}
-              className="flex min-h-[48px] w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
-            >
-              <span>Đóng phiếu khi chốt</span>
-              <span
-                aria-hidden
-                className={`relative h-6 w-11 shrink-0 rounded-full ${slipsOn ? 'bg-brand-500' : 'bg-grey-300'}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-card ${slipsOn ? 'right-0.5' : 'left-0.5'}`}
-                />
-              </span>
-            </button>
-            {slipsStaticForced ? (
-              <p className="px-2 pb-2 text-base text-ink-2">Phiên này giữ dạng tĩnh.</p>
-            ) : (
-              /* Khai phạm vi công tắc (Panel #07 F2): công tắc chỉ điều
-                 khiển thẻ chốt trên máy này; link chia sẻ luôn mang
-                 dạng phiếu sang máy người nhận (§9(a)). */
-              <p className="px-2 pb-2 text-base text-ink-2">
-                Link chia sẻ luôn hiện phiếu cho người nhận.
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onSessionRename}
-            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
-          >
-            <IconPencil size={16} aria-hidden /> Đổi tên cuộc chia
+            <IconReceipt size={16} aria-hidden /> Xuất phiếu
           </button>
           <button
             type="button"
@@ -279,53 +228,38 @@ export function SessionSheets(props: SessionSheetsProps) {
         </div>
       </Sheet>
 
-      {/* Share Sheet — cảnh báo 2 lớp (DATA-04(ii)): Lớp 1 headline +
-      nút xác nhận trong viewport đầu; Lớp 2 tối đa 3 gạch đầu dòng
-      ngay dưới headline. Link chỉ được tạo + copy SAU khi người dùng
-      bấm «Tôi hiểu, tạo link» (handleCopyShareLink). */}
-      <Sheet open={shareOpen} onClose={onCloseShare} title="Chia sẻ cuộc chia này">
-        <p className="text-base leading-relaxed font-medium text-ink">
-          Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia — và link không thu hồi được
-          sau khi gửi.
-        </p>
-        <ul className="mt-3 grid list-disc gap-2 pl-5 text-base leading-relaxed text-ink-2">
-          <li>
-            Link chứa: {session.members.length} thành viên · {session.expenses.length} khoản chi ·
-            tổng {formatVND(total)} — không có thông tin ngân hàng; QR chỉ hiện trên máy đã lưu tài
-            khoản người nhận.
-          </li>
-          <li>
-            Người nhận có bản sao trên máy của họ, sửa tiếp được — đối chiếu lại trước khi thanh
-            toán.
-          </li>
-          <li>Chỉ gửi link cho người trong nhóm.</li>
-        </ul>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PrimaryButton onClick={handleCopyShareLink}>
-            {shareState === 'copied' ? <IconCheck size={16} /> : <IconLink size={16} />}
-            {shareState === 'copied' ? 'Đã copy link!' : 'Tôi hiểu, tạo link'}
-          </PrimaryButton>
-          <GhostButton onClick={onCloseShare}>Quay lại</GhostButton>
-        </div>
-        <span className="sr-only" role="status">
-          {shareState === 'copied' ? 'Đã sao chép link chia sẻ vào bộ nhớ tạm.' : ''}
-        </span>
-        {shareState === 'failed' && shareUrl && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-base text-muted">
-              Trình duyệt không cho copy tự động — hãy copy thủ công link này:
-            </p>
-            <textarea
-              readOnly
-              aria-label="Link chia sẻ cuộc chia"
-              value={shareUrl}
-              onFocus={(e) => e.target.select()}
-              className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
-              rows={3}
-            />
-          </div>
+      {/* Sheet 4 — Chia sẻ: nơi DUY NHẤT của hành động chia sẻ. */}
+      <ShareSheet open={shareOpen} session={session} onClose={onCloseShare} />
+
+      {/* Xuất phiếu (Q1): phiếu chỉ được DỰNG khi người dùng bấm —
+          dùng lại SlipGrid/phieu sẵn có làm bộ dựng khi-xuất; không
+          còn lớp phiếu thường trực trong workspace/quyết toán. */}
+      <Sheet open={exportOpen} onClose={onCloseExport} title="Phiếu của phiên" wide>
+        {exportOpen && (
+          <SlipGrid
+            session={session}
+            balances={balances}
+            transfers={transfers}
+            onOpenQr={(index) => {
+              onCloseExport();
+              onOpenPayment(index);
+            }}
+          />
         )}
       </Sheet>
+
+      {/* Sheet 3 — Thanh toán (nơi duy nhất chứa QR thanh toán). */}
+      <PaymentSheet
+        session={session}
+        transfer={paymentTransfer}
+        paid={paymentTransfer ? paidKeys.has(transferKey(paymentTransfer)) : false}
+        onClose={onClosePayment}
+        onSetPaid={setTransferPaid}
+        onEditMember={(member) => {
+          onClosePayment();
+          openMember(member, true);
+        }}
+      />
 
       <ConfirmDialog
         open={confirmDeleteSession}
@@ -360,5 +294,60 @@ export function SessionSheets(props: SessionSheetsProps) {
         onConfirm={confirmDeleteExpense}
       />
     </>
+  );
+}
+
+/**
+ * Sheet 4 — Chia sẻ phiên: link phiên + «Sao chép link» + đúng 1 dòng
+ * DATA-04. Link dựng tại máy bằng buildShareUrl (lib/share) — payload
+ * không chứa thông tin ngân hàng ở tầng schema (ADR-1).
+ */
+function ShareSheet({
+  open,
+  session,
+  onClose,
+}: {
+  open: boolean;
+  session: Session;
+  onClose: () => void;
+}) {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const url = open ? buildShareUrl(session) : '';
+
+  async function handleCopy() {
+    const ok = await copyText(url);
+    setState(ok ? 'copied' : 'failed');
+    if (ok) window.setTimeout(() => setState('idle'), 3000);
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Chia sẻ phiên">
+      <div className="grid gap-3">
+        <p className="text-sm text-ink-2">Link không chứa thông tin ngân hàng.</p>
+        <textarea
+          readOnly
+          aria-label="Link chia sẻ phiên"
+          value={url}
+          onFocus={(e) => e.target.select()}
+          rows={4}
+          className="w-full rounded-lg border border-line-strong bg-card px-3 py-2.5 text-base break-all text-ink outline-none focus:border-brand-deep"
+        />
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton onClick={handleCopy}>
+            {state === 'copied' ? <IconCheck size={16} /> : <IconLink size={16} />}
+            {state === 'copied' ? 'Đã copy link!' : 'Sao chép link'}
+          </PrimaryButton>
+          <GhostButton onClick={onClose}>Đóng</GhostButton>
+        </div>
+        <span className="sr-only" role="status">
+          {state === 'copied' ? 'Đã sao chép link chia sẻ vào bộ nhớ tạm.' : ''}
+        </span>
+        {state === 'failed' && (
+          <p role="alert" className="text-base font-medium text-debt-ink">
+            Trình duyệt không cho copy tự động — hãy copy thủ công link ở trên.
+          </p>
+        )}
+      </div>
+    </Sheet>
   );
 }

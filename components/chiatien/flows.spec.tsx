@@ -53,11 +53,14 @@ afterEach(() => {
 describe('flow lõi ở tầng component', () => {
   it('ChiaTienApp (qua app/page): mở app trống -> tạo cuộc chia mới -> vào Màn B một màn hình và dữ liệu đã ghi vào localStorage', () => {
     render(<Page />);
-    expect(screen.getByText('Chưa có cuộc chia nào')).toBeTruthy();
+    // SPEC S1: trạng thái rỗng PHẲNG — «Chưa có cuộc chia nào» nằm
+    // trong đúng 1 dòng phẳng kèm CTA (bỏ hero + heading riêng).
+    expect(screen.getByText(/Chưa có cuộc chia nào/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Tạo cuộc chia mới'), {
       target: { value: 'Nhậu cuối tuần' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo cuộc chia' }));
+    // SPEC S1 (Pha 1): nhãn CTA tạo phiên đổi «Tạo cuộc chia» -> «Cuộc chia mới».
+    fireEvent.click(screen.getByRole('button', { name: 'Cuộc chia mới' }));
     // Vào thẳng cuộc chia vừa tạo: H1 là tên cuộc chia, KHÔNG còn stepper/bước.
     expect(screen.getByRole('heading', { name: 'Nhậu cuối tuần' })).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: /Các bước/ })).toBeNull();
@@ -96,7 +99,9 @@ describe('flow lõi ở tầng component', () => {
     fireEvent.click(saveButton);
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('Tên thành viên'), { target: { value: 'Chi' } });
-    fireEvent.click(screen.getByLabelText(/Lưu tài khoản trên máy này/));
+    // SPEC Sheet 2 (Pha 1): bỏ checkbox lưu tài khoản — disclosure
+    // «Tài khoản (không bắt buộc)» chính là công tắc, bấm để mở.
+    fireEvent.click(screen.getByRole('button', { name: /Tài khoản \(không bắt buộc\)/ }));
     fireEvent.change(screen.getByLabelText('Số tài khoản'), {
       target: { value: '0123 456 789' },
     });
@@ -114,7 +119,9 @@ describe('flow lõi ở tầng component', () => {
     const onSave = vi.fn();
     render(<MemberEditor onSave={onSave} onCancel={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('Tên thành viên'), { target: { value: 'Chi' } });
-    fireEvent.click(screen.getByLabelText(/Lưu tài khoản trên máy này/));
+    // SPEC Sheet 2 (Pha 1): bỏ checkbox lưu tài khoản — disclosure
+    // «Tài khoản (không bắt buộc)» chính là công tắc, bấm để mở.
+    fireEvent.click(screen.getByRole('button', { name: /Tài khoản \(không bắt buộc\)/ }));
     fireEvent.change(screen.getByLabelText('Số tài khoản'), { target: { value: 'abc' } });
     fireEvent.change(screen.getByLabelText('Tên chủ tài khoản'), {
       target: { value: 'NGUYEN THI CHI' },
@@ -130,7 +137,9 @@ describe('flow lõi ở tầng component', () => {
     const onSave = vi.fn();
     render(<MemberEditor onSave={onSave} onCancel={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('Tên thành viên'), { target: { value: 'Chi' } });
-    fireEvent.click(screen.getByLabelText(/Lưu tài khoản trên máy này/));
+    // SPEC Sheet 2 (Pha 1): bỏ checkbox lưu tài khoản — disclosure
+    // «Tài khoản (không bắt buộc)» chính là công tắc, bấm để mở.
+    fireEvent.click(screen.getByRole('button', { name: /Tài khoản \(không bắt buộc\)/ }));
     const input = screen.getByLabelText('Số tài khoản') as HTMLInputElement;
     expect(input.id).toBe('member-account');
 
@@ -185,8 +194,8 @@ describe('flow lõi ở tầng component', () => {
       target: { value: 'Lan, Hùng, Mai' },
     });
     expect(screen.getByText(/Sẽ thêm 3 người: Lan · Hùng · Mai/)).toBeTruthy();
-    // Chế độ bulk KHÔNG hiện khối ngân hàng.
-    expect(screen.queryByLabelText(/Lưu tài khoản trên máy này/)).toBeNull();
+    // Chế độ bulk KHÔNG hiện khối ngân hàng (kể cả disclosure tài khoản).
+    expect(screen.queryByRole('button', { name: /Tài khoản \(không bắt buộc\)/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Thêm 3 người' }));
     expect(onSaveBulk).toHaveBeenCalledWith(['Lan', 'Hùng', 'Mai']);
     expect(onSave).not.toHaveBeenCalled();
@@ -211,6 +220,51 @@ describe('flow lõi ở tầng component', () => {
     expect(draft.payerId).toBe('a');
     expect(draft.participantIds).toEqual(['a', 'b']);
     expect(draft.mode).toBe('equal');
+  });
+
+  it('ExpenseEditor (Addendum §6): kiểu chia 1 lớp — mặc định chỉ hiện «Chia đều» + nút «Chia khác»; bung ra chọn «Tuỳ chỉnh» xong thu gọn về tóm tắt, không còn hint tautology của Chia đều', () => {
+    render(<ExpenseEditor members={members} onSave={vi.fn()} onCancel={vi.fn()} />);
+    // Thu gọn: cách đang dùng + đúng 1 nút bung; 2 cách còn lại chưa hiện.
+    expect(screen.getByRole('button', { name: 'Chia khác' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Chia khác' }).getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    expect(screen.queryByRole('radio', { name: 'Tuỳ chỉnh' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Theo phần' })).toBeNull();
+    expect(document.body.textContent).not.toContain('Chia đều cho những người được chọn.');
+    // Bung ra -> đủ 3 lựa chọn; chọn Tuỳ chỉnh -> thu gọn, tóm tắt hiện
+    // đúng mode mới + khối nhập số tiền từng người hiện ra.
+    fireEvent.click(screen.getByRole('button', { name: 'Chia khác' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Tuỳ chỉnh' }));
+    expect(screen.queryByRole('radio', { name: 'Theo phần' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chia khác' })).toBeTruthy();
+    expect(screen.getByLabelText('Số tiền An phải chịu')).toBeTruthy();
+    expect(document.body.textContent).toContain('Nhập đúng số tiền từng người chịu');
+  });
+
+  it('ExpenseEditor (Addendum §6): mở sửa khoản «Theo phần» -> tóm tắt hiện ngay mode hiện tại, không cần bung', () => {
+    render(
+      <ExpenseEditor
+        members={members}
+        initial={{
+          id: 'e9',
+          title: 'Tiền phòng',
+          amount: 300000,
+          payerId: 'a',
+          participantIds: ['a', 'b'],
+          mode: 'shares',
+          custom: {},
+          weights: { a: 2, b: 1 },
+          createdAt: 1,
+        }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('radio', { name: 'Theo phần' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chia khác' })).toBeTruthy();
+    // Tóm tắt cạnh nút bung hiện đúng «Theo phần» + ô số phần có sẵn.
+    expect(screen.getByLabelText('Số phần của An')).toBeTruthy();
   });
 
   it('ExpenseEditor: nút Lưu disabled-có-lý-do NGAY từ trạng thái mở đầu (R3-10)', () => {

@@ -5,12 +5,18 @@
 // vào qua GameStage của lane P-STAGE (game/phaser/stage.tsx), đến lượt nó
 // cũng chỉ import('phaser') động trong effect.
 //
-// Vòng đời: mount → máy trạng thái M1→M8; unmount/thoát → cleanup đúng
-// thứ tự §1.2 phía React: GameStage tự dừng scene + destroy khi unmount
-// (P-STAGE), entry dừng + unload toàn bộ audio Howler rồi mới đóng overlay.
-// Khôi phục: khi vào mode mà có bản ghi đang dở (đã cam kết, chưa kết
-// thúc) → đi thẳng M6 diễn lại từ log (hoặc M7 nếu đã xem kết quả), không
-// sinh ván mới (SPEC §M6).
+// REDESIGN Pha 2 (SPEC §C2): entry TÁCH PHA — pha thiết lập render
+// dạng PANEL inline ngay trong mục «Ai trả ai» của S2 (session-view
+// mount qua slot của settlement, không overlay/không chrome riêng);
+// khi ván bắt đầu («Chơi» thành công) mới chuyển sang overlay
+// full-screen cho sân chơi + kết quả. Luật & chi tiết là SHEET dùng
+// chung (game-rules-sheet) mở từ «?» — không còn màn rules riêng.
+// Vòng đời overlay: unmount/thoát → cleanup §1.2 phía React: GameStage
+// tự dừng scene + destroy khi unmount (P-STAGE), entry dừng + unload
+// toàn bộ audio Howler rồi mới đóng overlay.
+// Khôi phục: khi vào mode mà có bản ghi đang chơi thật (dang-do +
+// phase playing) → đi thẳng M6 diễn lại từ log, không sinh ván mới;
+// bản ghi phase result KHÔNG BAO GIỜ chiếm cổng vào (SPEC C1, Pha 0).
 
 'use client';
 
@@ -20,7 +26,7 @@ import type { GameSessionInput } from './adapter';
 import { buildIdentityMapCovering, buildIdentityMapFromSessionMembers } from './assets/identity';
 import { loadAvatarPhotos } from './assets/avatar-store';
 import { FALLBACK_SET } from './screens/character-sets';
-import { GameSheet } from './screens/shared';
+import { GameSheet, bankDisplayOf } from './screens/shared';
 import {
   isGameMuted,
   setGameMuted,
@@ -29,11 +35,10 @@ import {
   stopBgm,
   unlockAudio,
 } from './audio/sound';
-import type { GameDraft, PlayerView, ScreenId } from './state';
+import type { ConsentReady, GameDraft, PlayerView, ScreenId } from './state';
 import { EMPTY_DRAFT } from './state';
 import {
   clearGameDraft,
-  countAbandonedCommitments,
   filterRestoredPlayerIds,
   findInProgressRecord,
   incrementAbandonedCommitments,
@@ -43,19 +48,17 @@ import {
   upsertRecord,
 } from './store';
 import type { GameRecord, PersistedGameDraft } from './store';
-import { bankDisplayOf } from './screens/m2-qr-screen';
 import { nameKeyOf } from './adapter';
-import { SetupScreen } from './screens/setup-screen';
-import type { ConsentReady } from './screens/m5-consent-screen';
+import { GamePanelScreen } from './screens/panel-screen';
 import { PlayScreen } from './screens/play-screen';
 import { M7ResultScreen } from './screens/m7-result-screen';
-import { M8ReplayScreen } from './screens/m8-replay-screen';
-import { RulesScreen } from './screens/rules-screen';
+import { GameRulesSheet } from './screens/game-rules-sheet';
 
 export function GameEntry({
   input,
   onExit,
   onRecordLedgerPayments,
+  onOpenMembers,
 }: {
   input: GameSessionInput;
   /** Rời game mode về app chính (chia đều bình thường / hoàn tất). */
@@ -64,37 +67,33 @@ export function GameEntry({
    * FIX-UX-GAME (F6): ghi kết quả ván vào SỔ của phiên qua API phiên
    * hiện hữu của app chính (session-view tự dựng khoản chi) — game chỉ
    * BÁO khoản cần ghi (người đãi + số tiền), không tự ghi gì vào phiên
-   * và không đụng lib. Vắng prop này thì M7 chỉ hiện dòng nói rõ kết
-   * quả chưa tự ghi vào sổ, không hiện nút ghi.
+   * và không đụng lib. Vắng prop này thì M7 chỉ có CTA «Xong».
    */
   onRecordLedgerPayments?: (
     payments: { payerId: string; amountVnd: number }[],
     matchCode: string,
   ) => void;
+  /**
+   * D5 (Pha 2): mở thẳng Sheet Người của phiên từ panel game —
+   * session-view nối sang sheet thành viên sẵn có của nó. Panel vẫn
+   * mount nguyên vẹn phía dưới sheet nên draft không mất (draft bền
+   * theo phiên là lớp bảo hiểm thứ hai, Pha 0).
+   */
+  onOpenMembers?: () => void;
 }) {
   const [recovered] = useState<GameRecord | null>(() => findInProgressRecord());
-  const [screen, setScreen] = useState<ScreenId>(() =>
-    recovered ? (recovered.phase === 'result' ? 'm7' : 'm6') : 'setup',
-  );
-  // TEAM 2F W2: vân tay phiên cho draft thiết lập bền — băm tiêu đề +
-  // danh sách id thành viên của PHIÊN NÀY. Draft lưu trên máy chỉ được
-  // khôi phục khi vân tay khớp: draft của phiên khác (hoặc của chính
-  // phiên này sau khi roster đổi) không áp sang.
+  const [screen, setScreen] = useState<ScreenId>(() => (recovered ? 'm6' : 'setup'));
+  // Vân tay phiên cho draft thiết lập bền — băm tiêu đề + danh sách id
+  // thành viên của PHIÊN NÀY. Draft lưu trên máy chỉ được khôi phục
+  // khi vân tay khớp (bản đồ draft theo sessionKey — Pha 0/SPEC C2).
   const sessionKey = fnv1a64(`${input.sessionTitle}|${input.members.map((m) => m.id).join(',')}`);
-  // Draft thiết lập dở dang của ĐÚNG phiên này (nếu có) — đọc một lần
-  // lúc mount. Có ván đang dở được khôi phục thì bỏ qua draft (đi thẳng
-  // M6/M7 như trước, không dựng thiết lập mới).
   const [restoredDraft] = useState<PersistedGameDraft | null>(() => {
     if (recovered) return null;
-    const saved = loadGameDraft();
+    const saved = loadGameDraft(undefined, sessionKey);
     return saved && saved.sessionKey === sessionKey ? saved : null;
   });
   const [draft, setDraft] = useState<GameDraft>(() => {
     if (restoredDraft) {
-      // Khôi phục đúng những gì người dùng đã nhập ở lượt thiết lập
-      // trước: lựa chọn người (lọc theo roster hiện tại — id lạ bỏ,
-      // rỗng thì về cả bàn), tổng đã sửa, trò, gán nhân vật. QR KHÔNG
-      // khôi phục (chỉ sống ở bộ nhớ theo §8) và replayOf luôn null.
       const memberIds = input.members.map((m) => m.id);
       const memberSet = new Set(memberIds);
       return {
@@ -110,34 +109,28 @@ export function GameEntry({
     }
     return {
       ...EMPTY_DRAFT,
-      // FIX-UX-GAME (F2): tổng tiền TỰ ĐIỀN từ tổng phiên + trò mặc định
-      // G2 — vào màn thiết lập là bấm Bắt đầu được ngay khi đã nhập số
-      // chung, không còn nhập lại những gì app đã biết.
+      // Tổng tiền TỰ ĐIỀN từ tổng phiên + trò CHƯA chọn (game: null là
+      // trạng thái thật — giữ quyết định đợt bước 2/3).
       totalVnd: input.sessionTotalVnd,
-      game: 'g2',
+      game: null,
       selectedPlayerIds: input.members.map((m) => m.id),
     };
   });
-  // Bước wizard hiện tại — SetupScreen báo lên qua onStepChange để bước
-  // cũng vào draft bền (vào lại là đứng đúng bước đang dở, không về 1).
-  const [setupStep, setSetupStep] = useState<1 | 2 | 3>(() => restoredDraft?.step ?? 1);
   // Mốc so «đã sửa gì so với lúc mount chưa»: chỉ ghi draft bền khi
-  // người dùng THỰC SỰ đổi thiết lập — mở game của phiên khác xem qua
-  // rồi thoát không được ghi đè draft đang dở của phiên trước.
+  // người dùng THỰC SỰ đổi thiết lập.
   const draftSaveStateRef = useRef<{ initial: string | null; saved: boolean }>({
     initial: null,
     saved: false,
   });
 
-  // Ván nào đã ghi vào sổ trong lần mở mode này (chống ghi trùng khi
-  // người dùng bấm nút ghi ở M7 hai lần).
   const [ledgerRecordedCode, setLedgerRecordedCode] = useState<string | null>(null);
   const [record, setRecord] = useState<GameRecord | null>(recovered);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
-  // Ghi draft thiết lập bền mỗi khi draft / bước đổi trong giai đoạn
-  // thiết lập (chưa có ván chốt). CHỈ các trường an toàn của
-  // PersistedGameDraft — draft.qr và các trường đồng thuận không bao
-  // giờ xuống storage (xem kỷ luật ở game/store.ts).
+  // Ghi draft thiết lập bền mỗi khi draft đổi ở pha panel (chưa có ván
+  // chốt). CHỈ các trường an toàn của PersistedGameDraft — draft.qr và
+  // số chung không bao giờ xuống storage (kỷ luật ở game/store.ts).
+  // Panel không còn bước wizard: `step` ghi hằng 1 (schema đóng cũ).
   useEffect(() => {
     if (record || screen !== 'setup') return;
     const persistable: PersistedGameDraft = {
@@ -147,7 +140,7 @@ export function GameEntry({
       game: draft.game,
       characterSetId: draft.characterSetId,
       characterAssignments: draft.characterAssignments,
-      step: setupStep,
+      step: 1,
       savedAt: Date.now(),
     };
     const snapshot = JSON.stringify({ ...persistable, savedAt: 0 });
@@ -159,48 +152,25 @@ export function GameEntry({
     if (snapshot === state.initial && !state.saved) return;
     saveGameDraft(persistable);
     state.saved = true;
-  }, [draft, setupStep, screen, record, sessionKey]);
-  // Ảnh avatar chụp trên máy (FIX-V3 N3): nạp từ kho RIÊNG
-  // `ct-game-avatars-v1` — tách khỏi bản ghi ván; mọi màn + PlayerView
-  // tra map này theo member id tại lúc hiển thị / bắt đầu ván / replay.
+  }, [draft, screen, record, sessionKey]);
+
   const [photos, setPhotos] = useState<Map<string, string>>(() => loadAvatarPhotos());
-  // Frame cuối của ván — CẢ G1 lẫn G2 (SPEC §M7) — chỉ sống ở bộ nhớ
-  // phiên, không lưu bền (giống kỷ luật payload QR). Khôi phục ván → vào
-  // thẳng M7 thì null.
   const [finalFrame, setFinalFrame] = useState<string | null>(null);
   const [muted, setMuted] = useState<boolean>(() => isGameMuted());
-  const [abandonedCount, setAbandonedCount] = useState<number>(() => countAbandonedCommitments());
-  const rulesReturnRef = useRef<ScreenId>('m4');
-  // C1 đã hiển thị trong lần đồng thuận hiện tại hay chưa — để ghi cam kết
-  // bị bỏ khi rời M5 bằng «Chia đều cho lành» (SPEC §M5/luật cuối §4).
+  // C1 đã hiển thị trong lần đồng thuận này hay chưa (panel hiện C1
+  // trong «Chi tiết ván» của Sheet Luật & chi tiết — mở sheet = đã
+  // hiển thị): rời mode sau đó thì ghi 1 cam kết bị bỏ vào LOG NỘI BỘ
+  // (D7: bộ đếm KHÔNG hiện lên UI nữa, store giữ nguyên).
   const consentShownRef = useRef(false);
-  // F1 (audit PWA native-feel): hộp xác nhận thoát ván khi người dùng
-  // bấm Back GIỮA ván (màn chơi m6) — xem effect pushState/popstate ở
-  // dưới. Đã có một state game riêng trong history hay chưa.
   const [exitMatchOpen, setExitMatchOpen] = useState(false);
   const gameStatePushedRef = useRef(false);
 
-  // FIX-UX-GAME: C1 được tạo ngay trên màn thiết lập gộp (trong mục
-  // «Chi tiết ván») — vào màn thiết lập tức là cam kết đã hiển thị cho
-  // lần đồng thuận này, nên rời mode từ đây bằng «Chia đều cho lành»
-  // hay «Thoát game» đều ghi cam kết bị bỏ như luật cũ ở M5.
-  useEffect(() => {
-    if (screen === 'setup') {
-      consentShownRef.current = true;
-      // Hoãn sang microtask: setState đồng bộ trong thân effect bị cấm
-      // bởi react-hooks/set-state-in-effect (cùng mẫu ở M7).
-      void Promise.resolve().then(() => setAbandonedCount(countAbandonedCommitments()));
-    }
-  }, [screen]);
-
   const exitCleanup = useCallback(() => {
-    // Thứ tự §1.2 phía React: stage tự cleanup khi unmount (sau khi state
-    // của cha đổi), audio dừng + unload tại đây trước khi overlay đóng.
     stopAllAudio();
     onExit();
   }, [onExit]);
 
-  /** Thoát chia đều từ màn thiết lập (C1 đã hiển thị tại đây): huỷ ý định; nếu C1 đã hiển thị trong lần này thì ghi 1 cam kết bị bỏ. */
+  /** Thoát sau khi C1 đã hiển thị: ghi cam kết bị bỏ (log nội bộ) rồi thoát. */
   const splitEvenAtConsent = useCallback(() => {
     if (consentShownRef.current) {
       incrementAbandonedCommitments();
@@ -209,11 +179,6 @@ export function GameEntry({
     exitCleanup();
   }, [exitCleanup]);
 
-  /**
-   * Huỷ CÔNG KHAI ván đang chơi — một đường duy nhất cho cả nút «Chia
-   * đều cho lành» ở màn chơi (PlayScreen) và hộp xác nhận khi bấm Back
-   * giữa ván (F1): ghi trạng thái đã huỷ công khai rồi thoát về chia đều.
-   */
   const publicCancelMatch = useCallback(() => {
     if (!record) return;
     patchRecord(record.code, {
@@ -225,82 +190,111 @@ export function GameEntry({
     exitCleanup();
   }, [record, exitCleanup]);
 
-  // F1 — Back của trình duyệt/hệ điều hành trong overlay game.
-  // Hành vi đã cài (ghi vào handoff REBUILD-C-D-SHELL):
-  // - Khi overlay mở: pushState MỘT state riêng của game
-  //   ({ ctGame: true }) — khác key với state { ctStrip: true } của app
-  //   chính nên hai cơ chế không giẫm nhau; app chính chỉ nghe popstate
-  //   để thu gọn strip của nó, không đọc state của game.
-  // - Back ở màn chơi (m6): KHÔNG rời app, KHÔNG huỷ ván im lặng — mở
-  //   hộp xác nhận thoát ván (cùng kiểu hộp «Huỷ ván và chia đều» sẵn
-  //   có ở màn chơi) và push lại state game để Back tiếp theo vẫn bị
-  //   chặn trong overlay. Chỉ khi người dùng bấm «Thoát ván» trong hộp
-  //   thì mới huỷ công khai qua publicCancelMatch.
-  // - Back ở m8/rules: lùi ĐÚNG một bước trong overlay (m8→m7,
-  //   rules→màn đã mở luật) rồi push lại state game. (FIX-UX-GAME:
-  //   luồng trước ván chỉ còn màn thiết lập gộp nên không còn các bước
-  //   lùi m2–m5 như luồng cũ.)
-  // - Back ở setup (chưa có ván) hoặc m7 (ván đã chốt kết quả): đóng
-  //   overlay về app chính qua đúng đường thoát hiện hữu (kèm ghi cam
-  //   kết bị bỏ nếu C1 đã hiển thị — như nút «Thoát game»).
-  const backRef = useRef({ screen, publicCancelMatch, splitEvenAtConsent, exitCleanup });
+  /**
+   * ĐÓNG STATUS của ván đã có kết quả (SPEC C1.1, Pha 0): mọi đường
+   * rời M7 đều chốt bản ghi như «Hoàn tất» (`hoan-tat`), không để
+   * `dang-do` + phase `result` nằm lại thành ván ma. Gọi lặp vô hại.
+   */
+  const closeResultRecord = useCallback((rec: GameRecord | null) => {
+    if (rec && rec.status === 'dang-do' && rec.phase === 'result') {
+      patchRecord(rec.code, { status: 'hoan-tat', finishedAt: Date.now() });
+    }
+  }, []);
+
+  const latestRecordRef = useRef<GameRecord | null>(null);
   useEffect(() => {
-    backRef.current = { screen, publicCancelMatch, splitEvenAtConsent, exitCleanup };
+    latestRecordRef.current = record;
+  }, [record]);
+  useEffect(() => {
+    return () => {
+      closeResultRecord(latestRecordRef.current);
+      // Panel bị gỡ (đổi nhánh quyết toán / rời phiên) sau khi C1 đã
+      // hiển thị trong Sheet Luật: ghi cam kết bị bỏ vào log nội bộ.
+      if (consentShownRef.current) incrementAbandonedCommitments();
+    };
+  }, [closeResultRecord]);
+
+  const discardRecoveredAndNew = useCallback(() => {
+    if (!record) return;
+    patchRecord(record.code, {
+      status: 'da-huy-cong-khai',
+      phase: 'result',
+      finishedAt: Date.now(),
+    });
+    setExitMatchOpen(false);
+    setFinalFrame(null);
+    setRecord(null);
+    setDraft({
+      ...EMPTY_DRAFT,
+      totalVnd: input.sessionTotalVnd,
+      game: null,
+      selectedPlayerIds: input.members.map((m) => m.id),
+    });
+    setScreen('setup');
+  }, [record, input]);
+
+  // Back của trình duyệt/hệ điều hành:
+  // - Pha panel (setup): KHÔNG can thiệp — panel nằm trong luồng S2,
+  //   Back là của app chính.
+  // - Pha overlay (m6/m7): push MỘT state riêng { ctGame: true } khi
+  //   vào overlay; Back ở m6 mở hộp xác nhận thoát ván (không huỷ im
+  //   lặng); Back khi sheet luật đang mở thì đóng sheet; Back ở m7
+  //   đóng status bản ghi rồi thoát (đường này từng sinh ván ma).
+  const backRef = useRef({
+    screen,
+    record,
+    rulesOpen,
+    publicCancelMatch,
+    exitCleanup,
+    closeResultRecord,
+  });
+  useEffect(() => {
+    backRef.current = {
+      screen,
+      record,
+      rulesOpen,
+      publicCancelMatch,
+      exitCleanup,
+      closeResultRecord,
+    };
   });
 
   useEffect(() => {
-    window.history.pushState({ ctGame: true }, '', window.location.href);
-    gameStatePushedRef.current = true;
+    if (screen === 'setup') {
+      gameStatePushedRef.current = false;
+      return;
+    }
+    if (!gameStatePushedRef.current) {
+      window.history.pushState({ ctGame: true }, '', window.location.href);
+      gameStatePushedRef.current = true;
+    }
+  }, [screen]);
+
+  useEffect(() => {
     const onPopState = () => {
       const cur = backRef.current;
+      if (cur.screen === 'setup') return;
       const pushGameState = () =>
         window.history.pushState({ ctGame: true }, '', window.location.href);
+      if (cur.rulesOpen) {
+        setRulesOpen(false);
+        pushGameState();
+        return;
+      }
       if (cur.screen === 'm6') {
         setExitMatchOpen(true);
         pushGameState();
         return;
       }
-      if (cur.screen === 'rules') {
-        setScreen(rulesReturnRef.current);
-        pushGameState();
-        return;
-      }
-      const prevStep: Partial<Record<ScreenId, ScreenId>> = {
-        // FIX-UX-GAME: luồng trước ván chỉ còn màn thiết lập gộp —
-        // Back ở setup = rời mode (xử lý ở nhánh m1/m7 phía dưới, setup
-        // được xếp cùng nhóm màn gốc); chỉ còn m8 → m7 là bước lùi nội bộ.
-        m8: 'm7',
-      };
-      const target = prevStep[cur.screen];
-      if (target) {
-        setScreen(target);
-        pushGameState();
-        return;
-      }
-      // setup / m7: state game đã bị pop — đóng overlay, không push lại.
+      // m7: state game đã bị pop — đóng overlay, không push lại.
       gameStatePushedRef.current = false;
-      if (consentShownRef.current) cur.splitEvenAtConsent();
-      else cur.exitCleanup();
+      cur.closeResultRecord(cur.record);
+      cur.exitCleanup();
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  // Danh tính MỘT NGUỒN DUY NHẤT (FIX-V3 P0.4): colorHex của
-  // PlayerView = strongHex từ identity map dựng trên roster ĐẦY ĐỦ
-  // của phiên (input.members) — KHÔNG dựng theo tập người được chọn
-  // hay tập người chơi của ván, nên cùng một người giữ nguyên màu ở
-  // mọi màn / mọi cỡ nhóm. Người chơi của ván đã chốt luôn thuộc
-  // roster phiên; buildIdentityMapCovering chỉ nối thêm (ở cuối
-  // roster) người chơi lạ của bản ghi khôi phục khác phiên để tra
-  // cứu không thiếu, không đổi màu của người thuộc phiên.
-  // Trường VIEW-ONLY cho scene (FIX-V3 N2b/N3, contract ở bridge.ts):
-  // setId + characterKey tra từ DRAFT (tầng trình diễn thuần — không
-  // đọc từ bản ghi ván, không vào paramsHash/seed/log), photoDataUrl
-  // tra từ kho ảnh trên máy theo member id TẠI LÚC dựng PlayerView
-  // (bắt đầu ván / phát lại M8 đều tra mới, không đọc từ log). Thiếu
-  // gán trong draft (vd khôi phục ván sau khi app đã đóng, draft rỗng)
-  // → gán mặc định phân biệt theo thứ tự của bộ dự phòng.
   const viewFieldsFor = useCallback(
     (id: string, index: number) => ({
       setId: draft.characterSetId ?? FALLBACK_SET.setId,
@@ -344,7 +338,7 @@ export function GameEntry({
       }));
   }, [record, draft, input, playersForRecord, viewFieldsFor]);
 
-  /** Bấm «Cả nhóm đồng ý — Bắt đầu»: chốt bản ghi ván + chạy engine THUẦN ngay, lưu bền, rồi sang M6 diễn lại từ log. */
+  /** Bấm «Chơi» ở panel: chốt bản ghi ván + chạy engine THUẦN ngay, lưu bền, rồi sang M6 diễn lại từ log. */
   const handleStart = useCallback(
     (ready: ConsentReady) => {
       const seedFinal = finalizeSeed(ready.seedDevice, ready.chung, ready.paramsHash);
@@ -354,7 +348,12 @@ export function GameEntry({
           ? runG2(seedFinal, ready.params)
           : runG1(seedFinal, ready.params);
       const qr = draft.qr;
-      const parsed = qr.parsed;
+      // Q3 (Pha 2): QR đọc được nhưng lệch tổng hoặc chưa có người đối
+      // chiếu => QR bị đánh dấu KHÔNG hợp lệ cho ván (không dùng QR
+      // này) — ván vẫn bắt đầu bình thường, QR không chặn «Chơi».
+      const qrUsable = ready.qrUsable !== false;
+      const parsed = qrUsable ? qr.parsed : null;
+      const qrPayload = qrUsable ? qr.payload : null;
       const matchedMember = parsed?.accountName
         ? (input.members.find(
             (m) => nameKeyOf(m.displayName) === nameKeyOf(parsed.accountName ?? ''),
@@ -367,7 +366,7 @@ export function GameEntry({
         chung: ready.chung,
         seedFinal,
         paramsHash: ready.paramsHash,
-        qrHash: qr.payload ? fnv1a64(qr.payload) : null,
+        qrHash: qrPayload ? fnv1a64(qrPayload) : null,
         algo: log.algo,
         log,
         status: 'dang-do',
@@ -378,33 +377,32 @@ export function GameEntry({
         replacedBy: null,
         qr: {
           branch: qr.parseFailed || !parsed ? '2c' : parsed.accountName ? '2a' : '2b',
-          providerId: qr.providerId,
-          confirmerId: qr.confirmerId,
-          confirmerName: input.members.find((m) => m.id === qr.confirmerId)?.displayName ?? null,
-          source: qr.source,
-          confirmedAt: ready.qrConfirmedAt ?? qr.confirmedAt,
+          providerId: qrUsable ? qr.providerId : null,
+          confirmerId: qrUsable ? qr.confirmerId : null,
+          confirmerName:
+            qrUsable && qr.confirmerId
+              ? (input.members.find((m) => m.id === qr.confirmerId)?.displayName ?? null)
+              : null,
+          source: qrUsable ? qr.source : null,
+          confirmedAt: qrUsable ? (ready.qrConfirmedAt ?? qr.confirmedAt) : null,
           bankDisplay: bankDisplayOf(parsed),
           maskedAccount: parsed?.maskedAccount ?? null,
           accountName: parsed?.accountName ?? null,
           nameMatchedMember: Boolean(matchedMember),
         },
       };
-      // Luồng chơi lại: ván cũ chuyển trạng thái «đã thay thế» đúng tại
-      // thời điểm ván mới BẮT ĐẦU (trước đó kết quả cũ vẫn còn hiệu lực).
       if (draft.replayOf) {
         patchRecord(draft.replayOf.code, { status: 'da-thay-the', replacedBy: code });
       }
       upsertRecord(rec);
-      // TEAM 2F W2: ván đã THỰC SỰ bắt đầu — draft thiết lập đã tiêu
-      // thụ, dọn khỏi máy để lần chơi sau không dính draft cũ.
-      clearGameDraft();
+      clearGameDraft(undefined, sessionKey);
       consentShownRef.current = false;
       setFinalFrame(null);
       setRecord(rec);
       startBgm();
       setScreen('m6');
     },
-    [draft, input],
+    [draft, input, sessionKey],
   );
 
   const toggleMute = useCallback(() => {
@@ -415,21 +413,25 @@ export function GameEntry({
     });
   }, []);
 
-  function goRules(from: ScreenId) {
-    rulesReturnRef.current = from;
-    setScreen('rules');
-  }
-
-  /** «Chơi lại» từ M7 — về thẳng màn thiết lập gộp, điền sẵn như ván trước nhưng sửa được (FIX-UX-GAME). */
+  /** «Chơi lại» từ M7 — về panel thiết lập, điền sẵn như ván trước nhưng sửa được. */
   const handlePlayAgain = useCallback(() => {
     if (!record) return;
+    // Addendum §3: đóng status của bản ghi cũ NGAY khi bấm «Chơi
+    // lại» — cùng cơ chế patchRecord + status 'da-thay-the' mà
+    // handleStart dùng cho ván thay thế (replacedBy được handleStart
+    // điền khi ván mới thật sự bắt đầu). Trước đây việc đóng bị hoãn
+    // tới handleStart của ván mới: bấm «Chơi lại» rồi rời panel là
+    // bản ghi cũ nằm lại dang-do + result trong storage thô.
+    if (record.status === 'dang-do') {
+      patchRecord(record.code, { status: 'da-thay-the' });
+    }
     setFinalFrame(null);
     setDraft({
       totalVnd: record.log.params.totalVnd,
-      qr: draft.qr, // QR điền sẵn từ bộ nhớ phiên này (payload + ảnh) — vẫn sửa được ở màn thiết lập.
+      qr: draft.qr,
       selectedPlayerIds: record.log.params.players.map((p) => p.id),
-      game: 'g2', // Mặc định ván nhanh như lần đầu vào mode.
-      characterSetId: null, // Gán lại mặc định như lần đầu (trình diễn thuần, không ảnh hưởng ván cũ).
+      game: null,
+      characterSetId: null,
       characterAssignments: {},
       replayOf: record,
     });
@@ -438,14 +440,12 @@ export function GameEntry({
   }, [record, draft.qr]);
 
   /**
-   * FIX-UX-GAME (F6): M7 bấm «Ghi vào sổ» → entry quy kết quả ván
-   * thành các khoản thanh toán (người đãi + số tiền) rồi nhờ app chính
-   * ghi qua callback. Cùng đãi: mỗi người một khoản phần bằng nhau,
-   * phần lẻ dồn cho người cuối để tổng khớp đúng tổng hoá đơn.
+   * Quy kết quả ván thành các khoản thanh toán và nhờ app chính ghi
+   * sổ — trả true khi đã ghi (hoặc đã ghi trước đó trong lần mở này).
    */
-  const handleRecordToLedger = useCallback(() => {
-    if (!record || !onRecordLedgerPayments) return;
-    if (ledgerRecordedCode === record.code) return;
+  const recordPaymentsToLedger = useCallback((): boolean => {
+    if (!record || !onRecordLedgerPayments) return false;
+    if (ledgerRecordedCode === record.code) return true;
     const total = record.log.params.totalVnd;
     const result = record.log.result;
     const payments =
@@ -461,114 +461,94 @@ export function GameEntry({
                   : base,
             };
           });
-    // Chỉ ghi khi mọi người đãi còn là thành viên phiên (app chính tra
-    // khoản theo member id của phiên).
-    if (!payments.every((p) => input.members.some((m) => m.id === p.payerId))) return;
+    if (!payments.every((p) => input.members.some((m) => m.id === p.payerId))) return false;
     onRecordLedgerPayments(payments, record.code);
     setLedgerRecordedCode(record.code);
+    return true;
   }, [record, onRecordLedgerPayments, ledgerRecordedCode, input]);
 
+  const completeRecord = useCallback(() => {
+    if (!record) return;
+    patchRecord(record.code, { status: 'hoan-tat', finishedAt: Date.now() });
+    exitCleanup();
+  }, [record, exitCleanup]);
+
+  /** CTA «Ghi vào sổ & Xong» của M7: ghi sổ + đóng status + thoát về S2 trong 1 bấm. */
+  const handleRecordAndComplete = useCallback(() => {
+    recordPaymentsToLedger();
+    completeRecord();
+  }, [recordPaymentsToLedger, completeRecord]);
+
+  /* ---------------- Pha panel (thiết lập) — inline trong S2 ---------------- */
+  if (screen === 'setup') {
+    return (
+      <GamePanelScreen
+        input={input}
+        draft={draft}
+        onDraft={setDraft}
+        onOpenMembers={onOpenMembers}
+        onCommitmentShown={() => {
+          consentShownRef.current = true;
+        }}
+        onStart={(ready) => {
+          unlockAudio();
+          handleStart(ready);
+        }}
+        onSplitEven={splitEvenAtConsent}
+        photos={photos}
+        onPhotosChanged={setPhotos}
+      />
+    );
+  }
+
+  /* ---------------- Pha overlay — sân chơi + kết quả full-screen ---------------- */
+  const gameName = record?.log.params.game === 'g1' ? 'Đấu trường tự động' : 'Mâm cơm xoay';
   return (
     <div
       className="fixed inset-0 z-40 overflow-y-auto bg-canvas pt-[max(0.75rem,env(safe-area-inset-top))]"
       role="dialog"
       aria-modal="true"
       aria-label="Chơi game đãi"
-      // F4: overscroll-behavior: none ở GỐC overlay — cuộn tới cuối
-      // overlay không kéo theo trang app chính phía dưới, không kích
-      // pull-to-refresh rời game giữa chừng. (Overlay chỉ có đúng một
-      // scroller là chính gốc này — các màn game không có scroller lồng
-      // nhau, đã rà game/screens/* — nên không có bề mặt nội bộ nào cần
-      // mức contain riêng.)
-      // F5: đệm safe-area cho header (trên) và đuôi overlay (dưới).
-      // Trên: class pt-[max(0.75rem, env(safe-area-inset-top))] ở gốc
-      // overlay — 0.75rem là ĐỆM CỨNG HIỆN TẠI (trước đây là py-3 của
-      // wrapper trong, đã bỏ pt ở wrapper để không cộng đôi): máy
-      // không tai thỏ inset = 0 thì đệm = 0.75rem, layout y hệt
-      // trước; máy có tai thỏ thì inset lớn hơn thắng, header + nút
-      // trên cùng không bị che. Khai báo dạng utility để nằm trong
-      // CSS đã biên dịch (đo lại được bằng grep, như các thanh dính
-      // đáy pb-[max(0.75rem, env(safe-area-inset-bottom))] sẵn có ở
-      // game/screens/setup-screen.tsx). Dưới: giữ env() inline ở
-      // gốc + pb-6 cứng của wrapper trong như hiện tại.
-      style={{
-        overscrollBehavior: 'none',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
+      style={{ overscrollBehavior: 'none', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* Bề rộng theo màn (FIX-V3 P1.11): các màn form giữ cột đọc
-          2xl; M6/M7/M8 mở rộng 6xl để sân + cột phụ / kết quả + QR
-          dàn NGANG thật ở desktop, không còn cột mobile giữa biển
-          trắng. */}
       <div
         className={`mx-auto w-full px-4 pb-6 ${
-          screen === 'm6' || screen === 'm7' || screen === 'm8' ? 'max-w-6xl' : 'max-w-2xl'
+          screen === 'm6' || screen === 'm7' ? 'max-w-6xl' : 'max-w-2xl'
         }`}
       >
-        {/* Header MỘT HÀNG DUY NHẤT: tiêu đề trái, cụm nút phải cùng
-            hàng (bản hai hàng cũ — tiêu đề một hàng, nút một hàng căn
-            phải — bị user chê là lỗi vị trí trên mobile 2026-10-25:
-            hàng nút trống gần hết chiều ngang, trông như vỡ layout).
-            Tiêu đề truncate khi hẹp, nút shrink-0, vùng chạm ≥44px.
-            FIX-V3 P1.5: nút tiếng KHÔNG còn ở chrome này — toàn mode
-            chỉ còn ĐÚNG MỘT nút tiếng, nằm trong cụm điều khiển của
-            màn chơi / màn xem lại (play-screen / m8). */}
+        {/* Header tối giản 1 hàng (Pha 2 §8): tên trò + «?» + Thoát. */}
         <div className="flex items-center justify-between gap-3">
           <h1 className="min-w-0 truncate font-display text-[20px] font-extrabold whitespace-nowrap text-ink">
-            Chơi game đãi
+            {gameName}
           </h1>
           <div className="flex shrink-0 items-center gap-2">
-            {/* UIUX-GAME-V2: nút «?» là CỔNG DUY NHẤT vào mọi giải thích
-                dài của game mode (sheet «Luật chơi & chi tiết») — các
-                màn không còn đoạn văn dài hiển thị mặc định nữa. */}
-            {screen !== 'rules' ? (
-              <button
-                type="button"
-                aria-label="Luật chơi & chi tiết"
-                onClick={() => goRules(screen)}
-                className="inline-flex min-h-11 w-11 items-center justify-center rounded-lg border border-line bg-card text-base font-bold text-ink"
-              >
-                ?
-              </button>
-            ) : null}
+            <button
+              type="button"
+              aria-label="Luật chơi & chi tiết ván"
+              onClick={() => setRulesOpen(true)}
+              className="inline-flex min-h-11 w-11 items-center justify-center rounded-lg border border-line bg-card text-base font-bold text-ink"
+            >
+              ?
+            </button>
             <button
               type="button"
               onClick={() => {
-                // Thoát sau khi C1 đã hiển thị trong lần đồng thuận này (dù đang
-                // ở M5 hay đã quay lại M4) cũng tính là một cam kết bị bỏ.
+                if (screen === 'm6' && record) {
+                  setExitMatchOpen(true);
+                  return;
+                }
+                closeResultRecord(record);
                 if (consentShownRef.current) splitEvenAtConsent();
                 else exitCleanup();
               }}
               className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-3 py-2 text-sm font-semibold text-ink"
             >
-              Thoát game
+              Thoát
             </button>
           </div>
         </div>
-        {/* UIUX-GAME-V2: đoạn boilerplate offline KHÔNG còn ở đầu màn
-            thiết lập — bản đầy đủ sống trong sheet «Luật chơi & chi
-            tiết» (mục «Chạy offline»), màn thiết lập chỉ giữ 1 dòng
-            ngắn trong «Chi tiết ván». */}
 
         <div className="mt-3">
-          {screen === 'setup' && (
-            <SetupScreen
-              input={input}
-              draft={draft}
-              onDraft={setDraft}
-              initialStep={setupStep}
-              onStepChange={setSetupStep}
-              abandonedCount={abandonedCount}
-              onStart={(ready) => {
-                unlockAudio(); // preload/decode audio từ thao tác bắt đầu (SPEC §9).
-                handleStart(ready);
-              }}
-              onSplitEven={splitEvenAtConsent}
-              photos={photos}
-              onPhotosChanged={setPhotos}
-            />
-          )}
-          {screen === 'rules' && <RulesScreen onBack={() => setScreen(rulesReturnRef.current)} />}
           {screen === 'm6' && record && (
             <PlayScreen
               record={record}
@@ -583,6 +563,9 @@ export function GameEntry({
                 setScreen('m7');
               }}
               onPublicCancel={publicCancelMatch}
+              onDiscardAndNew={
+                recovered && record.code === recovered.code ? discardRecoveredAndNew : undefined
+              }
               onDegrade={(level) => {
                 patchRecord(record.code, { degradeLevel: level });
                 setRecord((prev) => (prev ? { ...prev, degradeLevel: level } : prev));
@@ -595,36 +578,19 @@ export function GameEntry({
               record={record}
               draft={draft}
               finalFrameUrl={finalFrame}
-              onComplete={() => {
-                patchRecord(record.code, { status: 'hoan-tat', finishedAt: Date.now() });
-                exitCleanup();
-              }}
-              onDiscardToSplitEven={() => {
-                patchRecord(record.code, { status: 'da-bo-chia-deu', finishedAt: Date.now() });
-                exitCleanup();
-              }}
-              onReplayView={() => setScreen('m8')}
+              onComplete={completeRecord}
+              onRecordAndComplete={onRecordLedgerPayments ? handleRecordAndComplete : undefined}
               onPlayAgain={handlePlayAgain}
               photos={photos}
-              ledgerRecorded={ledgerRecordedCode === record.code}
-              onRecordToLedger={onRecordLedgerPayments ? handleRecordToLedger : undefined}
-              onOpenRules={() => goRules('m7')}
-            />
-          )}
-          {screen === 'm8' && record && (
-            <M8ReplayScreen
-              record={record}
               players={currentPlayers}
               muted={muted}
               onToggleMute={toggleMute}
-              onBack={() => setScreen('m7')}
+              ledgerRecorded={ledgerRecordedCode === record.code}
+              onOpenRules={() => setRulesOpen(true)}
             />
           )}
         </div>
 
-        {/* Hộp xác nhận thoát ván cho phím Back giữa ván (F1) — cùng
-            một đường huỷ publicCancelMatch; UI-SLIM T10: render bằng
-            GameSheet (mẫu sheet duy nhất của game) thay hộp tự chế. */}
         {exitMatchOpen && record ? (
           <GameSheet open onClose={() => setExitMatchOpen(false)} title="Thoát ván đang chơi">
             <p className="text-base leading-relaxed text-ink">
@@ -647,9 +613,14 @@ export function GameEntry({
           </GameSheet>
         ) : null}
 
-        {/* UIUX-GAME-V2: dòng chú thích lối thoát ở chân màn thiết lập
-            đã bỏ — nút «Chia đều cho lành» thật nằm ngay trong thanh
-            Bắt đầu của màn thiết lập, không cần chú thích nữa. */}
+        {/* Sheet «Luật & chi tiết» dùng chung cho sân chơi + kết quả:
+            Chi tiết ván của ván đã chốt (Mã ván = record.code, Mã cam
+            kết = C1, Số chung đã dùng — không Đổi mã sau khi chơi). */}
+        <GameRulesSheet
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          detail={record ? { code: record.code, c1: record.c1, chung: record.chung } : undefined}
+        />
       </div>
     </div>
   );

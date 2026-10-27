@@ -117,12 +117,10 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
     expect(LONG_TITLE).toHaveLength(71);
   });
 
-  it('(i) hàng ledger / hàng lệnh / dòng chốt hiển thị dạng rút gọn, KHÔNG chứa số đầy đủ; bản copy quyết toán CHỨA số đầy đủ', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(window.navigator, 'clipboard', {
-      value: { writeText },
-      configurable: true,
-    });
+  it('(i) hàng ledger / hàng lệnh / dòng tóm tắt dock hiển thị dạng rút gọn, KHÔNG chứa số đầy đủ; bản quyết toán dạng chữ của lib CHỨA số đầy đủ', async () => {
+    // THAY ĐỔI THEO SPEC Pha 1: nút «Copy tóm tắt» ở panel đã gỡ về
+    // Sheet 4 (chỉ copy link) — khẳng định «số đầy đủ» nay giữ ở tầng
+    // nguồn lib (buildSettlementText) thay vì qua nút copy của panel.
     renderView(stressSession);
 
     // Hàng ledger: nút của hàng khoản (data-expense-row).
@@ -131,26 +129,22 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
     expect(ledgerRow?.textContent).toContain(SHORT_TEXT);
     expect(ledgerRow?.textContent).not.toContain(FULL_TEXT);
 
-    // Hàng lệnh chuyển (mọi bản render của panel: dải mở rộng + cột desktop).
+    // Hàng lệnh chuyển — panel render DUY NHẤT 1 lần (Q5/D1).
     const transferRows = document.querySelectorAll('[data-transfer-row]');
-    expect(transferRows.length).toBeGreaterThan(0);
+    expect(transferRows).toHaveLength(1);
     for (const row of transferRows) {
       expect(row.textContent).toContain(SHORT_TEXT);
       expect(row.textContent).not.toContain(FULL_TEXT);
     }
 
-    // Dòng chốt của Strip thu gọn/mở rộng.
-    const stripSummary = document.querySelector('[data-strip-summary]');
-    expect(stripSummary).toBeTruthy();
-    expect(stripSummary?.textContent).toContain(SHORT_TEXT);
-    expect(stripSummary?.textContent).not.toContain(FULL_TEXT);
+    // Dòng tóm tắt 1 dòng của dock: «Còn 1 lệnh chưa trả · <tổng rút gọn>».
+    const dockSummary = document.querySelector('[data-dock-summary]');
+    expect(dockSummary).toBeTruthy();
+    expect(dockSummary?.textContent).toContain('Còn 1 lệnh chưa trả');
+    expect(dockSummary?.textContent).toContain(SHORT_TEXT);
+    expect(dockSummary?.textContent).not.toContain(FULL_TEXT);
 
-    // Bản copy quyết toán (đường copy thật của UI): số ĐẦY ĐỦ.
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy tóm tắt/ })[0]);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    const copiedText = writeText.mock.calls[0][0] as string;
-    expect(copiedText).toContain(FULL_TEXT);
-    // Và khớp đúng hàm nguồn mà panel dùng (buildSettlementText của lib).
+    // Nguồn chữ quyết toán đầy đủ của lib giữ nguyên số đầy đủ.
     const balances = computeBalances(stressSession);
     expect(buildSettlementText(stressSession, balances, simplifyDebts(balances))).toContain(
       FULL_TEXT,
@@ -182,7 +176,7 @@ describe('reflow họ B — ca stress (bằng chứng cấu trúc)', () => {
   });
 });
 
-describe('Panel #03 — Strip tóm tắt (Finding A, cấu trúc; UI-SLIM T1: còn 1 hàng)', () => {
+describe('Pha 1 — Dock tóm tắt 1 dòng (thay Strip tóm tắt của Panel #03 Finding A)', () => {
   const twoTransferSession: Session = {
     id: 's-two',
     title: 'Ăn trưa nhóm',
@@ -208,48 +202,38 @@ describe('Panel #03 — Strip tóm tắt (Finding A, cấu trúc; UI-SLIM T1: c�
     updatedAt: 2,
   };
 
-  it('(iv) UI-SLIM T1: nút tóm tắt strip CHỈ còn hàng «Tổng + Quyết toán»; KHÔNG còn hàng tóm tắt lệnh chuyển (tên/tiền/«+N lệnh») — danh sách lệnh đầy đủ nằm trong panel', () => {
+  it('(iv) dock tóm tắt ĐÚNG 1 dòng «Còn N lệnh chưa trả · X đ»; không tên cặp người chuyển — danh sách lệnh đầy đủ nằm trong panel duy nhất', () => {
+    // THAY ĐỔI THEO SPEC §1.4: tóm tắt khi cuộn tối đa 1 dòng dạng
+    // «Còn N lệnh chưa trả · X đ» — thay hàng «Tổng + Quyết toán»
+    // của strip cũ.
     renderView(twoTransferSession);
-    const summary = document.querySelector('[data-strip-summary]');
+    const summary = document.querySelector('[data-dock-summary]');
     expect(summary).toBeTruthy();
-    const rows = [...(summary?.children ?? [])];
-    // Phiên có lệnh chuyển, chưa cân: nút tóm tắt đúng MỘT hàng.
-    expect(rows.length).toBe(1);
-    const headerRow = rows[0];
-    expect(headerRow?.textContent).toContain('Quyết toán');
-    expect(headerRow?.textContent).toContain('Tổng');
-    // Không tóm tắt lệnh nào trong dock: không «lệnh», không tên cặp
-    // người chuyển (lệnh đầu của twoTransferSession là Bình -> An).
-    expect(summary?.textContent).not.toContain('lệnh');
+    expect(summary?.textContent).toContain('Còn 2 lệnh chưa trả');
+    expect(summary?.textContent).not.toContain('Quyết toán');
     expect(summary?.textContent).not.toContain('Bình');
+    // Panel duy nhất chứa cả 2 lệnh.
+    expect(document.querySelectorAll('[data-transfer-row]')).toHaveLength(2);
   });
 });
 
-describe('Panel #03 — Share Sheet 2 lớp (DATA-04(ii), cấu trúc + hành vi)', () => {
-  it('(v) đúng chữ «Tôi hiểu, tạo link»/«Quay lại»; link CHỈ sinh sau xác nhận và 0 dữ kiện ngân hàng', async () => {
+describe('Pha 1 — Sheet 4 Chia sẻ (thay Share Sheet 2 lớp của Panel #03)', () => {
+  it('(v) menu ⋯ -> «Chia sẻ»: link hiện ngay + «Sao chép link» copy link; 0 dữ kiện ngân hàng trong link', async () => {
+    // THAY ĐỔI THEO SPEC Sheet 4: bỏ cổng xác nhận 2 lớp
+    // («Tôi hiểu, tạo link»/«Quay lại») — AP-02 cấm xác nhận chồng.
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, 'clipboard', {
       value: { writeText },
       configurable: true,
     });
     renderView(stressSession);
-    const shareButtons = screen.getAllByRole('button', { name: 'Chia sẻ link' });
-    fireEvent.click(shareButtons[0]);
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent).toContain(
-      'Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia',
-    );
-    const confirmBtn = [...dialog.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Tôi hiểu, tạo link'),
-    );
-    const backBtn = [...dialog.querySelectorAll('button')].find(
-      (b) => b.textContent?.trim() === 'Quay lại',
-    );
-    expect(confirmBtn).toBeTruthy();
-    expect(backBtn).toBeTruthy();
-    // Trước xác nhận: chưa copy gì cả.
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chia sẻ' }));
+    const linkBox = (await screen.findByLabelText('Link chia sẻ phiên')) as HTMLTextAreaElement;
+    expect(linkBox.value).toContain('#chia=');
+    expect(screen.queryByRole('button', { name: /Tôi hiểu, tạo link/ })).toBeNull();
     expect(writeText).not.toHaveBeenCalled();
-    fireEvent.click(confirmBtn!);
+    fireEvent.click(screen.getByRole('button', { name: 'Sao chép link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalled());
     const url = writeText.mock.calls[0][0] as string;
     expect(url).toContain('#chia=');
@@ -259,7 +243,7 @@ describe('Panel #03 — Share Sheet 2 lớp (DATA-04(ii), cấu trúc + hành vi
   });
 });
 
-describe('Panel #03 — khối thiếu-QR (Finding F, hành vi clipboard)', () => {
+describe('Pha 1 — D11: danh sách thiếu-QR gọn (thay khối «Nhắn xin QR» của Finding F)', () => {
   const noBankSession: Session = {
     id: 's-nobank',
     title: 'Nhậu cuối tuần',
@@ -284,34 +268,31 @@ describe('Panel #03 — khối thiếu-QR (Finding F, hành vi clipboard)', () =
     updatedAt: 2,
   };
 
-  it('(vi) «Nhắn xin QR của Bình» copy LỜI NHẮN XIN QR thật (tên người nhận + số lệnh/tiền), không phải text link chung', async () => {
+  it('(vi) Bình thiếu QR: danh sách gọn có đúng 1 nút «Nhập tài khoản» cho Bình; KHÔNG còn «Nhắn xin QR»/copy lời nhắn', async () => {
+    // THAY ĐỔI THEO SPEC D11: đường copy lời nhắn xin QR bị cắt cùng
+    // các nút sao chép rải rác; việc duy nhất còn lại tại panel là
+    // nhập tài khoản của người nhận ngay trên máy này.
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, 'clipboard', {
       value: { writeText },
       configurable: true,
     });
     renderView(noBankSession);
-    const askButtons = screen.getAllByRole('button', { name: 'Nhắn xin QR của Bình' });
-    expect(askButtons.length).toBeGreaterThan(0);
-    fireEvent.click(askButtons[0]);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    const text = writeText.mock.calls[0][0] as string;
-    expect(text).toContain('Bình');
-    expect(text).toContain('mã QR');
-    expect(text).toContain('100.000');
-    expect(text.startsWith('Đây là link chốt tiền của nhóm mình')).toBe(false);
-    // Xác nhận sau copy phải nói đúng việc đã làm (không còn xác nhận giả).
-    await waitFor(() =>
-      expect(document.body.textContent).toContain('Đã copy lời nhắn — dán vào Zalo/Messenger'),
-    );
+    expect(screen.queryByRole('button', { name: /Nhắn xin QR/ })).toBeNull();
+    const importButtons = screen.getAllByRole('button', { name: 'Nhập tài khoản' });
+    expect(importButtons).toHaveLength(1);
+    fireEvent.click(importButtons[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('Sửa thành viên');
+    expect(writeText).not.toHaveBeenCalled();
   });
 });
 
 describe('Panel #03 — Sheet khoản chi (Finding B, cấu trúc)', () => {
   it('(vii) form chốt cột minmax(0,1fr); chip tên dài có min-w-0 + truncate; «Bỏ chọn tất cả» có mặt', async () => {
     renderView(stressSession);
-    const addButtons = screen.getAllByRole('button', { name: /Thêm khoản/ });
-    fireEvent.click(addButtons[0]);
+    // CTA chính của S2 ở dock: «+ Khoản chi» (SPEC §2 S2).
+    fireEvent.click(screen.getByRole('button', { name: 'Khoản chi' }));
     const dialog = await screen.findByRole('dialog');
     const formRoot = dialog.querySelector('.grid');
     expect(formRoot?.className).toContain('grid-cols-[minmax(0,1fr)]');
@@ -330,12 +311,12 @@ describe('Panel #03 — Sheet khoản chi (Finding B, cấu trúc)', () => {
 });
 
 describe('reflow họ A — ca tên ngắn (bằng chứng cấu trúc)', () => {
-  it('(iii) nhãn trạng thái / chức năng ở Strip không mang class truncate câm', () => {
+  it('(iii) StatusLine ở Dock (bề mặt trạng thái duy nhất của S2 — D8) không mang class truncate câm; nút "+ Thêm" của dải thành viên cũng vậy', () => {
+    // THAY ĐỔI THEO SPEC D8/Pha 1: Strip chết, trạng thái sống ở Dock.
     renderView(shortSession);
-    const strip = document.querySelector('[data-strip]');
-    expect(strip).toBeTruthy();
-    // Dòng trạng thái thường trực của Strip.
-    const statusTexts = [...(strip?.querySelectorAll('[role="status"]') ?? [])];
+    const dock = document.querySelector('[data-dock]');
+    expect(dock).toBeTruthy();
+    const statusTexts = [...(dock?.querySelectorAll('[role="status"]') ?? [])];
     expect(statusTexts.length).toBeGreaterThan(0);
     for (const el of statusTexts) {
       expect(el.className).not.toContain('truncate');
@@ -343,14 +324,11 @@ describe('reflow họ A — ca tên ngắn (bằng chứng cấu trúc)', () => 
         expect(child.className).not.toContain('truncate');
       }
     }
-    // Nhãn chức năng "Quyết toán" trên dòng chốt + nút "+ Thêm" của
-    // Member Strip là nhãn chức năng — không truncate.
-    const summary = document.querySelector('[data-strip-summary]');
-    const settleLabel = [...(summary?.querySelectorAll('span') ?? [])].find(
-      (s) => s.textContent === 'Quyết toán',
+    // StatusLine chỉ còn ĐÚNG 1 bề mặt trong toàn S2.
+    const allStatus = [...document.querySelectorAll('[role="status"]')].filter((el) =>
+      el.textContent?.includes('Đã lưu trên máy này'),
     );
-    expect(settleLabel).toBeTruthy();
-    expect(settleLabel?.className).not.toContain('truncate');
+    expect(allStatus).toHaveLength(1);
     const addButton = screen.getByRole('button', { name: 'Thêm' });
     expect(addButton.className).not.toContain('truncate');
   });

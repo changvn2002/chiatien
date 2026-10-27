@@ -18,6 +18,7 @@ import {
   titleForcesStatic,
   type SealMark,
 } from './phieu';
+import { isSessionUnfinished } from './session-progress';
 
 /**
  * Khoá localStorage RIÊNG cho id phiên đang mở dở (TEAM 2F W2): trước
@@ -143,11 +144,18 @@ export function useSessions() {
         setLayer1Active(true);
       }
     } else {
-      // TEAM 2F W2: không phải lần import — khôi phục thẳng phiên đang
-      // mở dở trước khi app đóng (nếu phiên đó còn trong danh sách).
+      // Q4 (REDESIGN Pha 1, SPEC §A): tự vào thẳng workspace CHỈ KHI
+      // có đúng 1 phiên đang dở VÀ phiên đó chính là phiên active gần
+      // nhất (khoá chiatien:active-session:v1). «Đang dở» = còn lệnh
+      // chuyển chưa đánh dấu đã trả (session-progress). Ngoài điều
+      // kiện đó -> S1 danh sách. (Thay luật khôi phục vô điều kiện
+      // của TEAM 2F W2.)
       const savedActiveId = loadPersistedActiveId();
-      if (savedActiveId && initial.some((s) => s.id === savedActiveId)) {
-        setActiveId(savedActiveId);
+      if (savedActiveId) {
+        const unfinished = initial.filter((s) => isSessionUnfinished(s));
+        if (unfinished.length === 1 && unfinished[0].id === savedActiveId) {
+          setActiveId(savedActiveId);
+        }
       }
     }
     setLoaded(true);

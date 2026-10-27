@@ -150,8 +150,12 @@ describe('Test Tắt Game — nghiệm thu số 1', () => {
     expect(text).toContain('3. Bình → An: 40.000');
   });
 
-  it('SessionView KHÔNG bật phiếu: không thẻ hoàn tất, không phiếu nào trong DOM sau copy', async () => {
-    const writeText = mockClipboard();
+  it('Q1 (Pha 1): workspace KHÔNG có lớp phiếu thường trực — 0 thẻ hoàn tất, 0 phiếu trong DOM khi chưa bấm «Xuất phiếu»', async () => {
+    // THAY ĐỔI THEO SPEC Q1: lớp phiếu + CompletionCard + nút
+    // Copy/Chia sẻ ở panel đã gỡ khỏi trình bày thường trực. Phiếu
+    // chỉ dựng khi bấm «Xuất phiếu» ở menu ⋯ (test ở describe Sheet 4
+    // bên dưới). Test cũ (copy -> không thẻ) thay bằng khẳng định
+    // cấu trúc mới này.
     render(
       <SessionView
         session={standardSession}
@@ -162,27 +166,23 @@ describe('Test Tắt Game — nghiệm thu số 1', () => {
         onNotifyUndo={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy tóm tắt/ })[0]);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
     expect(document.querySelector('[data-completion-card]')).toBeNull();
     expect(document.querySelector('[data-slip]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Copy tóm tắt/ })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /Đóng phiếu khi chốt/ })).toBeNull();
   });
 });
 
-describe('§9(e) — copy text mặc định KHÔNG chứa mũi tên/số cá nhân — CẢ HAI chế độ', () => {
+describe('Pha 1 — Sheet 4 là nơi sao chép/chia sẻ DUY NHẤT; phiếu chỉ dựng khi «Xuất phiếu» (Q1)', () => {
+  // THAY ĐỔI THEO SPEC Pha 1 (§9(e) cũ hết hiệu lực ở tầng UI):
+  // «Copy tóm tắt» (text tóm tắt + dấu bản) và công tắc phiếu trong
+  // Action Sheet đã bị CẮT — sao chép/chia sẻ chỉ còn: Sheet 4 (copy
+  // LINK) + Sheet 3 (copy nội dung CK). Mẫu text tóm tắt §4 của
+  // phieu.ts vẫn được khoá bởi test thuần buildSummaryShareText ở
+  // dưới (hàm giữ nguyên cho bộ dựng phiếu/lớp 1).
   const PERSONAL = ['240.000', '180.000', '40.000', '→', 'Chi →', 'Bình →', 'Dũng →'];
 
-  function expectSummaryOnly(text: string) {
-    for (const p of PERSONAL) expect(text).not.toContain(p);
-    expect(text).toContain('Chia Tiền — phiên “Nhậu cuối tuần”');
-    expect(text).toContain('Tổng 1.260.000');
-    expect(text).toContain('3 lần chuyển');
-    expect(text).toContain('Mở link để xem phần của bạn và mã QR.');
-    expect(text).toContain('bản 1');
-    expect(text).toContain('#chia=');
-  }
-
-  it('chế độ TĨNH (phiếu tắt): copy mặc định = tóm tắt; share link = tóm tắt + link', async () => {
+  it('Sheet 4: «Sao chép link» copy ĐÚNG link phiên (không text tóm tắt, không số cá nhân)', async () => {
     const writeText = mockClipboard();
     render(
       <SessionView
@@ -194,23 +194,18 @@ describe('§9(e) — copy text mặc định KHÔNG chứa mũi tên/số cá nh
         onNotifyUndo={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy tóm tắt/ })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chia sẻ' }));
+    const linkBox = (await screen.findByLabelText('Link chia sẻ phiên')) as HTMLTextAreaElement;
+    fireEvent.click(screen.getByRole('button', { name: 'Sao chép link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    expectSummaryOnly(writeText.mock.calls[0][0] as string);
-
-    // Đường chia sẻ link (Share Sheet -> «Tôi hiểu, tạo link»).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chia sẻ link' })[0]);
-    const dialog = await screen.findByRole('dialog');
-    const confirm = [...dialog.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Tôi hiểu, tạo link'),
-    );
-    fireEvent.click(confirm!);
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
-    expectSummaryOnly(writeText.mock.calls[1][0] as string);
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toBe(linkBox.value);
+    expect(copied).toContain('#chia=');
+    for (const p of PERSONAL) expect(copied).not.toContain(p);
   });
 
-  it('chế độ PHIẾU BẬT: copy mặc định vẫn là cùng mẫu tóm tắt', async () => {
-    const writeText = mockClipboard();
+  it('«Xuất phiếu» ở menu ⋯: phiếu của cả 4 thành viên chỉ xuất hiện SAU khi bấm, trong sheet xuất', async () => {
     render(
       <SessionView
         session={standardSession}
@@ -221,20 +216,13 @@ describe('§9(e) — copy text mặc định KHÔNG chứa mũi tên/số cá nh
         onNotifyUndo={vi.fn()}
       />,
     );
-    // Bật qua Session Action Sheet: nút mở sheet là nút ở AppBar của phiên.
-    const actionsBtn = screen.getAllByRole('button', { name: /Cuộc chia này|hành động/i })[0];
-    if (actionsBtn) fireEvent.click(actionsBtn);
-    const toggle = await screen.findByRole('switch', { name: /Đóng phiếu khi chốt/ });
-    fireEvent.click(toggle);
-    fireEvent.click(screen.getAllByRole('button', { name: /Copy tóm tắt/ })[0]);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    expectSummaryOnly(writeText.mock.calls[0][0] as string);
-    // Và thẻ hoàn tất hiện phiếu đóng của cả 4 thành viên (panel render
-    // song song bản mobile + desktop như mọi bề mặt cũ — đếm trong
-    // MỘT thẻ hoàn tất).
-    await waitFor(() => expect(document.querySelector('[data-completion-card]')).toBeTruthy());
-    const firstCard = document.querySelector('[data-completion-card]');
-    expect(firstCard?.querySelectorAll('[data-slip]')).toHaveLength(4);
+    expect(document.querySelector('[data-slip]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Xuất phiếu' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(dialog.querySelectorAll('[data-slip]')).toHaveLength(4));
+    // Vẫn không có thẻ hoàn tất thường trực trong workspace.
+    expect(document.querySelector('[data-completion-card]')).toBeNull();
   });
 
   it('buildSummaryShareText thuần: đúng mẫu §4 với dấu bản cho trước', () => {
@@ -250,8 +238,10 @@ describe('§9(e) — copy text mặc định KHÔNG chứa mũi tên/số cá nh
     );
   });
 
-  it('copy chi tiết đầy đủ CHỈ qua hành động tường minh trong Action Sheet', async () => {
-    const writeText = mockClipboard();
+  it('menu ⋯ của S2 chỉ còn đúng 3 mục theo SPEC: Chia sẻ · Xuất phiếu · Xoá cuộc chia', async () => {
+    // THAY ĐỔI THEO SPEC §2 S2: «Copy tóm tắt» + «Sao chép chi tiết
+    // đầy đủ» trong Action Sheet đã CẮT (mọi sao chép về Sheet 3/4).
+    mockClipboard();
     render(
       <SessionView
         session={standardSession}
@@ -262,14 +252,13 @@ describe('§9(e) — copy text mặc định KHÔNG chứa mũi tên/số cá nh
         onNotifyUndo={vi.fn()}
       />,
     );
-    const actionsBtn = screen.getAllByRole('button', { name: /Cuộc chia này|hành động/i })[0];
-    if (actionsBtn) fireEvent.click(actionsBtn);
-    const detailed = await screen.findByRole('button', { name: 'Sao chép chi tiết đầy đủ' });
-    fireEvent.click(detailed);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    const text = writeText.mock.calls[0][0] as string;
-    expect(text).toContain('Chi → An: 240.000');
-    expect(text).toContain('Bình → An: 40.000');
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    const dialog = await screen.findByRole('dialog');
+    const labels = [...dialog.querySelectorAll('button')]
+      .map((b) => b.textContent?.trim())
+      .filter((t) => t && t.length > 0);
+    expect(labels).toEqual(['Chia sẻ', 'Xuất phiếu', 'Xoá cuộc chia']);
+    expect(screen.queryByRole('button', { name: /Sao chép chi tiết đầy đủ/ })).toBeNull();
   });
 });
 
@@ -457,7 +446,11 @@ describe('điều kiện bật/tắt §3', () => {
     expect(titleForcesStatic('Đi Đà Lạt')).toBe(false);
   });
 
-  it('phiên tên tĩnh: công tắc trong Action Sheet hiện tắt + đúng một dòng «Phiên này giữ dạng tĩnh.»', async () => {
+  it('phiên tên tĩnh: menu ⋯ KHÔNG còn công tắc phiếu nào (Q1 gỡ hẳn lớp phiếu thường trực cho mọi phiên)', async () => {
+    // THAY ĐỔI THEO SPEC Q1: công tắc «Đóng phiếu khi chốt» bị cắt
+    // cùng lớp phiếu thường trực — không còn switch trong menu cho
+    // bất kỳ phiên nào, kể cả phiên tên tĩnh. Bộ lọc titleForcesStatic
+    // vẫn khoá ở test thuần phía trên (nay chỉ còn vai trò giảm accent).
     const solemn: Session = { ...standardSession, id: 's-solemn', title: 'Tiền giỗ bà nội' };
     render(
       <SessionView
@@ -469,12 +462,9 @@ describe('điều kiện bật/tắt §3', () => {
         onNotifyUndo={vi.fn()}
       />,
     );
-    const actionsBtn = screen.getAllByRole('button', { name: /Cuộc chia này|hành động/i })[0];
-    if (actionsBtn) fireEvent.click(actionsBtn);
-    const toggle = await screen.findByRole('switch', { name: /Đóng phiếu khi chốt/ });
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByText('Phiên này giữ dạng tĩnh.')).toBeTruthy();
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    await screen.findByRole('button', { name: 'Xuất phiếu' });
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByText('Phiên này giữ dạng tĩnh.')).toBeNull();
   });
 });

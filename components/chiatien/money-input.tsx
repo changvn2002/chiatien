@@ -61,7 +61,7 @@ export function MoneyInput({
       <input
         ref={inputRef}
         type="text"
-        inputMode="numeric"
+        inputMode="decimal"
         autoComplete="off"
         aria-label={ariaLabel ?? 'Số tiền'}
         autoFocus={autoFocus}
@@ -86,7 +86,7 @@ export function MoneyInput({
           setTypingText(next > 0 ? formatGrouped(next) : '');
           onChange(next);
         }}
-        className="font-figure h-11 min-w-0 w-full bg-transparent text-right text-base font-semibold text-ink outline-none placeholder:text-placeholder"
+        className="font-figure h-11 min-w-0 w-full bg-transparent text-right text-base font-semibold text-ink outline-none placeholder:text-placeholder focus-visible:outline-none"
       />
       <span aria-hidden className="shrink-0 text-base font-medium text-ink-2">
         ₫

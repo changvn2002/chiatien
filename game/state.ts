@@ -6,8 +6,37 @@ import type { ParsedShopQr } from './qr/emv';
 import type { QrSourceId } from './copy';
 import type { GameRecord } from './store';
 
-export type ScreenId =
-  'setup' | 'm1' | 'm2' | 'm3' | 'm3b' | 'm4' | 'm5' | 'm6' | 'm7' | 'm8' | 'rules';
+/**
+ * Màn còn sống sau REDESIGN Pha 2 (SPEC §C2, AUDIT D12): panel thiết
+ * lập nằm trong S2 (`setup` — render inline, không overlay), sân chơi
+ * (`m6`) và kết quả (`m7`) full-screen. Các id cũ m1–m5/m8/rules đã
+ * chết hẳn: luật chuyển thành sheet, xem lại nhúng trong m7.
+ */
+export type ScreenId = 'setup' | 'm6' | 'm7';
+
+/**
+ * Gói sẵn sàng bắt đầu ván (trước đây ở m5-consent-screen.tsx — file
+ * màn chết, D12: type đưa về đây). Entry chốt bản ghi + chạy engine
+ * thuần từ gói này; panel là nơi duy nhất dựng nó.
+ */
+export interface ConsentReady {
+  params: import('./engine/types').MatchParams;
+  /** Mã cam kết C1 (SPEC D13: «Mã ván» chỉ là record.code — C1 gọi đúng tên này). */
+  c1: string;
+  paramsHash: string;
+  seedDevice: number;
+  /** Số chung — TỰ SINH ở panel (SPEC Q2), nhóm đổi được trước khi chơi qua «Đổi mã». */
+  chung: string;
+  /** Mốc đối chiếu QR 1 chạm (Q3) — panel chốt khi người đối chiếu chạm xác nhận. */
+  qrConfirmedAt?: number | null;
+  /**
+   * QR có được dùng cho ván này không: false khi số tiền trong QR lệch
+   * tổng ván (QR bị đánh dấu không hợp lệ — Q3 tự chặn QR, KHÔNG chặn
+   * nút Chơi) hoặc QR đọc được mà chưa có người đối chiếu. Vắng =
+   * theo draft như cũ (không QR / QR chưa giải mã được).
+   */
+  qrUsable?: boolean;
+}
 
 /** Kết quả bước QR (M1 nhập → M2 xác nhận) trước khi khoá vào ván. */
 export interface QrDraft {

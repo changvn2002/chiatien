@@ -72,16 +72,26 @@ afterEach(() => {
   cleanup();
 });
 
-describe('Sheet — neo đáy theo --strip-h (Panel #03 Finding E)', () => {
-  it('lớp phủ dừng ở var(--strip-h, 0px) thay vì inset-0 phủ kín', () => {
+describe('Sheet — phủ kín toàn viewport (Addendum §4, đảo ngược Finding E)', () => {
+  // HỢP ĐỒNG MỚI (Fix Wave 2, Addendum §4): Finding E cũ giữ sheet dừng
+  // ở đỉnh dock (--strip-h) làm dock rò sáng dưới mọi sheet. Addendum
+  // đảo ngược: lớp phủ là inset-0 phủ kín cả dock như GameSheet.
+  it('lớp phủ là inset-0 phủ kín viewport, không còn neo đáy var(--strip-h)', () => {
     render(<SheetHarness />);
     const opener = screen.getByRole('button', { name: 'Mở sheet kiểm focus' });
     fireEvent.click(opener);
     const dialog = screen.getByRole('dialog');
     const wrap = dialog.parentElement as HTMLElement;
-    expect(wrap.style.bottom).toBe('var(--strip-h, 0px)');
-    expect(wrap.className).toContain('inset-x-0');
-    expect(wrap.className).not.toContain('inset-0');
+    expect(wrap.className).toContain('inset-0');
+    expect(wrap.style.bottom).toBe('');
+  });
+
+  it('vùng nội dung có đệm đáy max(1.25rem, env(safe-area-inset-bottom))', () => {
+    render(<SheetHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mở sheet kiểm focus' }));
+    const dialog = screen.getByRole('dialog');
+    const content = dialog.lastElementChild as HTMLElement;
+    expect(content.className).toContain('pb-[max(1.25rem,env(safe-area-inset-bottom))]');
   });
 });
 

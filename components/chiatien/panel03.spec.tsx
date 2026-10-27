@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
+import { useState } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { decompressFromEncodedURIComponent } from 'lz-string';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@/lib/types';
+import { buildVietQrPayload } from '@/lib/vietqr';
+import type { GameSessionInput } from '@/game/adapter';
+import { GamePanelScreen } from '@/game/screens/panel-screen';
+import { EMPTY_QR_DRAFT, type GameDraft } from '@/game/state';
 import { ExpenseEditor } from './expense-editor';
 import { SessionView } from './session-view';
 
@@ -144,63 +149,56 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('Panel #03 A — Strip thu gọn: chỉ hàng «Tổng + Quyết toán», không tóm tắt lệnh (UI-SLIM T1)', () => {
-  function expectStripStructure(container: HTMLElement, longName: boolean) {
-    const summary = container.querySelector('[data-strip-summary]');
+describe('Pha 1 — Dock tóm tắt 1 dòng + panel quyết toán DUY NHẤT (SPEC Q5/D1 thay Strip thu/mở)', () => {
+  // THAY ĐỔI THEO SPEC Pha 1: Strip thu/mở + aside desktop (2 cây DOM
+  // cùng render SettlementPanel) đã chết. Nay: dock chỉ còn 1 dòng
+  // tóm tắt «Còn N lệnh chưa trả · X đ» và panel render ĐÚNG 1 lần
+  // trong DOM ở mọi bề rộng. Hai test cũ khoá cấu trúc strip được
+  // thay bằng khẳng định hợp đồng mới dưới đây.
+  function expectDockStructure(container: HTMLElement, longName: boolean) {
+    const summary = container.querySelector('[data-dock-summary]');
     expect(summary).toBeTruthy();
-    const rows = [...(summary?.children ?? [])];
-    // UI-SLIM T1 (2026-10-25): hàng tóm tắt LỆNH ĐẦU đã BỎ khỏi dock —
-    // nó trùng lệnh đầu của danh sách «Ai trả ai» trong panel (một
-    // thông tin một chỗ). Nút tóm tắt còn đúng MỘT hàng: «Tổng» + tổng
-    // tiền + nhãn «Quyết toán» là span riêng (giữ phần §9.1 về hàng
-    // đầu). Hệ quả phụ: lớp lỗi chồng glyph của Finding A (tên dài ép
-    // hàng lệnh) không còn bề mặt để xảy ra trong strip.
-    expect(rows.length).toBe(1);
-    const headerRow = rows[0];
-    expect(
-      [...(headerRow?.querySelectorAll('span') ?? [])].some(
-        (s) => s.textContent?.trim() === 'Quyết toán',
-      ),
-    ).toBe(true);
-    expect(headerRow?.textContent).toContain('Tổng');
-    expect(summary?.textContent).not.toContain('lệnh');
+    expect(summary?.textContent).toContain('Còn 2 lệnh chưa trả');
+    expect(summary?.textContent).not.toContain('Quyết toán');
     if (longName) expect(summary?.textContent).not.toContain(LONG_NAME);
+    // 1 nguồn render: mỗi lệnh chuyển đúng 1 hàng trong toàn DOM.
+    expect(container.querySelectorAll('[data-transfer-row]')).toHaveLength(2);
   }
 
   it('ca tên 45 ký tự + ≥2 lệnh', () => {
     const { container } = renderView(stressSession);
-    expectStripStructure(container, true);
+    expectDockStructure(container, true);
   });
 
-  it('ca tên ngắn + ≥2 lệnh (Finding A nổ cả với tên ngắn)', () => {
+  it('ca tên ngắn + ≥2 lệnh', () => {
     const { container } = renderView(shortSession);
-    expectStripStructure(container, false);
+    expectDockStructure(container, false);
   });
 });
 
-describe('Panel #03 DATA-04(ii) — Share Sheet 2 lớp: link chỉ sinh sau xác nhận (§9.5)', () => {
-  it('trước «Tôi hiểu, tạo link»: 0 lần copy; sau: copy link #chia= với payload 0 field ngân hàng', async () => {
+describe('Pha 1 — Sheet 4 Chia sẻ (SPEC §2): link + Sao chép link, payload 0 field ngân hàng (DATA-04 giữ)', () => {
+  // THAY ĐỔI THEO SPEC Sheet 4: sheet chia sẻ 2 lớp xác nhận
+  // («Tôi hiểu, tạo link») đã gỡ (AP-02: cấm xác nhận chồng). Sheet 4
+  // hiện link ngay + nút «Sao chép link» copy ĐÚNG link. Bất biến
+  // DATA-04 ở tầng payload giữ nguyên và vẫn khẳng định ở đây.
+  async function openShareSheet() {
+    fireEvent.click(screen.getByRole('button', { name: 'Hành động của cuộc chia' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chia sẻ' }));
+    return screen.findByLabelText('Link chia sẻ phiên') as Promise<HTMLTextAreaElement>;
+  }
+
+  it('«Sao chép link» copy link #chia= với payload 0 field ngân hàng ở mọi tầng', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     mockClipboard(writeText);
     renderView(shortSession);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chia sẻ link' })[0]);
-    const dialog = await screen.findByRole('dialog');
-    // Lớp 1: headline + nút xác nhận đúng chữ; Lớp 2: đúng 3 gạch đầu dòng.
-    expect(dialog.textContent).toContain(
-      'Bất kỳ ai có link này đều xem và sửa được bản sao cuộc chia',
-    );
-    expect(dialog.querySelectorAll('ul li')).toHaveLength(3);
-    expect(screen.getByRole('button', { name: 'Quay lại' })).toBeTruthy();
+    const linkBox = await openShareSheet();
+    expect(linkBox.value).toContain('#chia=');
     expect(writeText).not.toHaveBeenCalled();
-    // Bấm xác nhận -> mới copy, nhãn lật sang trạng thái đã copy.
-    fireEvent.click(screen.getByRole('button', { name: 'Tôi hiểu, tạo link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sao chép link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: /Đã copy link/ })).toBeTruthy();
     const url = writeText.mock.calls[0][0] as string;
-    expect(url).toContain('#chia=');
-    // Payload giải mã được và không mang field ngân hàng ở BẤT KỲ tầng nào
-    // (phiên này thành viên Bình CÓ bank ở ca stress — dùng ca có bank để
-    // khẳng định mạnh: kiểm trên chính payload của phiên stress).
+    expect(url).toBe(linkBox.value);
     const payload = url.split('#chia=')[1];
     const parsed = JSON.parse(decompressFromEncodedURIComponent(payload) ?? 'null') as unknown;
     const keys: string[] = [];
@@ -222,11 +220,11 @@ describe('Panel #03 DATA-04(ii) — Share Sheet 2 lớp: link chỉ sinh sau xá
     const writeText = vi.fn().mockResolvedValue(undefined);
     mockClipboard(writeText);
     renderView(stressSession);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chia sẻ link' })[0]);
-    await screen.findByRole('dialog');
-    fireEvent.click(screen.getByRole('button', { name: 'Tôi hiểu, tạo link' }));
+    const linkBox = await openShareSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'Sao chép link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const url = writeText.mock.calls[0][0] as string;
+    expect(url).toBe(linkBox.value);
     const parsed = JSON.parse(
       decompressFromEncodedURIComponent(url.split('#chia=')[1]) ?? 'null',
     ) as { v?: number; s?: { members?: Array<Record<string, unknown>> } };
@@ -235,47 +233,125 @@ describe('Panel #03 DATA-04(ii) — Share Sheet 2 lớp: link chỉ sinh sau xá
     for (const m of parsed.s?.members ?? []) {
       expect(Object.keys(m).sort()).toEqual(['id', 'name']);
     }
-    // Timeout nới riêng cho test này (khai báo trung thực, không đổi
-    // assertion): test render toàn bộ SessionView + giải mã lz-string;
-    // chạy đơn lẻ ~2,5s nhưng dưới tải suite đầy đủ trên máy 2 vCPU nó
-    // từng chạm 5.251ms > timeout mặc định 5.000ms (fail dạng timeout,
-    // không phải sai logic — ghi nhận ở wave sửa Panel #03, 2026-10-23).
   }, 20000);
 });
 
-describe('Panel #03 F — «Nhắn xin QR của {Tên}» copy lời nhắn xin QR thật (§9.5)', () => {
-  it('clipboard: chào đúng tên người nhận, nêu số lệnh + tổng tiền, xin gửi mã QR, link khép vòng — KHÔNG phải bản quyết toán chung', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    mockClipboard(writeText);
+describe('Pha 1 — D11: khối thiếu-QR gom thành 1 danh sách gọn (tên + 1 nút/người)', () => {
+  // THAY ĐỔI THEO SPEC D11 + Sheet 3/4: nút «Nhắn xin QR» (copy lời
+  // nhắn) và khối lặp theo người nhận đã CẮT. Panel nay chỉ còn một
+  // danh sách gọn «Chưa có QR trên máy này»: mỗi người nhận thiếu QR
+  // đúng 1 hàng + 1 nút «Nhập tài khoản» mở Sheet 2 đúng người đó.
+  it('Bình thiếu QR: đúng 1 hàng trong danh sách gọn, 0 nút «Nhắn xin QR» trong DOM', () => {
     renderView(noBankSession, true);
-    const askButtons = await screen.findAllByRole('button', { name: 'Nhắn xin QR của Bình' });
-    fireEvent.click(askButtons[0]);
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    const text = writeText.mock.calls[0][0] as string;
-    expect(text).toContain('Chào Bình');
-    expect(text).toContain('1 lệnh chuyển tiền chờ');
-    expect(text).toContain('100.000\u00A0₫'); // formatVND: NBSP trước ₫
-    expect(text).toContain('gửi mình mã QR');
-    expect(text).toContain('#chia=');
-    // Không phải văn bản quyết toán dùng chung (gốc lỗi F ở Panel #03).
-    expect(text).not.toContain('Ai trả ai');
-    expect(text).not.toContain('Số dư từng người');
+    expect(screen.queryByRole('button', { name: /Nhắn xin QR/ })).toBeNull();
+    const importButtons = screen.getAllByRole('button', { name: 'Nhập tài khoản' });
+    // Panel render 1 lần duy nhất -> đúng 1 nút cho 1 người nhận.
+    expect(importButtons).toHaveLength(1);
+    expect(document.body.textContent).toContain('Chưa có QR trên máy này');
+    expect(document.body.textContent).toContain('1 lệnh · 100.000');
   });
 
-  it('copy thất bại: hiện textarea lời nhắn + role=alert, KHÔNG xác nhận «đã copy» giả', async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
-    mockClipboard(writeText);
+  it('bấm «Nhập tài khoản» mở Sheet Người của đúng Bình với disclosure tài khoản mở sẵn', async () => {
     renderView(noBankSession, true);
-    const askButtons = await screen.findAllByRole('button', { name: 'Nhắn xin QR của Bình' });
-    fireEvent.click(askButtons[0]);
-    // App render song song bản mobile + desktop của panel — lấy mọi
-    // textarea copy thủ công và khẳng định trên bản đầu tiên.
-    const manuals = await screen.findAllByLabelText('Lời nhắn xin mã QR để copy thủ công');
-    expect((manuals[0] as HTMLTextAreaElement).value).toContain('Chào Bình');
-    expect((manuals[0] as HTMLTextAreaElement).value).toContain('gửi mình mã QR');
-    const alerts = screen.getAllByRole('alert');
-    expect(alerts.some((a) => a.textContent?.includes('copy thủ công'))).toBe(true);
-    expect(screen.queryByText(/Đã copy lời nhắn/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Nhập tài khoản' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('Sửa thành viên');
+    // Disclosure tài khoản mở sẵn (autoEnableBank) -> ô số tài khoản có mặt.
+    expect(screen.getByLabelText('Số tài khoản')).toBeTruthy();
+    const nameInput = screen.getByLabelText('Tên thành viên') as HTMLInputElement;
+    expect(nameInput.value).toBe('Bình');
+  });
+});
+
+describe('Fix Wave 2 B2 — QR panel: chọn «Người đưa QR» trước, người đưa bị chặn tự đối chiếu (Addendum §2)', () => {
+  // Payload QR THẬT do chính hàm dựng của lib sinh (CRC hợp lệ, số
+  // tiền 400.000 khớp tổng ván của harness) — bơm vào panel qua ô dán
+  // của QrCaptureBlock như người dùng dán nội dung QR.
+  const QR_TOTAL = 400_000;
+  const payload = buildVietQrPayload(BANK, QR_TOTAL, 'An chuyen tien');
+  const input: GameSessionInput = {
+    members: [
+      { id: 'a', displayName: 'An' },
+      { id: 'b', displayName: 'Bình' },
+      { id: 'c', displayName: 'Chi' },
+    ],
+    equalShareByMemberId: { a: 133_334, b: 133_333, c: 133_333 },
+    sessionTotalVnd: QR_TOTAL,
+    sessionTitle: 'Nhậu cuối tuần',
+  };
+
+  function PanelHarness() {
+    const [draft, setDraft] = useState<GameDraft>({
+      totalVnd: QR_TOTAL,
+      qr: { ...EMPTY_QR_DRAFT },
+      selectedPlayerIds: ['a', 'b', 'c'],
+      game: 'g2',
+      characterSetId: null,
+      characterAssignments: {},
+      replayOf: null,
+    });
+    return (
+      <>
+        <GamePanelScreen
+          input={input}
+          draft={draft}
+          onDraft={setDraft}
+          onStart={vi.fn()}
+          onSplitEven={vi.fn()}
+          photos={new Map()}
+          onPhotosChanged={vi.fn()}
+        />
+        <div data-testid="qr-state">
+          {JSON.stringify({ providerId: draft.qr.providerId, confirmerId: draft.qr.confirmerId })}
+        </div>
+      </>
+    );
+  }
+
+  function qrState(container: HTMLElement) {
+    return JSON.parse(container.querySelector('[data-testid="qr-state"]')?.textContent ?? '{}') as {
+      providerId: string | null;
+      confirmerId: string | null;
+    };
+  }
+
+  function verifyButtons(container: HTMLElement) {
+    return [...(container.querySelector('#panel-qr-verify')?.querySelectorAll('button') ?? [])];
+  }
+
+  it('(i) chưa chọn người đưa QR → không đối chiếu được; (ii) người đưa bị chặn; (iii) người khác đối chiếu được → QR usable', async () => {
+    const { container } = render(<PanelHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm QR' }));
+    fireEvent.change(screen.getByLabelText('Hoặc dán nội dung QR'), { target: { value: payload } });
+    fireEvent.click(screen.getByRole('button', { name: 'Dùng nội dung này' }));
+    await screen.findByText(/Người đưa QR — người đã chụp hoặc chia sẻ mã này:/);
+
+    // (i) Chưa chọn người đưa: chỉ có 3 chip người đưa, KHÔNG có chip
+    // đối chiếu; có câu gợi ý + dòng F-06 (QR chưa đối chiếu → không dùng).
+    expect(screen.getByText(/Chọn người đưa QR trước/)).toBeTruthy();
+    expect(verifyButtons(container)).toHaveLength(3);
+    expect(screen.getByText(/QR chưa được đối chiếu nên ván này không dùng QR/)).toBeTruthy();
+    expect(qrState(container)).toEqual({ providerId: null, confirmerId: null });
+
+    // Chọn An là người đưa QR.
+    fireEvent.click(verifyButtons(container)[0]);
+    expect(qrState(container).providerId).toBe('a');
+    // Hàng đối chiếu mở: 3 chip người đưa + 3 chip đối chiếu.
+    const buttons = verifyButtons(container);
+    expect(buttons).toHaveLength(6);
+
+    // (ii) Chip đối chiếu của An (người đưa) bị chặn: aria-disabled +
+    // bấm không ghi confirmer.
+    const anConfirmer = buttons[3];
+    expect(anConfirmer.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(anConfirmer);
+    expect(qrState(container).confirmerId).toBeNull();
+
+    // (iii) Bình đối chiếu được → confirmerId = Bình, dòng F-06 biến mất.
+    fireEvent.click(verifyButtons(container)[4]);
+    expect(qrState(container)).toEqual({ providerId: 'a', confirmerId: 'b' });
+    expect(screen.getByText(/Đã đối chiếu/)).toBeTruthy();
+    expect(screen.queryByText(/QR chưa được đối chiếu nên ván này không dùng QR/)).toBeNull();
   });
 });
 

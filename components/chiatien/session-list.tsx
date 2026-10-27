@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { IconLink, IconPlus, IconTrash } from './icons';
+import { IconLink, IconMoreHorizontal, IconPlus, IconTrash } from './icons';
 import { formatVNDDisplay } from '@/lib/money';
 import { totalSpent } from '@/lib/split';
 import type { Session } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import {
   GhostButton,
   IconButton,
@@ -13,9 +14,25 @@ import {
   inputClass,
   useOnlineStatus,
 } from './ui-bits';
-import { ConfirmDialog } from './sheet';
+import { InfoSheet } from './info-sheet';
+import { sessionProgress } from './session-progress';
+import { ConfirmDialog, Sheet } from './sheet';
 
-/** Danh sách các cuộc chia đã lưu trên máy + form tạo mới (Màn A). */
+/**
+ * S1 — Danh sách cuộc chia (REDESIGN Pha 1, SPEC §2 S1): ô tên + nút
+ * «Cuộc chia mới» ở đầu; danh sách phiên dạng hàng hairline (tên · số
+ * người · tổng · tiến độ «n/m lệnh đã trả»); phiên đang dở lên đầu, phiên
+ * đã xong xếp dưới thu gọn; trạng thái rỗng phẳng (1 dòng + CTA, bỏ
+ * hero minh hoạ).
+ *
+ * CẮT theo SPEC: aside desktop «Nhập từ link» + 3 dòng sự kiện dữ
+ * liệu (D10) — nhập bằng link vẫn tự nhận khi mở link như cũ; nhập
+ * tay dời vào menu «⋯» của S1 (mở đúng UI nhập cũ trong một sheet —
+ * lựa chọn đã ghi: model import chỉ chạy ở bootstrap qua hash, nên
+ * sheet giữ nguyên cơ chế gán hash + reload như aside cũ). Nút xoá
+ * trên từng hàng -> menu hàng (giữ hộp xác nhận xoá hiện hữu).
+ * FAQ accordion ở chân app.tsx đã chuyển vào Sheet 5 (mở từ menu ⋯).
+ */
 export function SessionList({
   sessions,
   onCreate,
@@ -29,19 +46,30 @@ export function SessionList({
 }) {
   const [title, setTitle] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
+  const [rowMenu, setRowMenu] = useState<Session | null>(null);
+  const [listMenuOpen, setListMenuOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState('');
   const online = useOnlineStatus();
 
-  // Hàng gần nhất lên đầu: updatedAt giảm dần (như hiện hành).
-  const ordered = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+  // Phiên dở lên đầu (trong nhóm giữ thứ tự updatedAt giảm dần như
+  // hiện hành); phiên xong (và phiên chưa có gì để trả) xếp dưới.
+  const withProgress = sessions.map((s) => ({ session: s, progress: sessionProgress(s) }));
+  const ordered = [...withProgress].sort((a, b) => {
+    if (a.progress.unfinished !== b.progress.unfinished) {
+      return a.progress.unfinished ? -1 : 1;
+    }
+    return b.session.updatedAt - a.session.updatedAt;
+  });
+  const unfinished = ordered.filter((x) => x.progress.unfinished);
+  const rest = ordered.filter((x) => !x.progress.unfinished);
 
   function handleCreate() {
     const t = title.trim();
     if (!t) {
-      // R7 (mục 4b): nút tạo KHÔNG còn trạng thái disabled-xám (xem
-      // khối nút bên dưới) nên bấm lúc chưa có tên phải có hồi đáp:
-      // đưa focus về ô tên thay vì im lặng như nút bị khoá.
+      // CTA không disabled: bấm khi chưa có tên -> focus về ô tên.
       document.getElementById('new-session')?.focus();
       return;
     }
@@ -49,21 +77,10 @@ export function SessionList({
     setTitle('');
   }
 
-  function focusCreateInput() {
-    const input = document.getElementById('new-session');
-    input?.scrollIntoView({ block: 'center' });
-    input?.focus();
-  }
-
   /**
-   * Nhập từ link (cột phụ desktop, LAYOUT-SPEC §1.4): dữ liệu của một
-   * cuộc chia nằm trọn trong hash #chia= của link (lib/share.ts) và cơ
-   * chế import hiện hành của app chỉ chạy ở lần nạp trang
-   * (use-sessions bootstrap đọc hash một lần lúc mount). Vì vậy cách
-   * điều hướng sạch trong phạm vi bề mặt này là: trích phần #chia= từ
-   * link đã dán (bất kể link thuộc origin nào — dữ liệu tự chứa trong
-   * hash, không cần server của origin đó), gán vào URL hiện tại rồi
-   * reload để bootstrap nhập nó như một link được mở trực tiếp.
+   * Nhập từ link (giữ nguyên cơ chế của aside cũ): dữ liệu nằm trọn
+   * trong hash #chia= và import chỉ chạy ở bootstrap (use-sessions),
+   * nên trích hash từ link đã dán, gán vào URL hiện tại rồi reload.
    */
   function handleImportFromLink() {
     const raw = importUrl.trim();
@@ -80,116 +97,126 @@ export function SessionList({
     window.location.reload();
   }
 
+  function rowMeta(x: { session: Session; progress: ReturnType<typeof sessionProgress> }) {
+    const { session: s, progress: p } = x;
+    const parts = [`${s.members.length} người`, formatVNDDisplay(totalSpent(s))];
+    if (p.totalTransfers > 0) parts.push(`${p.paidCount}/${p.totalTransfers} lệnh đã trả`);
+    else if (p.finished) parts.push('Đã trả hết');
+    return parts.join(' · ');
+  }
+
+  function renderRow(x: { session: Session; progress: ReturnType<typeof sessionProgress> }) {
+    const s = x.session;
+    return (
+      <li
+        key={s.id}
+        className={cn(
+          'flex min-h-[56px] min-w-0 items-center gap-2 border-b border-line py-2',
+          !x.progress.unfinished && 'opacity-80',
+        )}
+      >
+        <button type="button" onClick={() => onOpen(s.id)} className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-base font-bold text-ink">{s.title}</span>
+          <span className="mt-0.5 block truncate text-[13px] text-ink-2">{rowMeta(x)}</span>
+        </button>
+        <IconButton title={`Menu của cuộc chia "${s.title}"`} onClick={() => setRowMenu(s)}>
+          <IconMoreHorizontal size={16} />
+        </IconButton>
+      </li>
+    );
+  }
+
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="grid min-w-0 gap-6 lg:max-w-[720px]">
-        {/* Card tạo mới — primary CTA DUY NHẤT của Màn A cho hành động
-            tạo (D-11): input + nút xếp dọc full-width trong card. */}
-        <div className="rounded-2xl border border-line bg-card p-4 sm:p-5">
-          <h2 className="mb-1.5 font-display text-[25px] font-extrabold text-ink">
+    <div className="mx-auto grid w-full max-w-[720px] gap-6">
+      {/* Tạo mới ở đầu: ô tên + CTA chính «Cuộc chia mới» + menu ⋯. */}
+      <div>
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <h2 className="font-display text-2xl font-extrabold text-ink">
             <label htmlFor="new-session">Tạo cuộc chia mới</label>
           </h2>
-          <div className="flex flex-col gap-2">
-            <input
-              id="new-session"
-              className={inputClass}
-              placeholder="Ví dụ: Đà Lạt 3 ngày 2 đêm…"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreate();
-              }}
-            />
-            {/* R7 (mục 4b): nút tạo là NÚT CHÍNH THƯỜNG (brand đậm
-                như mọi PrimaryButton) NGAY CẢ khi ô tên đang trống —
-                bản cũ dùng disabledReason nên ở trạng thái mặc định
-                của home nó render xám deck-sand + dòng lý do, đọc
-                như nút bị khoá (panel R6, home-390). Bỏ hẳn
-                disabledReason ở nút này: chưa có tên thì bấm vào
-                chỉ focus ô tên (handleCreate), không tạo phiên rỗng. */}
-            <PrimaryButton onClick={handleCreate} className="w-full">
-              <IconPlus size={16} /> Tạo cuộc chia
-            </PrimaryButton>
-          </div>
-          {/* Chỉ báo app-shell ở chân card tạo mới (D-2, LAYOUT-SPEC
-              §6.3): thường trực ở Màn A vì màn này chưa có Strip. */}
-          <StatusLine status={online} className="mt-3" />
+          <button
+            type="button"
+            aria-label="Menu danh sách"
+            onClick={() => setListMenuOpen(true)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition duration-100 ease-[var(--ease-lock)] hover:bg-card"
+          >
+            <IconMoreHorizontal size={20} aria-hidden />
+          </button>
         </div>
-
-        {sessions.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-card px-5 py-6 text-center">
-            {/* Lý do (CQ-02): ảnh minh hoạ là tài sản tĩnh của chính app
-                trong /public, kích thước hiển thị khai trước — next/image
-                không thêm lợi ích ở đây. (V3 dùng empty-state.webp; V4 thay
-                bằng hero-split.svg theo whitelist D3.) */}
-            {/* eslint-disable-next-line @next/next/no-img-element -- hero V4 là SVG tĩnh của app, aspect-ratio khai trước (CLS=0); next/image không thêm lợi ích */}
-            <img
-              src="/products/brand/hero-split.svg"
-              alt=""
-              aria-hidden
-              width={792}
-              height={240}
-              style={{ aspectRatio: '792 / 240' }}
-              className="mx-auto mb-3 w-full max-w-[520px]"
-              loading="lazy"
-            />
-            <h2 className="font-display text-[25px] font-extrabold text-ink">
-              Chưa có cuộc chia nào
-            </h2>
-            <p className="mx-auto mt-1 max-w-md text-base text-muted">
-              Dữ liệu chỉ lưu trên máy của bạn — không cần tài khoản.
-            </p>
-            {/* Hành động tạo ở trạng thái rỗng chỉ là ghost/link (D-11):
-                primary CTA cho hành động tạo đã nằm ở card tạo mới. */}
-            <GhostButton onClick={focusCreateInput} className="mt-4">
-              <IconPlus size={16} /> Tạo cuộc chia đầu tiên
-            </GhostButton>
-          </div>
-        ) : (
-          // Danh sách dạng BẢNG PHẲNG (LAYOUT-SPEC §1.4): bỏ chrome card
-          // (rounded/border/bg-card/shadow) ở wrapper + hàng — hàng ngăn
-          // nhau bằng hairline, đúng Flat Table Rule như ledger.
-          <ul className="grid">
-            {ordered.map((s) => (
-              <li key={s.id} className="flex min-w-0 items-center gap-2 border-b border-line py-3">
-                <button
-                  type="button"
-                  onClick={() => onOpen(s.id)}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <span className="block truncate text-xl font-bold text-ink">{s.title}</span>
-                  <span className="mt-0.5 block truncate text-sm text-ink-2">
-                    <span className="font-figure font-semibold">{s.members.length}</span>
-                    {' người · '}
-                    <span className="font-figure font-semibold">{s.expenses.length}</span>
-                    {' khoản · '}
-                    <span className="font-figure font-semibold">
-                      {formatVNDDisplay(totalSpent(s))}
-                    </span>
-                  </span>
-                </button>
-                <IconButton
-                  title={`Xoá cuộc chia "${s.title}"`}
-                  danger
-                  onClick={() => setPendingDelete(s)}
-                >
-                  <IconTrash size={16} />
-                </IconButton>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            id="new-session"
+            className={cn(inputClass, 'min-w-0 flex-1')}
+            placeholder="Ví dụ: Đà Lạt 3 ngày 2 đêm…"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCreate();
+            }}
+          />
+          <PrimaryButton onClick={handleCreate} className="shrink-0">
+            <IconPlus size={16} /> Cuộc chia mới
+          </PrimaryButton>
+        </div>
+        {/* StatusLine: bề mặt trạng thái DUY NHẤT của màn S1 (D8). */}
+        <StatusLine status={online} className="mt-3" />
       </div>
 
-      {/* Cột phụ desktop (LAYOUT-SPEC §1.4): hành động nhanh "Nhập từ
-          link" + 3 dòng "dữ liệu ở đâu" dạng chữ. KHÔNG còn aside tóm
-          tắt quyết toán tĩnh của cuộc chia gần nhất. */}
-      <aside
-        aria-label="Nhập từ link và thông tin dữ liệu"
-        className="sticky top-6 hidden lg:block"
-      >
-        <h2 className="font-display text-[25px] font-extrabold text-ink">Nhập từ link</h2>
-        <p className="mt-1 text-base text-ink-2">
+      {sessions.length === 0 ? (
+        // Addendum §6 / Seat 3 L3: trạng thái rỗng chỉ còn đúng 1 dòng —
+        // nút tạo thứ ba đã xoá (CTA tạo đã có ở khối trên), hậu tố
+        // «dữ liệu chỉ lưu trên máy» đã xoá (StatusLine ngay trên đã nói).
+        <div className="border-t border-line py-4">
+          <p className="text-base text-ink">Chưa có cuộc chia nào.</p>
+        </div>
+      ) : (
+        <>
+          {unfinished.length > 0 && <ul className="grid">{unfinished.map(renderRow)}</ul>}
+          {rest.length > 0 && (
+            <div>
+              {unfinished.length > 0 && (
+                <h3 className="mb-1 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+                  Đã xong &amp; chưa bắt đầu
+                </h3>
+              )}
+              <ul className="grid">{rest.map(renderRow)}</ul>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Menu ⋯ của S1: nhập tay từ link + mở Sheet 5. */}
+      <Sheet open={listMenuOpen} onClose={() => setListMenuOpen(false)} title="Danh sách cuộc chia">
+        <div className="grid">
+          <button
+            type="button"
+            onClick={() => {
+              setListMenuOpen(false);
+              setImportOpen(true);
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+          >
+            <IconLink size={16} aria-hidden /> Nhập từ link
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setListMenuOpen(false);
+              setInfoOpen(true);
+            }}
+            className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+          >
+            <span aria-hidden className="w-4 text-center font-bold">
+              ?
+            </span>{' '}
+            Hướng dẫn &amp; dữ liệu
+          </button>
+        </div>
+      </Sheet>
+
+      {/* UI nhập từ link cũ, nguyên cơ chế, nay trong sheet. */}
+      <Sheet open={importOpen} onClose={() => setImportOpen(false)} title="Nhập từ link">
+        <p className="text-base text-ink-2">
           Dán link cuộc chia đã nhận để mở bản sao trên máy này.
         </p>
         <div className="mt-3 flex flex-col gap-2">
@@ -208,29 +235,41 @@ export function SessionList({
           </GhostButton>
         </div>
         {importError && (
-          <div className="mt-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- art loi link V4 la SVG tinh, aspect-ratio khai truoc */}
-            <img
-              src="/products/brand/hero-broken.svg"
-              alt=""
-              aria-hidden
-              width={240}
-              height={160}
-              style={{ aspectRatio: '240 / 160' }}
-              className="mb-2 max-h-[80px] w-[120px]"
-              loading="lazy"
-            />
-            <p role="alert" className="text-base font-medium text-debt-ink">
-              {importError}
-            </p>
+          <p role="alert" className="mt-2 text-base font-medium text-debt-ink">
+            {importError}
+          </p>
+        )}
+      </Sheet>
+
+      {/* Menu hàng: nơi duy nhất chứa xoá ở S1 (giữ ConfirmDialog). */}
+      <Sheet open={rowMenu !== null} onClose={() => setRowMenu(null)} title={rowMenu?.title ?? ''}>
+        {rowMenu && (
+          <div className="grid">
+            <button
+              type="button"
+              onClick={() => {
+                onOpen(rowMenu.id);
+                setRowMenu(null);
+              }}
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-paper"
+            >
+              <IconPlus size={16} aria-hidden /> Mở cuộc chia
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingDelete(rowMenu);
+                setRowMenu(null);
+              }}
+              className="flex min-h-[48px] items-center gap-2 rounded-lg px-2 text-left text-base font-semibold text-debt-ink transition duration-100 ease-[var(--ease-lock)] hover:bg-debt-bg"
+            >
+              <IconTrash size={16} aria-hidden /> Xoá cuộc chia
+            </button>
           </div>
         )}
-        <ul className="mt-5 grid gap-1.5 border-t border-line pt-4 text-base text-ink-2">
-          <li>Dữ liệu lưu trên máy này — không cần tài khoản.</li>
-          <li>Link chia sẻ không chứa thông tin ngân hàng.</li>
-          <li>Không có mạng vẫn dùng được.</li>
-        </ul>
-      </aside>
+      </Sheet>
+
+      <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
 
       <ConfirmDialog
         open={pendingDelete !== null}

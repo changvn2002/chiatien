@@ -6,7 +6,10 @@
 // danh sách nguyên văn nằm ở SPEC §2, hồ sơ này không chép lại các từ đó.
 // Mọi màn phải dùng các hằng số ở đây cho những câu bắt buộc nguyên văn.
 
-/** Dòng trách nhiệm QR — nguyên văn SPEC §M2 (R2-3.5), hiện ở M2 và lặp lại ở M7. */
+/** Dòng trách nhiệm QR — nguyên văn SPEC §M2 (R2-3.5). Giữ làm bản chữ đầy đủ;
+ * từ 2026-10-27 (lệnh user) sheet «Luật chơi & chi tiết» cũng hiện bản rút
+ * gọn QR_RESPONSIBILITY_SHORT thay cho đoạn dài này — hằng số không còn màn
+ * nào render trực tiếp. */
 export const QR_RESPONSIBILITY_LINE =
   'App chỉ đọc và hiển thị thông tin chứa trong mã QR do nhóm cung cấp; app không xác minh tài khoản này thuộc về quán và không thực hiện việc chuyển tiền. Nhóm tự đối chiếu tên người nhận với QR tại quầy hoặc hoá đơn trước khi chơi, và người trả tiền kiểm tra lại tên người nhận trong app ngân hàng của mình trước khi xác nhận chuyển.';
 
@@ -15,7 +18,8 @@ export const QR_RESPONSIBILITY_LINE =
  * live 2026-10-25): màn kết quả + màn thiết lập chỉ hiện câu này thay cho
  * đoạn dài QR_RESPONSIBILITY_LINE — ý giữ nguyên (app không xác minh chủ
  * tài khoản, không chuyển tiền thay; nhóm tự đối chiếu tên trước khi
- * chuyển), chữ rút còn một dòng đọc lướt.
+ * chuyển), chữ rút còn một dòng đọc lướt. Từ 2026-10-27 (lệnh user) sheet
+ * «Luật chơi & chi tiết» cũng dùng câu này cho mục «Trách nhiệm QR».
  */
 export const QR_RESPONSIBILITY_SHORT =
   'App chỉ hiển thị thông tin trong QR nhóm cung cấp và không chuyển tiền thay — hãy đối chiếu tên người nhận với quán trước khi chuyển.';
@@ -29,7 +33,8 @@ export const RNG_HONESTY_LINE =
  * ở M7. UIUX-GAME-V2 (2026-10-25, lệnh user «mô tả còn quá nhiều»): rút
  * còn ĐÚNG 1 dòng hiển thị cạnh QR — giữ nguyên hành động bắt buộc (đối
  * chiếu tên người nhận trong app ngân hàng); bản chữ đầy đủ về trách
- * nhiệm QR là QR_RESPONSIBILITY_LINE, sống ở sheet «Luật chơi & chi tiết».
+ * nhiệm QR là QR_RESPONSIBILITY_LINE (từ 2026-10-27 sheet «Luật chơi &
+ * chi tiết» hiện bản rút gọn QR_RESPONSIBILITY_SHORT).
  */
 export const QR_NO_NAME_WARNING = 'QR không có tên — đối chiếu tên người nhận trong app ngân hàng.';
 

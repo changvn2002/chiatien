@@ -15,6 +15,26 @@ const MODE_LABELS: Record<Expense['mode'], string> = {
 };
 
 /**
+ * Nhãn dòng khoản chi NÓI THẬT (Addendum §1): khi đúng MỘT người chịu
+ * toàn bộ số tiền của khoản (phần của mọi người còn lại = 0 — ca
+ * người đãi chịu 100% sau ghi sổ game), nhãn phải nêu «chịu toàn bộ»
+ * thay cho nhãn kiểu chia — không bao giờ hiện «Chia đều» /
+ * «Tuỳ chỉnh số tiền» cho trường hợp này.
+ */
+export function expenseRowLabel(e: Expense, nameOf: (id: string) => string): string {
+  if (e.amount > 0) {
+    const shares = computeShares(e);
+    const bearers = [...new Set(e.participantIds)].filter((id) => (shares[id] ?? 0) > 0);
+    if (bearers.length === 1 && shares[bearers[0]] === e.amount) {
+      return bearers[0] === e.payerId
+        ? `${nameOf(e.payerId)} đã trả · chịu toàn bộ`
+        : `${nameOf(e.payerId)} đã trả · ${nameOf(bearers[0])} chịu toàn bộ`;
+    }
+  }
+  return `${nameOf(e.payerId)} đã trả · ${MODE_LABELS[e.mode]} cho ${e.participantIds.length} người`;
+}
+
+/**
  * Cột sổ khoản chi của Màn B (ARC-11): thông báo thành viên, hai
  * trạng thái rỗng (chưa có người / chưa có khoản), danh sách khoản
  * chi (mới nhất trước) kèm phần chia mở rộng tại hàng, và hàng tổng
@@ -35,9 +55,7 @@ export function SessionLedger({
   onFocusExpense,
   onOpenExpenseAction,
   onAddMember,
-  onAddExpense,
   onTotalVisibility,
-  allSettled = false,
 }: {
   session: Session;
   nameOf: (id: string) => string;
@@ -47,9 +65,6 @@ export function SessionLedger({
   onFocusExpense: (id: string) => void;
   onOpenExpenseAction: (expense: Expense) => void;
   onAddMember: () => void;
-  onAddExpense: () => void;
-  /** Có khoản + transfers rỗng (SessionView tính) — hiện «Kẻ Đôi Ngang Yên». */
-  allSettled?: boolean;
   /** Báo cho SessionView khi hàng tổng vào/ra khung nhìn (luật nhường kẻ đôi). */
   onTotalVisibility?: (visible: boolean) => void;
 }) {
@@ -88,21 +103,12 @@ export function SessionLedger({
     return () => window.clearTimeout(t);
   }, [session.expenses]);
 
+  // REDESIGN Pha 1: trạng thái rỗng PHẲNG — đúng 1 dòng + CTA của
+  // việc cần làm, bỏ hero minh hoạ (DESIGN-DIRECTION §2/§3).
   const emptyLedger =
     session.members.length === 0 ? (
-      <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- hero rut gon V4 la SVG tinh, aspect-ratio khai truoc (CLS=0); phan xu parent §5(b): moi phien expenses=0 deu dung hero rut gon, ke ca chua co thanh vien */}
-        <img
-          src="/products/brand/hero-split-compact.svg"
-          alt=""
-          aria-hidden
-          width={792}
-          height={160}
-          style={{ aspectRatio: '792 / 160' }}
-          className="mx-auto mb-3 w-full"
-          loading="lazy"
-        />
-        <p className="text-base text-ink">Thêm người đầu tiên để bắt đầu ghi khoản chi.</p>
+      <div className="py-4">
+        <p className="text-base text-ink">Thêm người để bắt đầu.</p>
         <button
           type="button"
           onClick={onAddMember}
@@ -112,38 +118,20 @@ export function SessionLedger({
         </button>
       </div>
     ) : session.expenses.length === 0 ? (
-      <div className="mx-auto max-w-md py-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- hero rut gon V4 la SVG tinh, aspect-ratio khai truoc (CLS=0) */}
-        <img
-          src="/products/brand/hero-split-compact.svg"
-          alt=""
-          aria-hidden
-          width={792}
-          height={160}
-          style={{ aspectRatio: '792 / 160' }}
-          className="mx-auto mb-3 w-full"
-          loading="lazy"
-        />
-        <p className="text-base text-ink">
-          Chưa có khoản chi nào. Ghi khoản đầu tiên: ai trả, bao nhiêu, chia cho ai.
-        </p>
-        <button
-          type="button"
-          onClick={onAddExpense}
-          className="mt-2 inline-flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-card px-4 text-base font-bold text-brand-deep transition duration-100 ease-[var(--ease-lock)] hover:border-brand-deep"
-        >
-          <IconPlus size={16} aria-hidden /> Thêm khoản chi
-        </button>
+      // MICRO-FIX F-04: sổ trống KHÔNG còn nút inline «Thêm khoản chi»
+      // — dock dính đáy là CTA duy nhất cho việc này (1 việc 1 nút).
+      <div className="py-4">
+        <p className="text-base text-ink">Chưa có khoản chi nào.</p>
       </div>
     ) : null;
 
   const ledger = (
-    // R4 (mục 2): ĐỆM ĐÁY TUYỆT ĐỐI cho vùng cuộn ledger = chiều cao
-    // dải quyết toán dính (--strip-h) + 24px thở — cuộn tới đáy tuyệt
-    // đối, hàng tổng cuối luôn nguyên vẹn phía trên dải dính. Thêm
-    // scrollbar-gutter stable để cột số mép phải không nằm dưới
-    // thanh cuộn overlay (R3 mục 6).
-    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-[calc(var(--strip-h,132px)_+_24px)] [scrollbar-gutter:stable] min-[900px]:flex-none min-[900px]:overflow-visible min-[900px]:pb-0">
+    // REDESIGN Pha 1: S2 là MỘT màn cuộn duy nhất — ledger không còn
+    // vùng cuộn nội bộ + đệm --strip-h; trang cuộn chung, dock dính đáy.
+    <div className="min-w-0">
+      <h2 className="mb-1 text-xs font-semibold tracking-[0.06em] text-ink-2 uppercase">
+        Sổ khoản chi
+      </h2>
       {memberNotice && (
         <p
           role="alert"
@@ -154,19 +142,6 @@ export function SessionLedger({
         </p>
       )}
       {emptyLedger}
-      {session.expenses.length > 0 && allSettled && (
-        // eslint-disable-next-line @next/next/no-img-element -- art da hoa V4 la SVG tinh, aspect-ratio khai truoc, hien thi <=280x70
-        <img
-          src="/products/brand/hero-settled.svg"
-          alt=""
-          aria-hidden
-          width={480}
-          height={120}
-          style={{ aspectRatio: '480 / 120' }}
-          className="mx-auto mb-3 max-h-[70px] w-[280px]"
-          loading="lazy"
-        />
-      )}
       {session.expenses.length > 0 && (
         <>
           {/* Nhãn cột ledger (desktop, TYPE-AND-ICON §1): Inter 600,
@@ -193,24 +168,24 @@ export function SessionLedger({
                     data-expense-row={e.id}
                     onFocus={() => onFocusExpense(e.id)}
                     onClick={() => onOpenExpenseAction(e)}
-                    className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-left min-[900px]:min-h-[56px]"
+                    className="grid min-h-[56px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-left"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-base font-medium text-ink">
                         {e.title}
                       </span>
                       <span className="block text-xs break-words text-ink-2">
-                        {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
-                        {e.participantIds.length} người
+                        {expenseRowLabel(e, nameOf)}
                       </span>
                     </span>
                     {/* D4-CT-4 (sửa W3): cột tiền KHÔNG trần cứng —
                         trần 136px cũ cắt cụt «₫» của chuỗi trần
-                        999.999.999.999 ₫ (cần 142px ở Inter 600 15px).
-                        Cột auto nở theo nội dung, cột tên
-                        minmax(0,1fr) + truncate nhường. */}
+                        999.999.999.999 ₫. Cột auto nở theo nội dung,
+                        cột tên minmax(0,1fr) + truncate nhường.
+                        (Micro-fix 3: cỡ số tiền 15px -> 16px về thang
+                        SPEC 12/13/14/16/19/24/32.) */}
                     <span
-                      className="font-figure text-[15px] font-semibold whitespace-nowrap text-ink"
+                      className="font-figure text-base font-semibold whitespace-nowrap text-ink"
                       title={formatVND(e.amount)}
                     >
                       {formatVNDDisplay(e.amount)}
@@ -239,15 +214,14 @@ export function SessionLedger({
             })}
             {exiting.map((e) => (
               <li key={`exiting-${e.id}`} aria-hidden className="animate-row-out">
-                <div className="grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 min-[900px]:min-h-[56px]">
+                <div className="grid min-h-[56px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 py-1.5">
                   <span className="min-w-0">
                     <span className="block truncate text-base font-medium text-ink">{e.title}</span>
                     <span className="block text-xs break-words text-ink-2">
-                      {nameOf(e.payerId)} đã trả · {MODE_LABELS[e.mode]} cho{' '}
-                      {e.participantIds.length} người
+                      {expenseRowLabel(e, nameOf)}
                     </span>
                   </span>
-                  <span className="font-figure text-[15px] font-semibold whitespace-nowrap text-ink">
+                  <span className="font-figure text-base font-semibold whitespace-nowrap text-ink">
                     {formatVNDDisplay(e.amount)}
                   </span>
                 </div>
